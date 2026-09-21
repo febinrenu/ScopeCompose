@@ -6,7 +6,12 @@ budget or rate-limit problem gets discovered after a full-corpus run instead of
 before one.
 """
 
-from api_budget.backends import BackendError, MockBackend, RateLimitError
+from api_budget.backends import (
+    BackendError,
+    MockBackend,
+    RateLimitError,
+    TruncatedResponseError,
+)
 from api_budget.cache import RequestCache, request_key
 from api_budget.client import (
     CompletionResult,
@@ -29,6 +34,7 @@ __all__ = [
     "MockBackend",
     "RateLimitError",
     "RequestCache",
+    "TruncatedResponseError",
     "Tier",
     "TierNotConfigured",
     "complete",

@@ -174,6 +174,13 @@ class TierSpec:
     temperature: float
     max_tokens: int
     prefer: list[str]
+    reasoning_effort: str | None = None
+    """For reasoning models (gpt-oss on Groq): low | medium | high.
+
+    Worth setting deliberately. Reasoning tokens are charged to the completion
+    and count against both ``max_tokens`` and the daily cap, so on a capped
+    free tier this is a budget control, not just a quality dial.
+    """
 
     @property
     def resolved(self) -> bool:
@@ -235,6 +242,7 @@ def models() -> ModelsConfig:
             temperature=float(t.get("temperature", 0.0)),
             max_tokens=int(t.get("max_tokens", 1024)),
             prefer=list(t.get("prefer") or []),
+            reasoning_effort=t.get("reasoning_effort"),
         )
 
     fb = raw.get("fallback") or {}

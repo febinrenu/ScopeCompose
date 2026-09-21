@@ -1,12 +1,23 @@
-# Logical tier -> concrete model ID mapping.
+# Logical tier -> concrete model ID mapping, and the real Groq free-tier limits.
 #
 # NEVER hardcode a model ID in a module. Ask api_budget.client for a TIER.
-# Regenerate the candidate list from your account's real model list with:
-#     python scripts/discover_models.py
+# Refresh the available-model list with:
+#     python scripts/discover_models.py --show
+# Check whether a planned run actually fits the daily caps with:
+#     python scripts/budget_estimate.py
 #
-# Why tiers and not names: the provider's catalogue changes, and the whole point
-# of README section 5 is that a single line here swaps in a frontier model if
-# budget ever appears, without touching any pipeline code.
+# ---------------------------------------------------------------------------
+# THE LOAD-BEARING FACT ABOUT THIS CONFIG
+# ---------------------------------------------------------------------------
+# Groq's rate limits are PER MODEL, not per account. So spreading the tiers
+# across different models multiplies the usable daily budget:
+#
+#   everything on gpt-oss-120b ............  200K tokens/day
+#   spread across the four tiers below ....  1.1M tokens/day  (5.5x)
+#
+# That is the single reason BULK, JUDGE and SECOND_BACKBONE point at three
+# different models rather than all at the strongest one. It is not a quality
+# compromise - it is the only way the experimental campaign fits in the term.
 
 default_provider: groq
 
@@ -25,75 +36,186 @@ providers:
     base_url_env: FRONTIER_BASE_URL
     api_key_env: FRONTIER_API_KEY
 
-# Tier definitions.
-#
-# `model` is filled in by scripts/discover_models.py. Values below are the
-# intended SHAPE, not verified IDs - run the discovery script before first use
-# and it will replace them with models your account can actually reach.
+# ---------------------------------------------------------------------------
+# Tier assignment
+# ---------------------------------------------------------------------------
+
 tiers:
 
   BULK:
     # High volume, low difficulty: stage-2 conflict judgement, applicability
     # descriptor extraction, counterfactual question generation, candidate
-    # condition proposal. Wants speed and a generous rate limit over quality.
+    # condition proposal. Thousands of calls per full pass.
     #
-    # Set to gpt-oss-120b so nothing is unresolved, but this is the ONE tier
-    # where a smaller model is the right call: bulk steps are thousands of
-    # calls and will exhaust a free-tier daily token cap long before the
-    # load-bearing steps do. Run scripts/discover_models.py and move this to
-    # the smallest capable model your account serves.
+    # gpt-oss-20b rather than allam-2-7b: allam has 7x the daily request
+    # budget, but it is an Arabic-centric model and BULK feeds the
+    # factual/conditional decision, which is the paper's headline number.
+    # Buying throughput with quality on that specific step is a bad trade.
+    # allam is configured below as the overflow valve instead.
     provider: groq
-    model: openai/gpt-oss-120b
+    model: openai/gpt-oss-20b
     temperature: 0.0
-    max_tokens: 1024
-    prefer: [small, fast]
+    # gpt-oss is a REASONING model: its reasoning tokens are charged to the
+    # completion and consume max_tokens before any visible content appears.
+    # A limit that looks generous for the answer can be fully eaten first,
+    # returning empty content with finish_reason='length'. Both numbers below
+    # carry headroom for that; the backend raises TruncatedResponseError
+    # rather than returning '' if it still happens.
+    max_tokens: 2048
+    reasoning_effort: low        # bulk steps are easy; low saves real budget
 
   JUDGE:
     # Load-bearing: the PR/SR/HCR/SCR metric judge and final scoped-answer
-    # generation. Strongest model available. Validated against human labels
-    # before any of its numbers are trusted - see README section 5.
-    provider: groq
-    model: openai/gpt-oss-120b
-    temperature: 0.0
-    max_tokens: 2048
-    prefer: [large, reasoning]
-
-  LONG_CONTEXT:
-    # The decisive experiment: the structured long-context baseline.
-    # At K=5 the input is only ~2-5K tokens, so capability matters more than
-    # window size here. Read README section 5 before interpreting its result.
+    # generation. Strongest model available, and it gets a dedicated 200K/day
+    # now that BULK lives on a different model.
+    #
+    # Validated against human labels before any of its numbers are trusted -
+    # see README section 5. On open weights that validation is load-bearing,
+    # not a formality.
     provider: groq
     model: openai/gpt-oss-120b
     temperature: 0.0
     max_tokens: 4096
-    prefer: [large, long_context]
+    reasoning_effort: medium     # load-bearing; do not starve the reasoning
+
+  LONG_CONTEXT:
+    # The decisive experiment: the structured long-context baseline.
+    #
+    # Deliberately NOT groq/compound, despite compound having no daily token
+    # cap. compound is an agentic system with built-in web search: it could
+    # look up the real policy instead of parsing the passages it was given,
+    # which would not be a long-context baseline at all - it would silently
+    # invalidate the one comparison the paper's central claim rests on.
+    #
+    # At K=5 the input is only ~2-5K tokens, so window size is not the
+    # constraint; capability is. Read README section 5 before interpreting
+    # anything this tier produces.
+    provider: groq
+    model: openai/gpt-oss-120b
+    temperature: 0.0
+    max_tokens: 8192             # a full structured branch parse is long
+    reasoning_effort: medium
 
   SECOND_BACKBONE:
-    # Robustness ablation: must be a DIFFERENT model family from JUDGE,
-    # otherwise the ablation shows nothing.
-    #
-    # Deliberately left unset. JUDGE is openai/gpt-oss-120b, so this must NOT
-    # be a gpt-oss model - a same-family "robustness" run demonstrates
-    # nothing about model-independence, which is the whole point of RQ3.
-    # Run scripts/discover_models.py and pick a llama / qwen / mixtral-family
-    # model of comparable size.
+    # Robustness ablation (RQ3: architectural, not model-specific).
+    # MUST be a different family from JUDGE, or the ablation shows nothing.
+    # qwen is a different family from gpt-oss and carries its own 200K/day.
     provider: groq
-    model: null
+    model: qwen/qwen3.8-27b
     temperature: 0.0
-    max_tokens: 2048
-    prefer: [large, different_family]
+    max_tokens: 4096
 
-# Automatic fallback when the primary provider rate-limits.
-# Any use of this is recorded in the cost log and MUST be reported, not buried.
+# ---------------------------------------------------------------------------
+# Real Groq free-tier limits, as data
+# ---------------------------------------------------------------------------
+# Used by scripts/budget_estimate.py to tell you whether a planned run fits
+# before you start it, rather than after it dies 60% of the way through.
+#
+# chat_capable: false marks models that cannot generate text. The prompt-guard
+# models have the highest request limits on the account, which makes them look
+# attractive in a table - they are prompt-injection classifiers (22M/86M
+# params). The orpheus models are text-to-speech.
+
+limits:
+  allam-2-7b:
+    rpm: 30
+    rpd: 7000
+    tpm: 6000
+    tpd: 500000
+    chat_capable: true
+    supports_reasoning_effort: false
+    note: >
+      Highest daily budget of any chat model here, but NOT a good overflow:
+      it rejects reasoning_effort with a 400, and answers English prompts in
+      Arabic by default. Both verified by scripts/smoke_test.py.
+  groq/compound:
+    rpm: 30
+    rpd: 250
+    tpm: 70000
+    tpd: null            # no daily token cap
+    chat_capable: true
+    note: "No daily token cap, but agentic with web search - unusable as a clean baseline."
+  groq/compound-mini:
+    rpm: 30
+    rpd: 250
+    tpm: 70000
+    tpd: null
+    chat_capable: true
+    note: "Same web-search caveat as compound."
+  openai/gpt-oss-120b:
+    rpm: 30
+    rpd: 1000
+    tpm: 8000
+    tpd: 200000
+    chat_capable: true
+  openai/gpt-oss-20b:
+    rpm: 30
+    rpd: 1000
+    tpm: 8000
+    tpd: 200000
+    chat_capable: true
+  openai/gpt-oss-safeguard-20b:
+    rpm: 30
+    rpd: 1000
+    tpm: 8000
+    tpd: 200000
+    chat_capable: true
+    note: "Safety-classifier variant. Not a general-purpose generator."
+  qwen/qwen3.8-27b:
+    rpm: 30
+    rpd: 1000
+    tpm: 8000
+    tpd: 200000
+    chat_capable: true
+  meta-llama/llama-prompt-guard-2-22m:
+    rpm: 30
+    rpd: 14400
+    tpm: 15000
+    tpd: 500000
+    chat_capable: false
+    note: "Prompt-injection classifier, 22M params. Cannot generate. Do not assign to a tier."
+  meta-llama/llama-prompt-guard-2-86m:
+    rpm: 30
+    rpd: 14400
+    tpm: 15000
+    tpd: 500000
+    chat_capable: false
+    note: "Prompt-injection classifier, 86M params. Cannot generate. Do not assign to a tier."
+
+# ---------------------------------------------------------------------------
+# Overflow chain
+# ---------------------------------------------------------------------------
+# Tried in order when the primary model rate-limits. Every substitution is
+# recorded in the cost log with fell_back=true and MUST be reported rather
+# than averaged in silently - a number produced by a different model than the
+# one named in the paper is a different number.
+
 fallback:
   enabled: true
+  trigger_after_retries: 3
+  chain:
+    # qwen, not allam, despite allam having 2.5x the daily token budget.
+    # Two reasons, both found by scripts/smoke_test.py rather than assumed:
+    #   1. allam-2-7b rejects `reasoning_effort` with a 400, so a request
+    #      built for a gpt-oss tier fails outright when it overflows there.
+    #   2. allam answers an English prompt in Arabic by default. Mixed-language
+    #      extractions on financial and immigration prose would be worse than
+    #      a rate-limit stall, and far harder to notice.
+    # qwen carries its own 200K/day and SECOND_BACKBONE uses under 10% of it.
+    - provider: groq
+      model: qwen/qwen3.8-27b
+    - provider: ollama
+      model_env: OLLAMA_MODEL     # fully offline last resort
+  # Legacy single-step fields, kept so older code paths still resolve.
   provider: ollama
   model_env: OLLAMA_MODEL
-  trigger_after_retries: 3
 
-# Pricing, USD per 1M tokens, for the cost log. Groq free tier is 0.0 but we
-# still track token volume, because rate limits - not dollars - are the real
-# constraint on this project.
+# ---------------------------------------------------------------------------
+# Pricing
+# ---------------------------------------------------------------------------
+# Free tier: everything is 0.0 USD. Token volume is still tracked, because on
+# this account the binding constraint is the daily cap, not money.
+
 pricing:
   default:
     input_per_1m: 0.0

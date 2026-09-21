@@ -37,6 +37,7 @@ from api_budget.backends import (
     MockBackend,
     OpenAICompatibleBackend,
     RateLimitError,
+    TruncatedResponseError,
 )
 from api_budget.cache import RequestCache, request_key
 from api_budget.costlog import CostLog
@@ -138,7 +139,7 @@ class LLMClient:
         self._backends[provider_name] = backend
         return backend
 
-    def _resolve_tier(self, tier: Tier | str) -> tuple[str, str, float, int]:
+    def _resolve_tier(self, tier: Tier | str) -> tuple[str, str, float, int, str | None]:
         name = tier.value if isinstance(tier, Tier) else str(tier).upper()
         spec = settings.models().tier(name)
         if not spec.resolved:
@@ -147,7 +148,7 @@ class LLMClient:
                 f"Run `python scripts/discover_models.py` to populate it from your "
                 f"account's real model list."
             )
-        return spec.provider, spec.model, spec.temperature, spec.max_tokens
+        return spec.provider, spec.model, spec.temperature, spec.max_tokens, spec.reasoning_effort
 
     # -- the call ------------------------------------------------------------ #
 
@@ -164,6 +165,7 @@ class LLMClient:
         use_cache: bool = True,
         model: str | None = None,
         provider: str | None = None,
+        reasoning_effort: str | None = None,
     ) -> CompletionResult:
         """Make one completion request.
 
@@ -174,11 +176,12 @@ class LLMClient:
         tier_name = tier.value if isinstance(tier, Tier) else str(tier).upper()
 
         if model is None or provider is None:
-            p, m, t, mt = self._resolve_tier(tier_name)
+            p, m, t, mt, re_ = self._resolve_tier(tier_name)
             provider = provider or p
             model = model or m
             temperature = t if temperature is None else temperature
             max_tokens = mt if max_tokens is None else max_tokens
+            reasoning_effort = re_ if reasoning_effort is None else reasoning_effort
         else:
             temperature = 0.0 if temperature is None else temperature
             max_tokens = 1024 if max_tokens is None else max_tokens
@@ -187,6 +190,7 @@ class LLMClient:
             provider=provider, model=model, messages=messages,
             temperature=temperature, max_tokens=max_tokens,
             system=system, response_format=response_format,
+            extra={"reasoning_effort": reasoning_effort} if reasoning_effort else None,
         )
 
         # -- cache ----------------------------------------------------------- #
@@ -216,12 +220,22 @@ class LLMClient:
                 resp = backend.complete(
                     model=model, messages=messages, temperature=temperature,
                     max_tokens=max_tokens, system=system, response_format=response_format,
+                    **({"reasoning_effort": reasoning_effort} if reasoning_effort else {}),
                 )
                 return self._finish(
                     key=key, step=step, tier_name=tier_name, provider=provider,
                     resp=resp, started=started, fell_back=False, use_cache=use_cache,
                     request={"messages": messages, "system": system, "temperature": temperature},
                 )
+            except TruncatedResponseError as exc:
+                # Retrying cannot help: the same max_tokens will truncate
+                # identically. Fail fast with the actionable message rather
+                # than spending three more calls against a daily cap.
+                self.cost_log.log(
+                    step=step, tier=tier_name, provider=provider, model=model,
+                    latency_s=time.time() - started, error=str(exc),
+                )
+                raise
             except RateLimitError as exc:
                 last_exc = exc
                 rate_limited += 1

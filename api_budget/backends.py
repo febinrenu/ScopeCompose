@@ -29,12 +29,50 @@ class BackendError(RuntimeError):
     """Any other provider failure."""
 
 
+class TruncatedResponseError(BackendError):
+    """The model hit ``max_tokens`` before finishing.
+
+    Raised whether the response came back empty or merely cut off. Both are
+    the same failure for this pipeline: every caller wants a complete
+    structured object, and JSON truncated mid-string is garbage rather than an
+    obvious error.
+
+    Reasoning models such as gpt-oss make this easy to hit. The ``reasoning``
+    field is generated first and its tokens count against ``max_tokens``, so a
+    limit that looks generous for the *answer* can be consumed before the
+    answer starts.
+
+    It gets its own type because the correct response is to raise
+    ``max_tokens`` or lower ``reasoning_effort`` -- not to retry, which would
+    burn three more calls against a daily cap and fail identically. Returning
+    the empty string instead would be worse still: every downstream JSON parse
+    would quietly fall back, and a whole corpus run would produce plausible
+    but empty extractions.
+    """
+
+
 @dataclass(frozen=True)
 class BackendResponse:
     text: str
     model: str
     prompt_tokens: int
     completion_tokens: int
+    finish_reason: str | None = None
+    reasoning_tokens: int = 0
+    """Tokens spent on reasoning rather than the answer. Tracked separately
+    because on a capped free tier they are a real and otherwise invisible
+    drain on the daily budget."""
+
+
+#: Model families that accept a ``reasoning_effort`` parameter. Sending it to
+#: one that does not (allam-2-7b) is a 400, which would turn an overflow
+#: fallback into a hard failure at exactly the moment throughput matters.
+_REASONING_EFFORT_FAMILIES = ("gpt-oss", "qwen")
+
+
+def supports_reasoning_effort(model: str) -> bool:
+    low = model.lower()
+    return any(fam in low for fam in _REASONING_EFFORT_FAMILIES)
 
 
 class Backend(Protocol):
@@ -49,6 +87,7 @@ class Backend(Protocol):
         max_tokens: int,
         system: str | None = None,
         response_format: dict[str, Any] | None = None,
+        reasoning_effort: str | None = None,
     ) -> BackendResponse: ...
 
 
@@ -81,6 +120,7 @@ class OpenAICompatibleBackend:
         max_tokens: int,
         system: str | None = None,
         response_format: dict[str, Any] | None = None,
+        reasoning_effort: str | None = None,
     ) -> BackendResponse:
         # Retries are handled by the client layer, not here, so that the
         # fallback decision and the cost log see every individual attempt.
@@ -99,6 +139,11 @@ class OpenAICompatibleBackend:
         }
         if response_format:
             kwargs["response_format"] = response_format
+        if reasoning_effort and supports_reasoning_effort(model):
+            # Supported by gpt-oss and qwen on Groq; allam-2-7b rejects it with
+            # a 400. The guard matters on the overflow path, where a request
+            # built for one model gets re-sent to another.
+            kwargs["reasoning_effort"] = reasoning_effort
 
         try:
             resp = self._client.chat.completions.create(**kwargs)
@@ -113,11 +158,35 @@ class OpenAICompatibleBackend:
 
         choice = resp.choices[0]
         usage = getattr(resp, "usage", None)
+        text = choice.message.content or ""
+        finish = getattr(choice, "finish_reason", None)
+
+        # Reasoning models put their chain in a separate field and charge its
+        # tokens to the completion. Measure it so the drain is visible.
+        reasoning = getattr(choice.message, "reasoning", None) or ""
+        reasoning_tokens = len(reasoning) // 4 if reasoning else 0
+
+        if finish == "length":
+            # Raised whether or not any content came back. Partial output is
+            # not a lesser problem than empty output here: every caller in
+            # this pipeline wants a complete structured object, and a JSON
+            # document cut off mid-string parses as garbage rather than as an
+            # obvious failure.
+            got = f"got {text.strip()[:40]!r}" if text.strip() else "produced no content"
+            raise TruncatedResponseError(
+                f"{model} hit max_tokens={max_tokens} and {got}"
+                + (f"; ~{reasoning_tokens} of those tokens went to reasoning" if reasoning else "")
+                + ". Raise max_tokens for this tier in config/models.yaml, or lower "
+                  "reasoning_effort. Retrying would fail identically."
+            )
+
         return BackendResponse(
-            text=choice.message.content or "",
+            text=text,
             model=resp.model or model,
             prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
             completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+            finish_reason=finish,
+            reasoning_tokens=reasoning_tokens,
         )
 
 
@@ -157,11 +226,12 @@ class MockBackend:
         max_tokens: int,
         system: str | None = None,
         response_format: dict[str, Any] | None = None,
+        reasoning_effort: str | None = None,
     ) -> BackendResponse:
         self.calls.append(
             {"model": model, "messages": messages, "system": system,
              "temperature": temperature, "max_tokens": max_tokens,
-             "response_format": response_format}
+             "response_format": response_format, "reasoning_effort": reasoning_effort}
         )
         if self.fail_with is not None:
             raise self.fail_with

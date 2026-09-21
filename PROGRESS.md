@@ -11,6 +11,111 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-21 (later) — Groq wired up live; four provider findings
+
+Key added, all four tiers verified against the real API, and the rate limits
+turned into a planning artifact rather than a surprise.
+
+**Done**
+
+- `.env` created with the Groq key (gitignored; verified untracked).
+- **Tier map set from the real free-tier limits** (`config/models.yaml`), with
+  those limits stored as data so tooling can reason about them.
+- `scripts/smoke_test.py` — live check: every tier reachable and non-empty,
+  structured JSON parses, truncation fails loudly, cache serves the second
+  call free. **All green.**
+- `scripts/budget_estimate.py` — multiplies pipeline call volume against the
+  daily caps and reports wall-clock days per model.
+- `api_budget` hardened for reasoning models: `reasoning_effort` passthrough,
+  `TruncatedResponseError`, per-model capability guard.
+- **Live end-to-end run** (5 instances, real DeBERTa on GPU + real Groq calls):
+  detection resolved **80% of pairs locally at zero API cost**, stage 2
+  escalated one, A4 ran live, routing produced one COMPOSE.
+- 245 tests pass.
+
+**Findings — all four came from running the thing, not from reading docs**
+
+1. **Groq rate limits are PER MODEL, not per account.** Putting every tier on
+   gpt-oss-120b caps the project at 200K tokens/day. Spreading BULK, JUDGE and
+   SECOND_BACKBONE across three models gives **1.1M/day — 5.5x**. This is the
+   single reason the tier map looks the way it does; it is not a quality
+   compromise.
+
+2. **gpt-oss is a reasoning model, and its reasoning tokens consume
+   `max_tokens` before any answer appears.** At `max_tokens=20` it returned
+   `finish_reason='length'` with *empty content*. The old backend would have
+   returned `''`, every downstream JSON parse would have quietly fallen back,
+   and a whole corpus run would have produced plausible-looking empty
+   extractions. Now raises `TruncatedResponseError` on any `length` finish —
+   partial output too, since JSON cut mid-string is garbage rather than an
+   obvious error. `reasoning_effort` is set per tier (`low` for bulk, `medium`
+   for load-bearing).
+
+3. **allam-2-7b rejected as the overflow model**, despite having 2.5x the
+   daily token budget of anything else. Two disqualifiers, both measured:
+   it returns HTTP 400 on `reasoning_effort`, and it answers English prompts
+   in Arabic by default. Mixed-language extractions on financial and
+   immigration prose would be worse than a rate-limit stall and far harder to
+   notice. Overflow is now qwen, which has spare quota.
+
+4. **`groq/compound` has no daily token cap but is unusable as the decisive
+   baseline.** It is an agentic system with built-in web search — it could
+   look up the real policy instead of parsing the passages it was given, which
+   would silently invalidate the one comparison the central claim rests on.
+   The unlimited quota is a trap here. LONG_CONTEXT stays on gpt-oss-120b.
+
+   Separately: `llama-prompt-guard-2-22m/86m` have the highest request limits
+   on the account and are **not chat models** — they are prompt-injection
+   classifiers. `canopylabs/orpheus-*` are text-to-speech. All excluded.
+
+**The schedule problem, and the fix**
+
+`python scripts/budget_estimate.py` on the 300-instance target, 12 configs:
+
+| Plan | Wall clock |
+|---|---|
+| Naive (per-branch judging, all ablations on full corpus) | **115 days** |
+| `--judge-batched --ablation-instances 100` | **41 days** |
+
+WP4 is roughly 42 days. The fitted plan fits with **essentially zero slack**.
+The metric judge is 65% of the total, so the two levers that matter are:
+
+- **batch the judge per instance**, not per branch — the passages and rubric
+  are re-sent for every branch otherwise, roughly doubling the cost for
+  identical judgements;
+- **run non-headline ablations on a stratified subsample**, headline
+  configurations on the full corpus. Ordinary practice; report it as such.
+
+Re-run the estimator before committing to any full-corpus pass. The cache
+makes re-runs free, so the number above is for a cold run only.
+
+**Decisions**
+
+- `BULK` → `openai/gpt-oss-20b`, not allam. allam has 7x the request budget,
+  but BULK feeds the factual/conditional decision — the paper's headline
+  number — and buying throughput with quality there is a bad trade.
+- `JUDGE` / `LONG_CONTEXT` → `openai/gpt-oss-120b` (they share one 200K/day
+  cap, so their days add; the estimator now says so explicitly).
+- `SECOND_BACKBONE` → `qwen/qwen3.8-27b`. Different family from gpt-oss, so
+  the RQ3 robustness ablation is meaningful, and it carries its own 200K/day.
+- **Rotate the API key.** It was pasted into a chat transcript, so treat it as
+  public regardless of what the transcript is used for.
+
+**Next up**
+
+1. Contract sign-off from Member B — still the gating item.
+2. Rotate the Groq key; update `.env`.
+3. Tell Member B to batch the metric judge per instance from the start. It is
+   a 2x budget difference and much cheaper to design in than to retrofit.
+4. A4 currently decides 100% of relations by entailment rather than typed
+   attributes on mock data — the LLM extractor is not emitting typed
+   attributes for these passages. Worth tuning the descriptor prompt on real
+   text, since attribute decisions are exact and entailment ones are not.
+5. Start WP0 (gating, reading not code).
+6. Collect ~20 real documents for the Tier-1 yield trial.
+
+---
+
 ### 2026-09-21 — Repository bootstrap: contract, API layer, and all of Member A
 
 **Done**
