@@ -87,6 +87,11 @@ not just *what*. The entry format is in `CLAUDE.md`.
 | `experiments.run_pipeline --evaluate` | runs A1→A4, emits a valid record and all scorers |
 | `benchmark.mining.tier1_pilot --demo` | runs, produces a yield-based recommendation |
 | torch CUDA | 2.6.0+cu124, RTX 4060 Laptop, 8.59 GB, `cuda.is_available() == True` |
+| `pytest -m slow` (dense retrieval on GPU) | passed — Contriever downloads, encodes, and fuses with BM25 |
+| Full suite incl. slow | **244 passed, 1 skipped** |
+
+The one skip is `test_second_backbone_is_a_different_family_from_judge`, which
+correctly skips until `SECOND_BACKBONE` is assigned.
 
 **Decisions**
 
@@ -130,24 +135,37 @@ not just *what*. The entry format is in `CLAUDE.md`.
 - **An undecidable scope relation falls back to `opposed`** (→ selection)
   rather than optimistically composing. Composing on unestablished scope
   invents a branch; selection is what prior work does and is the safe default.
+- **Model: `openai/gpt-oss-120b`** (chosen by Member A, set late in the
+  session) for `JUDGE` and `LONG_CONTEXT` — the two load-bearing tiers. It is
+  among the strongest open-weights models Groq serves, which is the right call
+  for the metric judge and the decisive baseline.
+  - `BULK` is currently also pointed at it **only so nothing is unresolved**.
+    This is the one tier that should move to a smaller model: bulk steps are
+    thousands of calls and will exhaust a free-tier daily token cap long
+    before the load-bearing steps do. Run `scripts/discover_models.py` and
+    reassign.
+  - `SECOND_BACKBONE` deliberately left **unset**. It must be a *different
+    family* from JUDGE — another gpt-oss model would make the robustness
+    ablation (RQ3, "architectural rather than model-specific") vacuous. A test
+    enforces this and skips until it is assigned.
 
 **Blocked / open**
 
 1. **Contract sign-off from Member B.** `contract/schema/query_record-v1.0.0.json`
    is ready to send. Nothing should be built against a contract B has not
    agreed to.
-2. **No Groq key in `.env` yet.** Everything above ran offline. Copy
-   `.env.example` to `.env`, add `GROQ_API_KEY`, then run
-   `python scripts/discover_models.py` to populate the tier map. Until then all
-   four tiers are unresolved and any live call raises `TierNotConfigured`.
+2. **No Groq key on disk yet — THE remaining blocker for live runs.**
+   Everything above ran offline. `.env` does not exist; only `.env.example`
+   does, and `GROQ_API_KEY` is not in the process or user environment either.
+   Create `.env` with the key, then run `python scripts/discover_models.py`.
+   Until then every live call raises a provider-not-configured error.
 3. **Member B's GPU size is unknown.** The 6 GB floor is assumed. If their card
    is 4 GB, `config/hardware.yaml` needs a fourth profile.
 4. **`FineTunedDetector` has never been trained.** The code is written and fits
    the memory budget on paper; it has not been run. It is the one A3 variant
    with no rule-based fallback.
-5. **Dense retrieval GPU path not yet confirmed end to end** — the Contriever
-   download was still running when this session ended. Sparse retrieval and
-   fusion are fully tested.
+5. **`SECOND_BACKBONE` unassigned.** Needs a non-gpt-oss model of comparable
+   size, chosen after seeing Groq's real catalogue.
 6. **Supervisor should hear about the zero-spend consequence** before WP4, with
    the asymmetry argument. It is a framing decision, not only a budget one.
 
@@ -155,13 +173,13 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 1. Send `contract/schema/query_record-v1.0.0.json` to Member B and get the
    contract frozen. Everything downstream depends on it.
-2. Add `GROQ_API_KEY` to `.env`, run `python scripts/discover_models.py`, then
-   make one live `BULK` call and confirm the second identical call is served
-   from cache at zero tokens.
-3. Run `pytest -m slow` to confirm the dense-retrieval GPU path.
-4. Train `FineTunedDetector` on mock data — not for accuracy, but to confirm it
+2. Create `.env` with `GROQ_API_KEY`, run `python scripts/discover_models.py`,
+   then make one live `BULK` call and confirm the second identical call is
+   served from cache at zero tokens. Reassign `BULK` to a smaller model and
+   pick a non-gpt-oss `SECOND_BACKBONE` from the discovered catalogue.
+3. Train `FineTunedDetector` on mock data — not for accuracy, but to confirm it
    fits in 8 GB at the stated batch size and that the training loop runs.
-5. **Start WP0.** It is gating and it is reading, not code. Begin with the three
+4. **Start WP0.** It is gating and it is reading, not code. Begin with the three
    confirmed anchors in `docs/wp0_positioning_memo.md`.
-6. Collect ~20 real documents and run `benchmark.mining.tier1_pilot` for the
+5. Collect ~20 real documents and run `benchmark.mining.tier1_pilot` for the
    actual Tier-1 yield. Due end of week 4.

@@ -258,11 +258,76 @@ def test_result_json_error_is_actionable():
         r.json()
 
 
-def test_unresolved_tier_raises_with_a_fix():
+def test_unresolved_tier_raises_with_a_fix(tmp_path, monkeypatch):
+    """A tier with no model must fail with an actionable message.
+
+    Pointed at a throwaway config rather than the repo's, so this stays true
+    whatever is currently assigned in config/models.yaml -- otherwise the test
+    passes or fails depending on how far tier configuration has progressed,
+    which tests nothing.
+    """
+    cfg = tmp_path / "models.yaml"
+    cfg.write_text(
+        "default_provider: groq\n"
+        "providers:\n"
+        "  groq:\n"
+        "    base_url_env: GROQ_BASE_URL\n"
+        "    api_key_env: GROQ_API_KEY\n"
+        "tiers:\n"
+        "  BULK:\n"
+        "    provider: groq\n"
+        "    model: null\n"
+        "fallback: {enabled: false}\n"
+        "pricing: {}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings, "MODELS_YAML", cfg)
     settings.reload()
-    c = mock_client()
-    with pytest.raises(TierNotConfigured, match="discover_models"):
-        c.complete(messages=[{"role": "user", "content": "x"}], tier=Tier.BULK, step="t")
+    try:
+        with pytest.raises(TierNotConfigured, match="discover_models"):
+            mock_client().complete(
+                messages=[{"role": "user", "content": "x"}], tier=Tier.BULK, step="t"
+            )
+    finally:
+        settings.reload()
+
+
+def test_configured_tiers_resolve_to_a_model():
+    """Whatever is in config/models.yaml must at least be internally valid.
+
+    SECOND_BACKBONE is allowed to be unset: it has to be a DIFFERENT family
+    from JUDGE, and picking one requires seeing the provider's real catalogue.
+    """
+    settings.reload()
+    cfg = settings.models()
+    for name in ("BULK", "JUDGE", "LONG_CONTEXT"):
+        assert cfg.tier(name).resolved, (
+            f"tier {name} has no model. Run `python scripts/discover_models.py`."
+        )
+
+
+def test_second_backbone_is_a_different_family_from_judge():
+    """A same-family robustness run demonstrates nothing about
+    model-independence, which is the whole point of RQ3."""
+    settings.reload()
+    cfg = settings.models()
+    judge = cfg.tier("JUDGE").model
+    second = cfg.tier("SECOND_BACKBONE").model
+    if not second:
+        pytest.skip("SECOND_BACKBONE not assigned yet -- pick one after model discovery")
+
+    def family(model_id: str) -> str:
+        low = model_id.lower()
+        for fam in ("gpt-oss", "llama", "qwen", "deepseek", "mixtral", "mistral",
+                    "gemma", "kimi", "compound"):
+            if fam in low:
+                return fam
+        return low.split("/")[0]
+
+    assert family(judge) != family(second), (
+        f"SECOND_BACKBONE ({second}) is the same family as JUDGE ({judge}); "
+        "the robustness ablation would show nothing"
+    )
 
 
 def test_retries_then_gives_up(tmp_path):
