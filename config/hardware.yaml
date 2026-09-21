@@ -1,0 +1,88 @@
+# Hardware profiles.
+#
+# The shared code targets a 6 GB VRAM FLOOR so it runs unmodified on both members'
+# machines. Member A's machine (RTX 4060 Laptop, 8 GB) can opt into "extended_8gb"
+# for larger batches, but nothing in the reported pipeline may REQUIRE it.
+#
+# Select with the CONFLICT_RAG_HW_PROFILE env var, or hardware.load(profile=...).
+
+active_profile: conservative_6gb
+
+profiles:
+
+  conservative_6gb:
+    description: "Default. Fits a 6 GB card. What Member B's machine runs."
+    device: auto              # auto -> cuda if available, else cpu
+    precision: fp16
+
+    embeddings:               # A1 dense retrieval
+      model: facebook/contriever-msmarco
+      batch_size: 32
+      max_seq_length: 256
+
+    cross_encoder:            # A2 stage-1 NLI filter, A3 variants (i) and (iii)
+      model: cross-encoder/nli-deberta-v3-base
+      batch_size: 16
+      max_seq_length: 256
+
+    finetune:                 # A3 variant (ii)
+      model: microsoft/deberta-v3-base
+      batch_size: 8
+      gradient_accumulation_steps: 4      # effective batch 32
+      max_seq_length: 384
+      epochs: 4
+      learning_rate: 2.0e-5
+      warmup_ratio: 0.1
+
+  extended_8gb:
+    description: "Opt-in. Member A's RTX 4060 Laptop, 8 GB. Larger batches only."
+    device: auto
+    precision: fp16
+
+    embeddings:
+      model: facebook/contriever-msmarco
+      batch_size: 64
+      max_seq_length: 256
+
+    cross_encoder:
+      model: cross-encoder/nli-deberta-v3-base
+      batch_size: 32
+      max_seq_length: 384
+
+    finetune:
+      model: microsoft/deberta-v3-base
+      batch_size: 16
+      gradient_accumulation_steps: 2      # effective batch 32, same as above
+      max_seq_length: 384
+      epochs: 4
+      learning_rate: 2.0e-5
+      warmup_ratio: 0.1
+
+  cpu_only:
+    description: "No GPU. Slow but correct - for CI and for laptops without CUDA."
+    device: cpu
+    precision: fp32
+
+    embeddings:
+      model: sentence-transformers/all-MiniLM-L6-v2
+      batch_size: 8
+      max_seq_length: 256
+
+    cross_encoder:
+      model: cross-encoder/nli-deberta-v3-base
+      batch_size: 4
+      max_seq_length: 256
+
+    finetune:
+      model: microsoft/deberta-v3-base
+      batch_size: 2
+      gradient_accumulation_steps: 16
+      max_seq_length: 256
+      epochs: 1
+      learning_rate: 2.0e-5
+      warmup_ratio: 0.1
+
+# Retrieval settings shared across profiles
+retrieval:
+  top_k: 5
+  rrf_k: 60                   # reciprocal-rank-fusion damping constant

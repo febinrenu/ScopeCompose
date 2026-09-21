@@ -1,0 +1,270 @@
+{
+  "$defs": {
+    "ConflictPair": {
+      "additionalProperties": false,
+      "description": "Member A's judgement about one pair of passages.\n\nPairs are UNORDERED. ``doc_i``/``doc_j`` are stored in sorted order so that\na record is byte-identical under any permutation of the input passages --\nthe schema-level half of the order-invariance property. The semantic half\n(branch roles derive from the applicability relation, never from retrieval\norder) lives in ``scope/relation.py``.",
+      "properties": {
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "decided_by": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DecidedBy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "doc_i": {
+          "title": "Doc I",
+          "type": "string"
+        },
+        "doc_j": {
+          "title": "Doc J",
+          "type": "string"
+        },
+        "is_conflict": {
+          "title": "Is Conflict",
+          "type": "boolean"
+        },
+        "scope_relation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScopeRelation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required when type == conditional. Optional for borderline factual pairs, where the scope analyser is also run. Must be absent when type == no_conflict."
+        },
+        "type": {
+          "$ref": "#/$defs/ConflictType"
+        }
+      },
+      "required": [
+        "doc_i",
+        "doc_j",
+        "is_conflict",
+        "type",
+        "confidence"
+      ],
+      "title": "ConflictPair",
+      "type": "object"
+    },
+    "ConflictType": {
+      "description": "The five-class conflict taxonomy.\n\nExtends the prior three-way factual/temporal/opinion split with\n``CONDITIONAL`` -- the class this project exists to handle.",
+      "enum": [
+        "no_conflict",
+        "factual",
+        "temporal",
+        "opinion",
+        "conditional"
+      ],
+      "title": "ConflictType",
+      "type": "string"
+    },
+    "Construction": {
+      "description": "Benchmark tier. Never blend these two when reporting headline numbers.\n\nNATURAL\n    Tier 1. The general rule and its exception were mined from genuinely\n    separate, separately-retrievable documents. This is the primary\n    evidence for the \"naturally occurring, multi-source\" claim that\n    distinguishes this benchmark from ConditionalQA.\nSPLIT\n    Tier 2. A single-document rule/exception pair deliberately split across\n    two synthetic \"documents\". Legitimate and useful -- it isolates the\n    resolution-operator question from the mining question -- but it is not\n    evidence of natural multi-source occurrence.",
+      "enum": [
+        "natural",
+        "split"
+      ],
+      "title": "Construction",
+      "type": "string"
+    },
+    "DecidedBy": {
+      "description": "Which stage produced a pair's judgement.\n\nRecorded so the two-stage detector's cost/accuracy split can be reported,\nand so a run that silently fell back to a different backend is visible.",
+      "enum": [
+        "stage1_local",
+        "stage2_api",
+        "gold",
+        "mock"
+      ],
+      "title": "DecidedBy",
+      "type": "string"
+    },
+    "Domain": {
+      "description": "Benchmark domain. Kept deliberately narrow: financial terms and\nimmigration eligibility keep stakes moderate and ground truth objective.\nMedical and legal are excluded to avoid overclaiming.",
+      "enum": [
+        "financial_terms",
+        "immigration_eligibility",
+        "synthetic"
+      ],
+      "title": "Domain",
+      "type": "string"
+    },
+    "MultiExceptionFlags": {
+      "additionalProperties": false,
+      "description": "Second-order structure flags.\n\nPopulated by Member B, not A: deciding these requires comparing extracted\nexception branches to EACH OTHER, not just to the default, which only B has.\n\nThe project scope is first-order conditional conflicts. When either flag is\nset the instance is routed to the selection fallback with the specific flag\nrecorded, rather than silently mis-composed. Reporting the two rates\nseparately is what lets the paper say how often real data contains\nexception-to-exception structure versus co-occurring conflicting exceptions.",
+      "properties": {
+        "crossed": {
+          "default": false,
+          "description": "Two independent exceptions whose conditions co-occur and whose outcomes disagree.",
+          "title": "Crossed",
+          "type": "boolean"
+        },
+        "nested": {
+          "default": false,
+          "description": "An exception to an exception -- one exception's applicability nests inside another's.",
+          "title": "Nested",
+          "type": "boolean"
+        }
+      },
+      "title": "MultiExceptionFlags",
+      "type": "object"
+    },
+    "Passage": {
+      "additionalProperties": false,
+      "description": "A single retrieved passage with the metadata downstream stages need.",
+      "properties": {
+        "date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Publication date as YYYY, YYYY-MM, or YYYY-MM-DD. Drives temporal handling.",
+          "title": "Date"
+        },
+        "document_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Identifier of the source document. Two passages sharing a document_id did NOT come from separate documents -- which is what makes a construction='natural' claim checkable rather than asserted.",
+          "title": "Document Id"
+        },
+        "id": {
+          "description": "Unique within a record, e.g. 'p0'.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "source_type": {
+          "$ref": "#/$defs/SourceType",
+          "default": "unknown"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "title": "Passage",
+      "type": "object"
+    },
+    "ScopeRelation": {
+      "description": "The four-way scope relation between two claims.\n\nDefined jointly over applicability *and* outcome. Deciding only\napplicability -- \"do these scopes overlap?\" -- cannot separate a redundant\nrestatement from a real exception, which is the bug this four-way version\nreplaced a two-way version to fix.\n\nREFINEMENT\n    One applicability set is a proper subset of the other, and the branches\n    are outcome-INCOMPATIBLE on the subset. A genuine exception. Compose.\nDISJOINT\n    Applicability sets do not intersect. Outcome comparison is vacuous.\n    Compose trivially.\nREDUNDANT\n    Applicability sets overlap or nest, but the branches AGREE on outcome\n    throughout the overlap. Not a conflict at all. Merge into one branch.\nOPPOSED\n    Applicability sets overlap, neither contains the other, and outcomes\n    disagree on the overlap. A real contradiction. Fall back to selection.",
+      "enum": [
+        "refinement",
+        "disjoint",
+        "redundant",
+        "opposed"
+      ],
+      "title": "ScopeRelation",
+      "type": "string"
+    },
+    "SourceType": {
+      "description": "Provenance of a passage. Needed downstream for temporal and credibility\nhandling, and for the credibility-selection baseline.",
+      "enum": [
+        "official_policy",
+        "product_terms",
+        "amendment",
+        "faq",
+        "category_page",
+        "government_guidance",
+        "third_party",
+        "synthetic",
+        "unknown"
+      ],
+      "title": "SourceType",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One record per query. The unit that crosses the A/B boundary.",
+  "properties": {
+    "conflict_pairs": {
+      "items": {
+        "$ref": "#/$defs/ConflictPair"
+      },
+      "title": "Conflict Pairs",
+      "type": "array"
+    },
+    "construction": {
+      "$ref": "#/$defs/Construction"
+    },
+    "contract_version": {
+      "default": "1.0.0",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "domain": {
+      "$ref": "#/$defs/Domain"
+    },
+    "multi_exception_flags": {
+      "$ref": "#/$defs/MultiExceptionFlags"
+    },
+    "passages": {
+      "items": {
+        "$ref": "#/$defs/Passage"
+      },
+      "minItems": 1,
+      "title": "Passages",
+      "type": "array"
+    },
+    "query": {
+      "minLength": 1,
+      "title": "Query",
+      "type": "string"
+    },
+    "query_id": {
+      "minLength": 1,
+      "title": "Query Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "query_id",
+    "query",
+    "domain",
+    "construction",
+    "passages"
+  ],
+  "title": "conflict-rag query_record v1.0.0",
+  "type": "object"
+}

@@ -1,0 +1,25 @@
+# Install torch FIRST with the CUDA index, then this file:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r requirements.txt
+
+# Core
+pydantic>=2.7
+pyyaml>=6.0
+python-dotenv>=1.0
+tqdm>=4.66
+
+# Retrieval (A1)
+rank-bm25>=0.2.2
+sentence-transformers>=3.0
+transformers>=4.44
+
+# Detection / classification (A2, A3)
+scikit-learn>=1.5
+numpy>=1.26
+pandas>=2.2
+
+# API layer
+openai>=1.40
+
+# Testing
+pytest>=8.0

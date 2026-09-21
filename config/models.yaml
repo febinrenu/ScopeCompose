@@ -1,0 +1,100 @@
+# Logical tier -> concrete model ID mapping.
+#
+# NEVER hardcode a model ID in a module. Ask api_budget.client for a TIER.
+# Regenerate the candidate list from your account's real model list with:
+#     python scripts/discover_models.py
+#
+# Why tiers and not names: the provider's catalogue changes, and the whole point
+# of README section 5 is that a single line here swaps in a frontier model if
+# budget ever appears, without touching any pipeline code.
+
+default_provider: groq
+
+providers:
+
+  groq:
+    base_url_env: GROQ_BASE_URL
+    api_key_env: GROQ_API_KEY
+
+  ollama:
+    base_url_env: OLLAMA_BASE_URL
+    api_key_env: null           # Ollama needs no key
+    api_key_literal: ollama     # the OpenAI SDK requires a non-empty string
+
+  frontier:
+    base_url_env: FRONTIER_BASE_URL
+    api_key_env: FRONTIER_API_KEY
+
+# Tier definitions.
+#
+# `model` is filled in by scripts/discover_models.py. Values below are the
+# intended SHAPE, not verified IDs - run the discovery script before first use
+# and it will replace them with models your account can actually reach.
+tiers:
+
+  BULK:
+    # High volume, low difficulty: stage-2 conflict judgement, applicability
+    # descriptor extraction, counterfactual question generation, candidate
+    # condition proposal. Wants speed and a generous rate limit over quality.
+    #
+    # Set to gpt-oss-120b so nothing is unresolved, but this is the ONE tier
+    # where a smaller model is the right call: bulk steps are thousands of
+    # calls and will exhaust a free-tier daily token cap long before the
+    # load-bearing steps do. Run scripts/discover_models.py and move this to
+    # the smallest capable model your account serves.
+    provider: groq
+    model: openai/gpt-oss-120b
+    temperature: 0.0
+    max_tokens: 1024
+    prefer: [small, fast]
+
+  JUDGE:
+    # Load-bearing: the PR/SR/HCR/SCR metric judge and final scoped-answer
+    # generation. Strongest model available. Validated against human labels
+    # before any of its numbers are trusted - see README section 5.
+    provider: groq
+    model: openai/gpt-oss-120b
+    temperature: 0.0
+    max_tokens: 2048
+    prefer: [large, reasoning]
+
+  LONG_CONTEXT:
+    # The decisive experiment: the structured long-context baseline.
+    # At K=5 the input is only ~2-5K tokens, so capability matters more than
+    # window size here. Read README section 5 before interpreting its result.
+    provider: groq
+    model: openai/gpt-oss-120b
+    temperature: 0.0
+    max_tokens: 4096
+    prefer: [large, long_context]
+
+  SECOND_BACKBONE:
+    # Robustness ablation: must be a DIFFERENT model family from JUDGE,
+    # otherwise the ablation shows nothing.
+    #
+    # Deliberately left unset. JUDGE is openai/gpt-oss-120b, so this must NOT
+    # be a gpt-oss model - a same-family "robustness" run demonstrates
+    # nothing about model-independence, which is the whole point of RQ3.
+    # Run scripts/discover_models.py and pick a llama / qwen / mixtral-family
+    # model of comparable size.
+    provider: groq
+    model: null
+    temperature: 0.0
+    max_tokens: 2048
+    prefer: [large, different_family]
+
+# Automatic fallback when the primary provider rate-limits.
+# Any use of this is recorded in the cost log and MUST be reported, not buried.
+fallback:
+  enabled: true
+  provider: ollama
+  model_env: OLLAMA_MODEL
+  trigger_after_retries: 3
+
+# Pricing, USD per 1M tokens, for the cost log. Groq free tier is 0.0 but we
+# still track token volume, because rate limits - not dollars - are the real
+# constraint on this project.
+pricing:
+  default:
+    input_per_1m: 0.0
+    output_per_1m: 0.0
