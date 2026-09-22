@@ -97,6 +97,34 @@ class VariantResult:
         n = self.n_gold_factual
         return self.factual_as_conditional / n if n else 0.0
 
+    @property
+    def combined_leak_rate(self) -> float:
+        """Both directions of the factual/conditional boundary, averaged.
+
+        Selecting on ``conditional_leak_rate`` alone is gameable, and not
+        theoretically: a detector that labels everything ``conditional``
+        scores a perfect 0% on it while being useless. That is the same
+        caveat-happy failure the Spurious-Condition Rate exists to catch, so
+        the detector-selection criterion has to be symmetric too.
+        """
+        return (self.conditional_leak_rate + self.factual_leak_rate) / 2
+
+    @property
+    def degenerate(self) -> bool:
+        """True if the variant collapses onto one predicted label.
+
+        A detector that predicts a single class for almost everything can look
+        excellent on whichever one-directional metric that class happens to
+        favour. Flagged rather than silently ranked.
+        """
+        if not self.n_pairs:
+            return False
+        predicted: dict[str, int] = {}
+        for row in self.confusion.values():
+            for label, n in row.items():
+                predicted[label] = predicted.get(label, 0) + n
+        return bool(predicted) and max(predicted.values()) / self.n_pairs >= 0.8
+
     def per_type_f1(self) -> dict[str, dict[str, float]]:
         out: dict[str, dict[str, float]] = {}
         for label in [c.value for c in ConflictType]:
@@ -173,29 +201,58 @@ def render(results: list[VariantResult]) -> str:
         "accuracy: distractors dominate the label distribution, so accuracy can look",
         "healthy while every real exception is being routed to selection.",
         "",
-        f"  {'variant':<24} {'type acc':>9} {'rel acc':>9} {'cond->fact':>11} {'fact->cond':>11}",
-        "  " + "-" * 82,
+        "Both directions are shown, and selection uses both: a detector that labels",
+        "everything conditional scores a perfect cond->fact while being useless.",
+        "",
+        f"  {'variant':<24} {'type acc':>9} {'rel acc':>9} {'cond->fact':>11} "
+        f"{'fact->cond':>11} {'combined':>9}",
+        "  " + "-" * 92,
     ]
 
     for r in results:
         if r.error:
             lines.append(f"  {r.name:<24} {'ERROR':>9}   {r.error[:44]}")
             continue
+        flag = "  DEGENERATE" if r.degenerate else ""
         lines.append(
             f"  {r.name:<24} {r.type_accuracy:>9.3f} {r.relation_accuracy:>9.3f} "
             f"{r.conditional_as_factual:>4}/{r.n_gold_conditional:<6} "
-            f"{r.factual_as_conditional:>4}/{r.n_gold_factual:<6}"
+            f"{r.factual_as_conditional:>4}/{r.n_gold_factual:<6} "
+            f"{r.combined_leak_rate:>9.3f}{flag}"
         )
 
     usable = [r for r in results if not r.error and r.n_gold_conditional]
-    if usable:
-        best = min(usable, key=lambda r: (r.conditional_leak_rate, -r.type_accuracy))
+    healthy = [r for r in usable if not r.degenerate]
+    pool = healthy or usable
+
+    if pool:
+        best = min(pool, key=lambda r: (r.combined_leak_rate, -r.type_accuracy))
         lines += [
             "",
-            f"  Lowest conditional-leak rate: {best.name} "
-            f"({best.conditional_leak_rate:.1%} of true exceptions lost to the factual label)",
+            f"  Best on the combined factual/conditional boundary: {best.name}",
+            f"    cond->fact {best.conditional_leak_rate:.1%} "
+            f"(true exceptions lost to selection)",
+            f"    fact->cond {best.factual_leak_rate:.1%} "
+            f"(real contradictions sent to composition)",
+            f"    accuracy   {best.type_accuracy:.3f}",
             "  -> this is the variant to report as 'the' detector, per proposal section 5.2.",
         ]
+
+    degenerate = [r for r in usable if r.degenerate]
+    if degenerate:
+        lines += [
+            "",
+            "  EXCLUDED as degenerate (one label covers >=80% of predictions):",
+        ]
+        for r in degenerate:
+            lines.append(
+                f"    {r.name} - scores well on one direction of the cell only because it "
+                f"collapses onto a single class. This is the caveat-happy failure the "
+                f"Spurious-Condition Rate exists to catch."
+            )
+        if not healthy:
+            lines.append("    NOTE: every variant is degenerate, so the pick above is "
+                         "the least bad, not a good one.")
 
     for r in results:
         if r.error:
