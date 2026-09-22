@@ -26,6 +26,11 @@ from detection.features import PairFeatures, extract_pair_features
 from detection.head import HeadConfig, PairHead
 from detection.nli import NLIScorer, NLIScores, get_nli
 
+DEFAULT_HEAD_PATH = Path("models/stage1_head.pkl")
+"""Where `python -m detection.train` saves the head, and where Stage1Filter
+looks for one. Gitignored: a trained head is a build artifact, and committing
+one would let a stale model silently outlive the features it was fit on."""
+
 
 @dataclass(frozen=True)
 class PairCandidate:
@@ -75,6 +80,7 @@ class Stage1Filter:
         heuristic_nli: bool = False,
         low_threshold: float = 0.35,
         high_threshold: float = 0.75,
+        auto_load_head: bool = True,
     ):
         """
         Parameters
@@ -82,14 +88,29 @@ class Stage1Filter:
         low_threshold, high_threshold
             The escalation band. Pairs scoring below ``low`` are confidently
             non-conflicting and pairs above ``high`` are confidently
-            conflicting; only the middle is sent to stage 2. Widening the band
-            buys accuracy with API calls, which is exactly the trade-off
-            ``threshold.py`` tunes on the dev split rather than guessing.
+            conflicting; only the middle is sent to stage 2. These defaults are
+            placeholders -- tune them with ``python -m detection.threshold``,
+            because the escalation rate is the API cost of detection and on a
+            capped tier it is the wall-clock cost too.
+        auto_load_head
+            Load a trained head from :data:`DEFAULT_HEAD_PATH` when one exists.
+            Without a trained head the filter falls back to a hand-weighted
+            rule, which is a scaffold rather than a model: measured on mock
+            data it scores at chance, so its "resolved locally" pairs are
+            resolved *wrongly*. Train one with ``python -m detection.train``.
         """
         self.nli = nli if nli is not None else get_nli(profile, heuristic=heuristic_nli)
         self.head = head
         self.low = low_threshold
         self.high = high_threshold
+
+        if self.head is None and auto_load_head and DEFAULT_HEAD_PATH.exists():
+            try:
+                self.head = PairHead.load(DEFAULT_HEAD_PATH)
+            except Exception:
+                # A head saved against a different feature set must not stop
+                # the pipeline; the rule-based fallback still runs.
+                self.head = None
 
     # -- scoring -------------------------------------------------------------- #
 

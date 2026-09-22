@@ -124,15 +124,29 @@ def compare(a: Applicability, b: Applicability) -> SetRelation:
         if con_b is not None and con_a.disjoint_from(con_b):
             return SetRelation.DISJOINT
 
-    shared = set(ca) & set(cb)
-    if not shared:
-        # The two sets constrain entirely different dimensions. They almost
-        # certainly intersect -- a case can satisfy both -- but neither
-        # contains the other, and saying so confidently would be overreach.
+    if any(not c.decidable for c in list(ca.values()) + list(cb.values())):
+        # Free text cannot be reasoned over. Bail before drawing any
+        # conclusion from the dimensions that ARE typed, since the untyped one
+        # could constrain the set arbitrarily.
         return SetRelation.UNKNOWN
 
-    if any(not c.decidable for c in list(ca.values()) + list(cb.values())):
-        return SetRelation.UNKNOWN
+    shared = set(ca) & set(cb)
+    if not shared:
+        # The two sets constrain entirely DIFFERENT dimensions -- say
+        # {account_kind = current} and {age < 23}. This is decidable, and
+        # exactly, which is worth doing rather than deferring to entailment:
+        #
+        #   they intersect, because a case can satisfy both independently
+        #     (a current account held by a 21-year-old);
+        #   neither contains the other, because each leaves the other's
+        #     dimension unconstrained and so admits cases the other excludes
+        #     (a current account held by a 30-year-old is in A, not B).
+        #
+        # That is precisely OVERLAPPING. Returning UNKNOWN here sent a large
+        # share of real pairs to entailment -- and because UNKNOWN falls back
+        # to `opposed`, it also cost composability on pairs that were merely
+        # cross-cutting rather than contradictory.
+        return SetRelation.OVERLAPPING
 
     # a subset of b requires a to be at least as restrictive on EVERY
     # dimension b constrains. A dimension b constrains and a does not means a

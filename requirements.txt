@@ -13,6 +13,12 @@ rank-bm25>=0.2.2
 sentence-transformers>=3.0
 transformers>=4.44
 
+# DeBERTa-v3 tokenizer (variant ii fine-tuning). Without these,
+# AutoTokenizer.from_pretrained fails with "`tiktoken` is required".
+tiktoken>=0.7
+sentencepiece>=0.2
+protobuf>=4.25
+
 # Detection / classification (A2, A3)
 scikit-learn>=1.5
 numpy>=1.26

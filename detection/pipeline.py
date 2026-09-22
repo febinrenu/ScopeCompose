@@ -150,6 +150,19 @@ class TwoStageDetector:
             )
 
         ctype, relation = self._classify(cand)
+
+        # The classifier may overturn stage 1's binary verdict. Stage 1 only
+        # asks "do these disagree at all"; A3 asks "how", and "not actually a
+        # conflict" is a legitimate answer to that. Honour it rather than
+        # emitting is_conflict=True with type=no_conflict, which the contract
+        # rejects outright -- and rightly, since Member B could not route it.
+        if ctype is ConflictType.NO_CONFLICT:
+            return ConflictPair(
+                doc_i=cand.doc_i, doc_j=cand.doc_j, is_conflict=False,
+                type=ConflictType.NO_CONFLICT, scope_relation=None,
+                confidence=cand.confidence, decided_by=DecidedBy.STAGE1_LOCAL,
+            )
+
         return ConflictPair(
             doc_i=cand.doc_i, doc_j=cand.doc_j, is_conflict=True,
             type=ctype, scope_relation=relation,

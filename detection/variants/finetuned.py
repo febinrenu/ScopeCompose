@@ -71,6 +71,16 @@ class _MultiTaskModel:
         self.encoder.to(device)
         self.type_head.to(device)
         self.relation_head.to(device)
+
+        # Master weights must stay fp32 even when training under autocast.
+        # Some checkpoints carry a half-precision dtype in their config, which
+        # `from_pretrained` honours; the parameters then arrive as fp16 and
+        # GradScaler fails with "Attempting to unscale FP16 gradients", because
+        # it expects fp32 masters with fp16 activations, not fp16 everything.
+        # `.float()` is version-agnostic where the dtype kwarg name is not.
+        self.encoder.float()
+        self.type_head.float()
+        self.relation_head.float()
         self.fp16 = fp16
 
     def parameters(self):

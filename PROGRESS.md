@@ -11,6 +11,104 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-22 — Closed Member A's six code gaps
+
+All six items from the completeness audit. Four of them surfaced real bugs.
+
+**Done**
+
+- **`detection/threshold.py`** (gap 1) — sweeps the stage-1/stage-2 escalation
+  band and reports the cost/accuracy curve with a Pareto front. Selection
+  requires an explicit constraint (`--max-escalation` or `--min-accuracy`),
+  because without one the answer is always "escalate everything", which is what
+  the two-stage design exists to avoid. Detects and refuses to tune on a
+  saturated curve.
+- **`detection/train.py`** (gap 3) — trains and persists the stage-1 head,
+  compares it against the rule-based fallback on a held-out split, and refuses
+  to save a head that does not beat the fallback. `Stage1Filter` auto-loads it.
+- **`experiments/run_baselines.py`** (gap 2) — scores the three retrieval-side
+  baselines on **branch loss**, not answer correctness: did the exception
+  passage survive to generation? Prints worked examples.
+- **Variant (ii) now trains** (gap 4) — two blockers fixed, see below. The
+  three-architecture comparison is finally three-way.
+- **`experiments/run_retrieval_eval.py`** (gap 5) — recall@k and, more
+  importantly, **exception recall@k**, comparing BM25 against hybrid.
+- **`scripts/eval_descriptors.py`** (gap 6) — measures the typed-attribute rate
+  directly.
+
+**Bugs found by running these**
+
+1. **Stage 1 was at chance.** The threshold sweep showed stage-1 accuracy of
+   **0.500 at zero escalation** with the rule-based fallback. The earlier
+   "70% of pairs resolved locally at zero API cost" was therefore measuring
+   escalation rate, not correctness -- it was resolving them *wrongly*. After
+   training the head: 0.460 -> 1.000 held-out. (1.000 is itself a fixture
+   artifact; the mock templates are regular enough to memorise.)
+
+2. **fp16 master weights broke fine-tuning.** Variant (ii) died with
+   "Attempting to unscale FP16 gradients": some checkpoints carry a
+   half-precision dtype in their config which `from_pretrained` honours, so
+   parameters arrived as fp16 while GradScaler expects fp32 masters with fp16
+   activations. Fixed with an explicit `.float()`, which is version-agnostic
+   where the dtype kwarg name is not. Also needed `tiktoken` + `sentencepiece`
+   for the DeBERTa-v3 tokenizer.
+
+3. **A contradictory ConflictPair could be constructed.** When stage 1 said
+   "conflict" but the A3 classifier returned `no_conflict`, the pipeline built
+   `is_conflict=True, type=no_conflict` -- which the contract rejects. Latent
+   until the trained head changed stage-1's verdicts and exposed it. The
+   classifier now wins: it answers *how* two passages disagree, and "not
+   actually" is a legitimate answer.
+
+4. **`compare()` deferred a decidable case.** When two applicability sets
+   constrain *different* dimensions (`account_kind` vs `age`) it returned
+   UNKNOWN and fell through to entailment. That case is provably OVERLAPPING:
+   they necessarily intersect, and neither contains the other because each
+   leaves the other's dimension unconstrained. Since UNKNOWN falls back to
+   `opposed`, this was also costing composability on merely cross-cutting
+   pairs. **Live effect: exact attribute decisions 0% -> 44%, and `compose`
+   fired 4x instead of 1x on the same input.**
+
+**Measured**
+
+| Check | Result |
+|---|---|
+| Test suite | **246 passed** |
+| Order-invariance gate | **PASS, 1.0000**, 66/72 non-positional |
+| Typed-attribute rate (live) | **82%** on representative passages |
+| Baseline branch loss | rerank_top1 **55.4%**, nli_filter **15.8%**, standard_rag 0% |
+| Three-variant comparison | lexical_nli 0.988 acc, combined leak 0.010; other two flagged DEGENERATE |
+
+**The suppression demo now runs**, and it is the slide:
+
+    query:      Do I pay a fee on cross-border transfers?
+    nli_filter: dropped p1 as inconsistent (contradiction score 1.000)
+    should say: ...the fee is waived for premium-tier cardholders (per p1).
+    will say:   Cross-border transfers incur a 3.5% fee.
+
+**Two numbers that are fixture artifacts, not results**
+
+- Exception recall reads 28.6%, but **65% of mock passages are near-duplicates**
+  of each other, so pooled retrieval is being asked an unanswerable question.
+  The tool now detects this and says so before the number can be misread.
+- Stage-1 held-out accuracy of 1.000, and the saturated threshold curve, are
+  both the templates being memorised.
+
+Both need re-running on the WP2 corpus. Neither is quotable now.
+
+**Still open for Member A** — none of it code:
+
+1. Contract sign-off from Member B (blocks everything)
+2. Rotate the Groq key
+3. WP0 literature review, A's slice — **gating**
+4. ~50 labelled cases for B's probe — **gating**
+5. Tier-1 mining on ~20 real documents — harness ready, zero documents — **gating**
+6. WP2 annotation of 250-350 instances — the largest single time cost
+7. kappa pilot with B on refinement-vs-opposed
+8. Zeroth review deck, slides 4-8
+
+---
+
 ### 2026-09-21 (later) — Groq wired up live; four provider findings
 
 Key added, all four tiers verified against the real API, and the rate limits

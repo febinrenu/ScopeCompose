@@ -143,8 +143,28 @@ def test_free_text_is_undecidable():
     assert intersects(a, b) is None
 
 
-def test_no_shared_dimension_is_undecidable():
+def test_different_dimensions_overlap_exactly():
+    """Constraining different dimensions is DECIDABLE, not unknown.
+
+    {card_tier = premium} and {status = student} necessarily intersect (a
+    premium-holding student), and neither contains the other (each leaves the
+    other's dimension unconstrained). That is OVERLAPPING, and deciding it
+    here rather than deferring to entailment keeps the answer exact -- and
+    avoids the UNKNOWN -> `opposed` fallback needlessly costing composability
+    on pairs that merely cross-cut.
+    """
     a = app("premium", tier("premium"))
+    b = app("students", cat("status", "student"))
+    assert compare(a, b) is SetRelation.OVERLAPPING
+    assert intersects(a, b) is True
+    assert narrower(a, b) is None
+
+
+def test_free_text_still_blocks_a_decision_even_beside_typed_dimensions():
+    """One untyped dimension can constrain the set arbitrarily, so no
+    conclusion may be drawn from the typed ones."""
+    a = app("premium but complicated", tier("premium"),
+            ScopeAttribute(name="misc", kind=AttributeKind.FREE_TEXT, text="unclear"))
     b = app("students", cat("status", "student"))
     assert compare(a, b) is SetRelation.UNKNOWN
 

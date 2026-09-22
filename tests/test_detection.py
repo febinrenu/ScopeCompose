@@ -229,7 +229,10 @@ def test_logistic_head_is_inspectable():
 
 @pytest.fixture
 def stage1() -> Stage1Filter:
-    return Stage1Filter(heuristic_nli=True)
+    # auto_load_head=False on purpose: a trained head in models/ would make
+    # these tests pass or fail depending on whether someone had run
+    # `python -m detection.train`, which is not a property of the code.
+    return Stage1Filter(heuristic_nli=True, auto_load_head=False)
 
 
 def test_stage1_scores_every_pair(stage1):
