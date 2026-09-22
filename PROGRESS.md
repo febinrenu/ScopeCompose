@@ -11,6 +11,90 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-22 (later) — WP1 probe set drafted (54 cases, awaiting Member A verification)
+
+**Done**
+
+- `benchmark/wp1_probe_set.py` — 54 hand-built cases for Member B's WP1
+  feasibility probe, emitted as validated `GoldInstance` JSONL at
+  `benchmark/data/wp1_probe.jsonl`.
+
+  | Group | n | Purpose |
+  |---|---|---|
+  | Implicit conditions | 28 | the probe's core — what Contrastive Scope Probing must recover |
+  | Explicit conditions | 8 | control arm; explicit/implicit are reported separately |
+  | Distractors | 14 | factual, temporal, opinion, no-conflict, redundant — the SCR denominator |
+  | Disjoint / opposed | 4 | so the set covers all four scope relations |
+
+- Every instance carries `annotator_a="model-proposed"`, `annotator_b=None`.
+  **This is not gold data until Member A signs off.** That is the workflow the
+  proposal specifies (model proposes, human verifies), and reviewing is far
+  faster than authoring.
+- `python -m benchmark.wp1_probe_set --review` prints a verification sheet with
+  a four-point checklist per case and a `why` note saying exactly what the
+  reader must infer.
+
+**Design notes**
+
+- The 28 implicit cases each carry the narrowing by a *different device* —
+  product name, scheme membership, tier, amount threshold, jurisdiction, time
+  window, customer status, sponsor attribute, recharacterisation, negated
+  sub-condition. A method that handles only one device is exposed rather than
+  flattered.
+- Deliberate boundary cases for Member A to adjudicate: `imp_008` (origination
+  date — conditional, NOT temporal, since both texts remain in force);
+  `imp_019` and `imp_020` (surface contradictions that are conditional, not
+  factual); `fin_red_049` (nested scope, agreeing outcome — the single most
+  important distractor, since proposing a condition there fabricates a branch).
+- Prose is written for this benchmark, not copied from any provider: realistic
+  in shape, fictional in content, so the set carries no licensing question.
+  Tagged `construction="split"` so it can never be counted toward Tier 1.
+
+**Two problems the tooling caught in the draft**
+
+1. **Four "implicit" cases contained exception cues.** One (`imp_009`,
+   "exempt from") was genuinely mislabelled and has been reworded. The other
+   three were false positives from an overly broad cue list — see below.
+   `check_implicitness()` now runs inside `build_all()`, so a mislabelled case
+   cannot be emitted.
+
+2. **`contract.validate` reported no `disjoint` or `opposed` instances**, with
+   the note that a fixture missing a relation cannot catch confusions involving
+   it. Four cases added; all four relations are now present.
+
+**A real defect in the detector, found while checking the probe set**
+
+`EXCEPTION_CUES` lumped strong exception markers together with generic
+conditional prose — `"where the"`, `"if the"`, `"subject to"`. Those fire on
+almost every sentence in this domain, so `exception_cues_max`, one of the
+strongest signals for the conditional class, was partly measuring "this text
+describes a rule" rather than "this text states an exception". The noise landed
+directly on the factual/conditional cell the detector is judged on. Now split
+into `STRONG_EXCEPTION_CUES` and `WEAK_CONDITION_CUES`; the feature counts
+strong cues only.
+
+**Measured**
+
+| Check | Result |
+|---|---|
+| Probe set validation | **54/54 valid**, all 4 scope relations |
+| Implicit/explicit split | 0 mislabelled (enforced at build time) |
+| Test suite | **246 passed** |
+| Baselines on probe prose | nli_filter **26.8%** branch loss (vs 15.8% on templates) |
+
+That last row is worth noting: realistic varied phrasing is harder than the
+templates, which is exactly why the probe set exists.
+
+**Next for Member A**
+
+1. `python -m benchmark.wp1_probe_set --review` and verify all 54. Correct the
+   Python source, not the JSONL, then regenerate.
+2. Hand the verified JSONL to Member B to start the probe.
+3. Remaining non-code items unchanged: contract sign-off, rotate the key, WP0,
+   Tier-1 mining on real documents, WP2 annotation, kappa pilot, review deck.
+
+---
+
 ### 2026-09-22 — Closed Member A's six code gaps
 
 All six items from the completeness audit. Four of them surfaced real bugs.

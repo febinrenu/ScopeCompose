@@ -26,16 +26,36 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass
 
-# Multi-word cues are matched as phrases, so they must be checked before
-# falling back to single tokens.
-EXCEPTION_CUES: tuple[str, ...] = (
+# Cues are split by strength, which is not cosmetic.
+#
+# STRONG cues mark an EXCEPTION: the passage is signalling that it overrides or
+# carves out of something else. WEAK cues mark a CONDITION generally -- "where
+# the balance is settled", "transfers subject to verification" -- and appear
+# constantly in ordinary rule-governed prose that carves out nothing.
+#
+# Lumping them together was a real defect: "where the", "if the" and "subject
+# to" fired on plain conditional sentences, so `exception_cues_max` was partly
+# measuring "this text describes a rule" rather than "this text states an
+# exception". Since that feature is one of the strongest signals for the
+# conditional class, the noise landed directly on the factual/conditional cell
+# the detector is judged on.
+
+STRONG_EXCEPTION_CUES: tuple[str, ...] = (
     "except", "unless", "excluding", "other than", "save for", "apart from",
     "does not apply", "do not apply", "shall not apply", "is not applicable",
-    "notwithstanding", "subject to", "provided that", "provided, that",
-    "only if", "only when", "only for", "solely for", "limited to",
+    "notwithstanding", "provided that", "provided, that",
+    "only if", "only when", "only for", "solely for",
     "waived for", "exempt from", "exemption", "carve-out", "carve out",
-    "in the case of", "where the", "if the", "unless otherwise",
+    "unless otherwise", "with the exception of", "save that",
 )
+
+WEAK_CONDITION_CUES: tuple[str, ...] = (
+    "subject to", "in the case of", "where the", "if the", "limited to",
+    "provided", "for the purposes of", "in respect of",
+)
+
+#: Union, kept because callers outside this module treat it as "any cue".
+EXCEPTION_CUES: tuple[str, ...] = STRONG_EXCEPTION_CUES + WEAK_CONDITION_CUES
 
 RESTRICTION_CUES: tuple[str, ...] = (
     "tier", "premium", "platinum", "signature", "gold", "silver", "bronze",
@@ -76,7 +96,8 @@ def _qualifier_count(text: str) -> int:
     """
     low = text.lower()
     return (
-        _count_cues(low, EXCEPTION_CUES)
+        _count_cues(low, STRONG_EXCEPTION_CUES)
+        + _count_cues(low, WEAK_CONDITION_CUES)
         + _count_cues(low, RESTRICTION_CUES)
         + len(_MODAL_RE.findall(low))
         + low.count(",")
@@ -146,8 +167,11 @@ def extract_pair_features(text_i: str, text_j: str) -> PairFeatures:
     changed under passage reordering would break the order-invariance property
     A4 is required to hold.
     """
-    exc_i = _count_cues(text_i, EXCEPTION_CUES)
-    exc_j = _count_cues(text_j, EXCEPTION_CUES)
+    # Strong cues only: a weak cue means "this sentence states a condition",
+    # which is true of almost every passage in this domain and therefore
+    # separates nothing.
+    exc_i = _count_cues(text_i, STRONG_EXCEPTION_CUES)
+    exc_j = _count_cues(text_j, STRONG_EXCEPTION_CUES)
     res_i = _count_cues(text_i, RESTRICTION_CUES)
     res_j = _count_cues(text_j, RESTRICTION_CUES)
     qual_i = _qualifier_count(text_i)
