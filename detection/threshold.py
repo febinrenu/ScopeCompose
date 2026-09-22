@@ -33,6 +33,7 @@ import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import settings
 from contract.models import QueryRecord
 from detection.stage1 import Stage1Filter
 
@@ -247,9 +248,7 @@ def render(results: list[BandResult], pick: BandResult | None, why: str) -> str:
 
     # A saturated curve cannot tune anything, and the output looks like a
     # spectacular result rather than a useless one. Say so.
-    accs = {round(r.overall_accuracy, 4) for r in results}
-    zero_band = next((r for r in results if r.escalation_rate == 0.0), None)
-    if len(accs) == 1 or (zero_band and zero_band.stage1_accuracy >= 0.99):
+    if is_saturated(results):
         lines += [
             "  SATURATED CURVE -- this tuning run is not usable.",
             "",
@@ -280,6 +279,42 @@ def render(results: list[BandResult], pick: BandResult | None, why: str) -> str:
     return "\n".join(lines)
 
 
+def is_saturated(results: list[BandResult]) -> bool:
+    """True when the curve cannot distinguish bands.
+
+    Either every band scores identically, or stage 1 is already near-perfect
+    with no escalation at all. Both mean the data is too easy to tune on --
+    which is what templated fixtures look like.
+    """
+    if not results:
+        return True
+    accs = {round(r.overall_accuracy, 4) for r in results}
+    zero_band = next((r for r in results if r.escalation_rate == 0.0), None)
+    return len(accs) == 1 or bool(zero_band and zero_band.stage1_accuracy >= 0.99)
+
+
+def write_band(pick: BandResult, *, dataset: str) -> None:
+    """Persist the chosen band to ``config/hardware.yaml``.
+
+    Records the dataset it was fitted on alongside the numbers, because a band
+    tuned on one corpus is not evidence for another, and six weeks later
+    nobody remembers which.
+    """
+    import yaml
+
+    raw = yaml.safe_load(settings.HARDWARE_YAML.read_text(encoding="utf-8"))
+    raw.setdefault("detection", {})
+    raw["detection"]["low_threshold"] = float(pick.low)
+    raw["detection"]["high_threshold"] = float(pick.high)
+    raw["detection"]["tuned"] = True
+    raw["detection"]["tuned_on"] = dataset
+    settings.HARDWARE_YAML.write_text(
+        yaml.safe_dump(raw, sort_keys=False, default_flow_style=False),
+        encoding="utf-8", newline="\n",
+    )
+    settings.reload()
+
+
 def main(argv: list[str] | None = None) -> int:
     from detection.variants.compare import load_records
 
@@ -297,6 +332,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-accuracy", type=float, default=None,
                     help="accuracy floor, e.g. 0.95")
     ap.add_argument("--json", type=Path, default=None, help="write the raw curve here")
+    ap.add_argument("--write", action="store_true",
+                    help="write the chosen band back to config/hardware.yaml and mark "
+                         "it tuned")
     args = ap.parse_args(argv)
 
     if args.max_escalation is not None and args.min_accuracy is not None:
@@ -327,6 +365,23 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
         print(f"\ncurve -> {args.json}")
+
+    if args.write:
+        if pick is None:
+            print("\nnothing to write: no band was chosen", file=sys.stderr)
+            return 1
+        if is_saturated(results):
+            print(
+                "\nREFUSING to write a band tuned on a saturated curve. Every band "
+                "scored the same, so the chosen one is arbitrary, and marking it "
+                "'tuned: true' would be a claim the rest of the pipeline then trusts.",
+                file=sys.stderr,
+            )
+            return 1
+        write_band(pick, dataset=str(args.data))
+        print(f"\nwrote band [{pick.low}, {pick.high}] to "
+              f"{settings.HARDWARE_YAML.name} and marked it tuned "
+              f"(tuned_on: {args.data})")
     return 0
 
 

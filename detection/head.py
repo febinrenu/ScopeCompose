@@ -18,6 +18,7 @@ unrelated".
 
 from __future__ import annotations
 
+import hashlib
 import json
 import pickle
 from dataclasses import dataclass
@@ -25,6 +26,40 @@ from pathlib import Path
 from typing import Literal, Sequence
 
 import numpy as np
+
+
+def feature_signature() -> str:
+    """Fingerprint of everything that determines what a feature VALUE means.
+
+    A saved head is only valid for the feature extractor it was fitted on. The
+    vector's *shape* is not enough to check that: splitting the cue lists
+    changed what ``exception_cues_max`` counts without changing how many
+    numbers there are, so a stale head loaded fine and scored nonsense. This
+    hashes the feature names together with the cue vocabularies, so any change
+    to either invalidates the checkpoint loudly.
+    """
+    from detection.features import (
+        OPINION_CUES,
+        RESTRICTION_CUES,
+        STRONG_EXCEPTION_CUES,
+        TEMPORAL_CUES,
+        WEAK_CONDITION_CUES,
+        PairFeatures,
+    )
+
+    payload = json.dumps({
+        "features": PairFeatures.names(),
+        "strong": list(STRONG_EXCEPTION_CUES),
+        "weak": list(WEAK_CONDITION_CUES),
+        "restriction": list(RESTRICTION_CUES),
+        "temporal": list(TEMPORAL_CUES),
+        "opinion": list(OPINION_CUES),
+    }, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+
+class StaleHeadError(RuntimeError):
+    """A saved head was fitted on a different feature extractor."""
 
 
 def interaction_features(e_i: np.ndarray, e_j: np.ndarray) -> np.ndarray:
@@ -134,7 +169,8 @@ class PairHead:
         with p.open("wb") as fh:
             pickle.dump(
                 {"model": self._model, "scaler": self._scaler, "classes": self.classes_,
-                 "config": self.config, "feature_names": self.feature_names},
+                 "config": self.config, "feature_names": self.feature_names,
+                 "feature_signature": feature_signature()},
                 fh,
             )
         p.with_suffix(".json").write_text(
@@ -144,9 +180,28 @@ class PairHead:
         )
 
     @classmethod
-    def load(cls, path: str | Path) -> PairHead:
+    def load(cls, path: str | Path, *, strict: bool = True) -> PairHead:
+        """Load a saved head.
+
+        ``strict=True`` refuses a head whose feature signature no longer
+        matches the current extractor. That refusal is the point: a stale head
+        does not crash, it quietly scores against features that have changed
+        meaning, and every downstream number is then wrong in a way nothing
+        surfaces.
+        """
         with Path(path).open("rb") as fh:
             blob = pickle.load(fh)
+
+        saved_sig = blob.get("feature_signature")
+        current_sig = feature_signature()
+        if strict and saved_sig != current_sig:
+            raise StaleHeadError(
+                f"{path} was fitted on feature signature {saved_sig or '(none recorded)'}, "
+                f"but the current extractor is {current_sig}. The feature set or a cue "
+                f"vocabulary has changed since it was trained. Retrain it: "
+                f"python -m detection.train --data <labelled.jsonl>"
+            )
+
         head = cls(blob["config"], feature_names=blob.get("feature_names"))
         head._model = blob["model"]
         head._scaler = blob["scaler"]

@@ -11,6 +11,79 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-22 (later still) — Closed the debt from today's own work
+
+An audit of what I had built during the day, not of the original plan. Four
+issues, all self-inflicted, all now fixed.
+
+**Done**
+
+1. **Tests for the six untested modules.** `tests/test_tooling.py`, 51 tests
+   covering `threshold.py`, `train.py`, `run_baselines.py`,
+   `run_retrieval_eval.py`, `wp1_probe_set.py` and `budget_estimate.py`.
+   Everything written that day had shipped with zero coverage while the core
+   pipeline had 246 tests. **Suite: 246 -> 297.**
+
+2. **Stale trained heads are now rejected instead of silently used.**
+   `models/stage1_head.pkl` had been fitted before the cue-list split changed
+   what `exception_cues_*` *counts*. The vector shape was unchanged, so it
+   loaded fine and scored nonsense — the worst kind of failure, because
+   nothing surfaces it. `PairHead` now records a `feature_signature()` hashing
+   the feature names together with every cue vocabulary; `load()` refuses a
+   mismatch with a retrain command, and `Stage1Filter` warns loudly rather
+   than falling back in silence. The stale file was deleted.
+
+3. **`--write` now exists.** `threshold.py` documented a flag that was never
+   implemented, so tuning produced numbers with no path back into config. It
+   now writes the chosen band to `config/hardware.yaml`, records `tuned_on`,
+   and **refuses to write a band tuned on a saturated curve**. `Stage1Filter`
+   reads its band from config, so a tuned band is actually used.
+
+4. **README documents the tooling.** Eight of nine new tools were missing from
+   the plan of record — the file Member B reads. Added, grouped by purpose,
+   with the correct running order (train the head *before* tuning the band;
+   the sweep is meaningless against the near-chance rule fallback). Status
+   legend rewritten: several rows are DONE for the *harness* while the run
+   itself is PENDING real data, and saying so is the point.
+
+**Bugs found while doing it**
+
+- `train.py` was auto-loading an existing head while fitting a new one, so the
+  "rule-based baseline" it reported was not the rule-based baseline.
+- My first `--write` patch silently failed to apply: the argparse flag landed
+  but the handler did not, reproducing the exact documented-but-unimplemented
+  bug I was fixing. Caught by running it rather than trusting the patch.
+- Running `--write` on mock data marked the committed config `tuned: true`.
+  Reverted. `test_shipped_thresholds_are_marked_untuned` now guards it —
+  a band fitted to templated data is worse than no band, because it looks
+  legitimate.
+
+**State**
+
+| Check | Result |
+|---|---|
+| Test suite | **297 passed** |
+| Order-invariance gate | **PASS, 1.0000** |
+| WP1 probe set | 54/54 valid |
+| Shipped escalation band | `tuned: false` — placeholder, as it should be |
+
+**Still open — all non-code, all Member A's**
+
+1. Verify the 54 probe cases → unblocks Member B
+2. Contract sign-off from Member B → blocks everything
+3. Rotate the Groq key
+4. WP0 literature review — *gating*
+5. Tier-1 mining on ~20 real documents — *gating*, harness ready, no documents
+6. WP2 annotation, 250–350 instances — largest time cost
+7. kappa pilot with Member B
+8. Zeroth review deck, slides 4–8
+
+Two tools produce fixture artifacts until real data exists, and say so
+themselves: the threshold curve saturates on templates, and exception recall
+is floored by near-duplicate mock passages.
+
+---
+
 ### 2026-09-22 (later) — WP1 probe set drafted (54 cases, awaiting Member A verification)
 
 **Done**

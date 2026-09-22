@@ -81,6 +81,12 @@ class HardwareProfile:
     top_k: int
     rrf_k: int
 
+    low_threshold: float = 0.35
+    high_threshold: float = 0.75
+    thresholds_tuned: bool = False
+    """False means the escalation band is still a placeholder. Any escalation
+    rate quoted from an untuned band is describing two invented constants."""
+
     def resolve_device(self) -> str:
         """Turn ``device: auto`` into a concrete device string.
 
@@ -129,6 +135,7 @@ def hardware(profile: str | None = None) -> HardwareProfile:
         )
     p = profiles[name]
     retrieval = raw.get("retrieval", {})
+    detection = raw.get("detection", {})
 
     return HardwareProfile(
         name=name,
@@ -140,6 +147,9 @@ def hardware(profile: str | None = None) -> HardwareProfile:
         finetune=_model_spec(p["finetune"]),
         top_k=int(retrieval.get("top_k", 5)),
         rrf_k=int(retrieval.get("rrf_k", 60)),
+        low_threshold=float(detection.get("low_threshold", 0.35)),
+        high_threshold=float(detection.get("high_threshold", 0.75)),
+        thresholds_tuned=bool(detection.get("tuned", False)),
     )
 
 

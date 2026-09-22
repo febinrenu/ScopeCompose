@@ -86,3 +86,22 @@ profiles:
 retrieval:
   top_k: 5
   rrf_k: 60                   # reciprocal-rank-fusion damping constant
+
+# A2 stage-1 / stage-2 escalation band.
+#
+# Pairs scoring inside [low, high] escalate to an API call; everything outside
+# is resolved locally. The escalation rate IS the API cost of detection, and on
+# a capped free tier it is the wall-clock cost too, so these are not arbitrary
+# constants. Tune them and write them back with:
+#
+#     python -m detection.threshold --data <dev.jsonl> --min-accuracy 0.95 --write
+#
+# The values below are PLACEHOLDERS. `tuned: false` means exactly that: they
+# have not been fitted to anything, and any escalation rate quoted from them is
+# describing two invented numbers. Tune on ANNOTATED data -- a band fitted to
+# templated mock data is worse than no band, because it looks legitimate.
+detection:
+  low_threshold: 0.35
+  high_threshold: 0.75
+  tuned: false                # set to true only by --write, on real data
+  tuned_on: null              # which dataset the band was fitted to

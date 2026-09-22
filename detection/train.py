@@ -123,7 +123,10 @@ def train(
     kind: str = "logistic",
     heuristic_nli: bool = False,
 ) -> tuple[PairHead, TrainReport]:
-    stage1 = Stage1Filter(heuristic_nli=heuristic_nli)
+    # auto_load_head=False: we are FITTING a head, so loading a previous one
+    # would mean the reported rule-based baseline is not the rule-based
+    # baseline, and a stale checkpoint would warn on every training run.
+    stage1 = Stage1Filter(heuristic_nli=heuristic_nli, auto_load_head=False)
     train_recs, dev_recs = _split(records, dev_fraction)
 
     X_tr, y_tr = _matrix(train_recs, stage1)

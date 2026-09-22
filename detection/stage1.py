@@ -15,15 +15,17 @@ trained system.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from itertools import combinations
 from pathlib import Path
 
 import numpy as np
 
+import settings
 from contract.models import Passage, QueryRecord
 from detection.features import PairFeatures, extract_pair_features
-from detection.head import HeadConfig, PairHead
+from detection.head import HeadConfig, PairHead, StaleHeadError
 from detection.nli import NLIScorer, NLIScores, get_nli
 
 DEFAULT_HEAD_PATH = Path("models/stage1_head.pkl")
@@ -78,8 +80,8 @@ class Stage1Filter:
         head: PairHead | None = None,
         profile: str | None = None,
         heuristic_nli: bool = False,
-        low_threshold: float = 0.35,
-        high_threshold: float = 0.75,
+        low_threshold: float | None = None,
+        high_threshold: float | None = None,
         auto_load_head: bool = True,
     ):
         """
@@ -88,10 +90,12 @@ class Stage1Filter:
         low_threshold, high_threshold
             The escalation band. Pairs scoring below ``low`` are confidently
             non-conflicting and pairs above ``high`` are confidently
-            conflicting; only the middle is sent to stage 2. These defaults are
-            placeholders -- tune them with ``python -m detection.threshold``,
-            because the escalation rate is the API cost of detection and on a
-            capped tier it is the wall-clock cost too.
+            conflicting; only the middle is sent to stage 2. ``None`` reads the
+            band from ``config/hardware.yaml``, whose shipped values are
+            PLACEHOLDERS until tuned -- see ``thresholds_tuned``. Tune with
+            ``python -m detection.threshold --data <dev> --write``, because the
+            escalation rate is the API cost of detection and on a capped tier
+            it is the wall-clock cost too.
         auto_load_head
             Load a trained head from :data:`DEFAULT_HEAD_PATH` when one exists.
             Without a trained head the filter falls back to a hand-weighted
@@ -101,15 +105,37 @@ class Stage1Filter:
         """
         self.nli = nli if nli is not None else get_nli(profile, heuristic=heuristic_nli)
         self.head = head
-        self.low = low_threshold
-        self.high = high_threshold
+
+        # Band comes from config/hardware.yaml unless overridden, so a band
+        # tuned by `python -m detection.threshold --write` is actually picked
+        # up by the pipeline instead of sitting in a file nothing reads.
+        hw = settings.hardware(profile)
+        self.low = hw.low_threshold if low_threshold is None else low_threshold
+        self.high = hw.high_threshold if high_threshold is None else high_threshold
+        self.thresholds_tuned = hw.thresholds_tuned
 
         if self.head is None and auto_load_head and DEFAULT_HEAD_PATH.exists():
             try:
                 self.head = PairHead.load(DEFAULT_HEAD_PATH)
-            except Exception:
-                # A head saved against a different feature set must not stop
-                # the pipeline; the rule-based fallback still runs.
+            except StaleHeadError as exc:
+                # Loudly, not silently. Falling back without a word would leave
+                # the pipeline quietly running the near-chance rule instead of
+                # the trained head, and the only visible symptom would be worse
+                # numbers with no explanation.
+                warnings.warn(
+                    f"ignoring the saved stage-1 head: {exc}",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                self.head = None
+            except Exception as exc:
+                warnings.warn(
+                    f"could not load {DEFAULT_HEAD_PATH}: {exc}. "
+                    f"Falling back to the rule-based scorer, which is a scaffold, "
+                    f"not a model.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
                 self.head = None
 
     # -- scoring -------------------------------------------------------------- #

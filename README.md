@@ -236,7 +236,11 @@ judge fails to track human labels, that is a finding to report, not a number to 
 
 ## 6. Module build order
 
-Status legend: NOT STARTED / IN PROGRESS / DONE
+Status legend: **DONE** (built, tested, verified by running) / **STUBBED**
+(interface fixed, body is Member B's) / **PENDING** (needs data or a human).
+
+A status that lies is worse than no status, so these are kept honest: several
+say DONE for the *harness* while the run itself is PENDING real data.
 
 ### Phase 0–2 — foundations (Week 1, must come first)
 
@@ -267,6 +271,25 @@ development iteration free instead of metered. Both are due end of Week 1.
 | `baselines/rerank.py` | A | single top passage | DONE |
 | `baselines/nli_filter.py` | A | drop the passage judged inconsistent — the vivid, directly demonstrable suppression case | DONE |
 | `metrics/` | B leads | A contributes the detection, classification, scope and order-invariance scorers; B owns PR/SR/HCR/SCR and the judge validation | A's part DONE, B's stubbed |
+
+### Tooling (built alongside the modules)
+
+| Tool | What it answers | Status |
+|---|---|---|
+| `scripts/discover_models.py` | what does my account actually serve? | DONE |
+| `scripts/smoke_test.py` | is every tier reachable, does JSON parse, does the cache work? | DONE |
+| `scripts/budget_estimate.py` | does this run fit the daily caps, and in how many days? | DONE |
+| `scripts/eval_descriptors.py` | how often does A4 decide scope arithmetically rather than by entailment? | DONE |
+| `detection/train.py` | fit and persist the stage-1 head; does it beat the rule fallback? | DONE |
+| `detection/threshold.py` | what escalation band, at what cost/accuracy trade-off? | DONE, **needs real data** |
+| `experiments/run_baselines.py` | do the baselines still have the exception passage at generation time? | DONE |
+| `experiments/run_retrieval_eval.py` | recall@k, and **exception** recall@k | DONE, **needs real data** |
+| `benchmark/wp1_probe_set.py` | 54 probe cases for Member B | DONE, **needs verification** |
+
+Two of these currently produce fixture artifacts rather than results, and say
+so in their own output: the threshold curve saturates on templated data, and
+exception recall is floored by near-duplicate mock passages. Both need the WP2
+corpus before anything they print is quotable.
 
 ### Phase 5 — gating work packages
 
@@ -320,15 +343,60 @@ python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_
 
 ### Running things
 
+**Everyday**
+
 ```bash
 pytest                                                   # full suite, offline, zero API spend
 python -m contract.mock --n 50 --seed 0 -o mock.jsonl    # deterministic mock records for Member B
 python -m contract.validate mock.jsonl                   # validate any JSONL against the contract
 python -m contract.export_schema                         # regenerate contract/schema/v1.0.0.json
-python -m api_budget.costlog report                      # weekly API spend review
-python -m scope.order_invariance --sample 50             # must pass at 100%
-python -m detection.variants.compare --data mock.jsonl   # the three-architecture comparison table
-python -m experiments.run_pipeline --query "..."         # end-to-end A1->A4
+python -m experiments.run_pipeline --data mock.jsonl     # end-to-end A1->A4 (add --live for real calls)
+```
+
+**The correctness gate** — run this before any commit that touches `scope/`.
+It exits non-zero on failure, so it can gate CI, and it must pass at 1.0000:
+
+```bash
+python -m scope.order_invariance --sample 60 --heuristic-nli
+```
+
+**Provider and budget** — run the smoke test after any change to
+`config/models.yaml`, and the estimator before any full-corpus pass:
+
+```bash
+python scripts/discover_models.py --show      # what your account actually serves
+python scripts/smoke_test.py --all-tiers      # every tier reachable, JSON parses, cache works
+python scripts/budget_estimate.py --judge-batched --ablation-instances 100
+python -m api_budget.report                   # weekly spend review
+```
+
+**Training and tuning** — in this order; the threshold sweep is meaningless
+against the untrained rule-based fallback, which scores near chance:
+
+```bash
+python -m detection.train --data train.jsonl              # fit + persist the stage-1 head
+python -m detection.threshold --data dev.jsonl --min-accuracy 0.95 --write
+```
+
+`--write` stores the chosen band in `config/hardware.yaml` and marks it
+`tuned: true`. Until then the shipped band is a **placeholder**, and any
+escalation rate quoted from it is describing two invented constants.
+
+**Evaluation**
+
+```bash
+python -m detection.variants.compare --data gold.jsonl    # three-architecture comparison
+python -m experiments.run_baselines --data gold.jsonl --show-examples 2
+python -m experiments.run_retrieval_eval --data gold.jsonl --k 5
+python scripts/eval_descriptors.py                        # A4 typed-attribute rate
+```
+
+**Benchmark**
+
+```bash
+python -m benchmark.wp1_probe_set --review                # WP1 verification sheet
+python -m benchmark.wp1_probe_set -o benchmark/data/wp1_probe.jsonl
+python -m benchmark.mining.tier1_pilot --docs docs.jsonl  # WP1 Tier-1 yield trial
 ```
 
 ---
