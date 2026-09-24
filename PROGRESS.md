@@ -11,6 +11,76 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-24 (final) - The decisive experiment exists, and its first result was fake
+
+Proposal 6.3's structured long-context baseline now runs end to end. The
+important part of this session is that **the first number it produced was
+wrong in the flattering direction**, and both causes are now tested against.
+
+**Done**
+
+- `baselines/structured_long_context.py` - a long-context model given every
+  passage at once, asked for the gold branch schema. Two variants: `structured`
+  (6.3's strong form) and `freetext`, the latter to separate the pipeline's
+  architectural benefit from the benefit of merely requiring structured output.
+- `metrics/branch_match.py` - deterministic gold-to-predicted branch
+  alignment, so the experiment is scoreable without Member B's LLM judge.
+- `experiments/run_decisive.py` - head-to-head with Wilson intervals, paired
+  bootstrap difference, and McNemar.
+- 376 tests pass (up from 354), 22 of them on this code specifically.
+
+**The first result, and why it was fake**
+
+    pipeline 100.0%  vs  baseline 33.3%   difference +66.7%   p = 3e-05
+
+Spectacular, and wrong at both ends.
+
+1. **The pipeline was scored with GOLD labels.** `to_query_record(
+   include_gold_pairs=True)` hands routing the correct conflict type, so it
+   routes perfectly by construction. That is an ORACLE pipeline compared
+   against a baseline doing its own detection - it flatters the pipeline by
+   exactly the detector's error rate.
+2. **The matcher was too strict.** Gold outcomes are terse annotations; model
+   outputs are verbose prose. Symmetric Jaccard scored gold "a 2.50
+   per-transaction charge applies" against "You will be charged a 2.50 fee per
+   cash withdrawal..." at **0.19** and called two identical outcomes a
+   distortion.
+
+**After fixing both**
+
+    pipeline 50.0%  vs  baseline 58.3%   difference -8.3% [-29.2%, +12.5%]   p = 0.73
+
+The baseline is nominally AHEAD and the interval contains zero. With only 8
+discordant branches the test has almost no power, so this settles nothing yet -
+but it is the honest reading, and it is the opposite of what the broken version
+said.
+
+**Fixes**
+
+- `score_pipeline_routing(oracle=...)` defaults to running the REAL detector.
+  Oracle mode still exists, is labelled "oracle routing" in every output, and
+  its docstring says plainly that comparing it to a self-detecting baseline is
+  the easiest way to manufacture a result here.
+- Matching now combines three signals: numeric disagreement as a hard veto,
+  symmetric Jaccard OR asymmetric containment, and optional NLI entailment.
+  Containment handles the verbose-prediction case; **NLI is required for true
+  paraphrase**, and a test records that containment alone does not rescue the
+  original failing example.
+
+**What the renderer now does**
+
+Prints the falsifying outcome as prominently as a positive one, per 6.5; warns
+when fewer than 10 branches are discordant; and states the open-weights
+asymmetry inline - a pipeline win is weak evidence, a baseline win is decisive.
+
+**Still not journal-ready**
+
+Zero annotated instances, no kappa, WP0 not started. Every number above is on
+12 hand-built unverified instances with the offline detector. The machinery is
+right; the data is not there.
+
+---
+
 ### 2026-09-24 (final) - Statistical rigour layer, and a broken invariance guarantee
 
 Answering "is this journal-ready?" honestly: no, and the largest closable gap

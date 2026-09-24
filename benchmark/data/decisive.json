@@ -1,0 +1,60 @@
+{
+  "pipeline": {
+    "name": "pipeline (real detection)",
+    "PR": 0.5,
+    "SR": 0.5,
+    "distortion": 0.0,
+    "HCR": 0.0,
+    "SCR": 0.0,
+    "gold_branches": 24,
+    "instances": 12,
+    "PR_ci": {
+      "point": 0.5,
+      "ci_low": 0.314274,
+      "ci_high": 0.685726,
+      "confidence": 0.95,
+      "method": "wilson",
+      "n": 24
+    }
+  },
+  "baselines": [
+    {
+      "name": "long-context (structured)",
+      "PR": 0.5833,
+      "SR": 0.0417,
+      "distortion": 0.375,
+      "HCR": 0.0,
+      "SCR": 0.0,
+      "gold_branches": 24,
+      "instances": 12,
+      "PR_ci": {
+        "point": 0.583333,
+        "ci_low": 0.388347,
+        "ci_high": 0.755324,
+        "confidence": 0.95,
+        "method": "wilson",
+        "n": 24
+      }
+    }
+  ],
+  "comparison": {
+    "mcnemar": {
+      "b": 3,
+      "c": 5,
+      "both_right": 9,
+      "both_wrong": 7,
+      "p_value": 0.7265625,
+      "method": "exact binomial",
+      "n": 24
+    },
+    "pr_difference": {
+      "point": -0.083333,
+      "ci_low": -0.291667,
+      "ci_high": 0.125,
+      "confidence": 0.95,
+      "method": "bootstrap-diff",
+      "n": 24
+    },
+    "n_shared": 24
+  }
+}
