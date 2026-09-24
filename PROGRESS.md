@@ -11,6 +11,97 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-09-24 (later still) - Member B built: B1, B2, B3 and the preservation metrics. Four scoring bugs found on the way.
+
+The pipeline now runs end to end. Building B exercised the shared scoring code
+against real structures for the first time, and it broke in four places -- every
+one of them silently, and three of them in the direction of a better-looking
+number.
+
+**Done**
+- `extraction/probing.py` (B1) - Contrastive Scope Probing plus the grounding
+  gate. Contrastive questions rather than open ones, because a question with a
+  presupposition is harder to answer vacuously. The gate scores
+  `passage |= (condition AND outcome)` locally and its rejection rate is
+  reported: a gate that rejects nothing is not a gate. Includes the cue-matching
+  fallback as the baseline the probe must beat.
+- `composition/operator.py` (B2) - the composition operator. Routes on A4's
+  relation, merges restatements rather than branching them, and flags `nested`
+  and `crossed` separately instead of composing second-order structure.
+- `generation/scoped_answer.py` (B3) - scoped answers with per-branch
+  attribution. Default renderer uses **no model at all**; `check_faithfulness()`
+  verifies afterwards that every branch reached the answer, that no figure was
+  invented, and that the generator did not rank sources.
+- `metrics/preservation.py` - PR / SR / HCR / SCR implemented against the
+  frozen signatures, broken out by tier. The LLM-judge path raises rather than
+  silently working, because proposal 6.1 requires validation against human
+  labels first.
+- 36 tests added (423 -> 459). Order-invariance gate still PASS at 1.0000.
+
+**Four bugs in the shared scoring code**
+
+1. **Negation was a stopword.** `"no"` and `"not"` were in `_STOP`, so
+   `"no fee applies"` and `"a fee applies"` scored a Jaccard of **1.00** --
+   exact opposites judged identical. A system emitting the reverse of a gold
+   branch was scored as preserving it. This sits in `metrics/branch_match.py`,
+   which the decisive experiment scores on. Fixed by removing them from the
+   stoplist and adding `polarity_conflict()` as a hard veto beside
+   `numbers_conflict()`.
+2. **Two `BranchJudgement` enums.** `align()` returned `branch_match`'s and the
+   scorer compared against `preservation`'s, so every `is` check was False and a
+   perfectly preserved run scored **PR = 0.0** with all branches counted
+   distorted. Now one enum, imported.
+3. **Passage ids read as invented figures.** `(per p0)` matched the number
+   regex, so every correctly-attributed answer was flagged for inventing a
+   figure -- including the template renderer's, which cannot invent anything.
+   That the deterministic path failed its own check is what exposed it.
+4. **Decimals split as clause boundaries.** `[;.]` tore `"a 2.75% fee applies"`
+   into `"a 2"` and `"75% fee applies"`, so any answer quoting a decimal was
+   reported as dropping its own branches.
+
+Plus a false positive from the fix to (1): `"no more than 20 hours"` is a
+quantifier bound, not a negation, and it made a permission read as a
+prohibition. Comparative quantifier phrases are now stripped before polarity is
+counted.
+
+**Decisions**
+- *`PASS_THROUGH` and the flagged path keep only the branches the answer
+  actually states.* Both previously carried every branch through while emitting
+  an answer that stated one or none. On `PASS_THROUGH` that mattered most: a
+  missed conditional conflict is exactly the suppression the project measures,
+  and crediting it with full preservation hid the detector's own failures behind
+  the scorer. End-to-end PR on mock fell from an inflated **0.97** to **0.58**
+  against **0.73** with oracle routing -- the 0.15 gap is the detector's real
+  contribution.
+- *Generation defaults to the template renderer, no model.* It cannot drop a
+  branch or invent a figure. The model earns its place only where fluency is
+  being measured, and the two are reported as separate systems.
+- *The LLM judge is unreachable by default.* Passing a client raises. An
+  unvalidated judge that quietly works would get used.
+- *`validate_judge` reports rank correlation as well as agreement.* A judge can
+  agree on 85% of branches and still mis-rank two systems if its errors
+  concentrate in one -- and the ranking is what a conclusion rests on.
+
+**Decisive experiment re-run after the matcher fix**
+Baseline PR 58.3% -> 62.5%, difference -8.3% -> **-12.5% [-37.5%, +12.5%]**,
+McNemar p = 0.51, 9 discordant branches. **Conclusion unchanged**: the interval
+contains zero and the test has almost no power at this size. Both directions of
+the negation fix moved numbers -- negation-to-negation now matches better,
+negation-to-affirmation is now vetoed.
+
+**Verified**
+- A -> B end to end on mock: A1-A4 output feeds B2-B3 without adaptation, 25/25
+  answers faithful, PR/SR separate composition (0.78) from pure selection
+  (0.49) as the design requires.
+
+**Next up**
+- Everything remaining is data, not code: the 54 probe cases need human
+  verification (3 flagged in `docs/wp1_probe_verification.md`), WP0's
+  closed-venue sweep, WP2 annotation, and the kappa pilot, which needs a second
+  person.
+
+---
+
 ### 2026-09-24 (later) - Annotation tooling, probe verification, WP0 first pass, and a schema bug that inverted four test cases
 
 Cleared the remaining Member A work and the manual tasks. The verification pass

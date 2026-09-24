@@ -1,8 +1,28 @@
-"""MEMBER B owns this module. Member A must not implement it.
+"""B2: the composition operator.
 
-This is a placeholder so the package imports and the shared harness can be
-wired end to end before Member B's code lands. Filling it in would erase the
-A/B split that both zeroth-review presentations depend on.
+The step that replaces selection. Prior conflict-aware RAG reaches this point,
+ranks the sources and emits the winner; this assembles a structure keeping
+every branch that is true, each attached to the scope it is true under.
 
-See README.md section 2 for the ownership split, and CONVENTIONS.md for the rule.
+Second-order structure -- an exception carved back by a further exception
+(``nested``), or two exceptions that co-occur and disagree (``crossed``) -- is
+outside this project's first-order scope. It is detected and flagged, never
+composed recursively and never silently picked between. The two flags are
+reported separately because they say different things about the data.
 """
+
+from composition.operator import (
+    ComposedAnswer,
+    CompositionOperator,
+    CompositionStats,
+    Resolution,
+    classify_exception_pair,
+)
+
+__all__ = [
+    "ComposedAnswer",
+    "CompositionOperator",
+    "CompositionStats",
+    "Resolution",
+    "classify_exception_pair",
+]

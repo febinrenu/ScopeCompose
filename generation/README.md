@@ -1,6 +1,4 @@
-# `generation/` — Member B
-
-**Owner: Member B.** Member A must not implement this.
+# `generation/`
 
 ## What goes here
 
@@ -18,14 +16,21 @@ composition. If the generator is given room to adjudicate, it will, and then the
 pipeline's careful branch preservation gets quietly undone at the last step by a
 model picking a favourite.
 
-## What already exists for you
+## Implementation
+
+`scoped_answer.py` implements this. `render_template()` is the default
+renderer and uses no model at all; `check_faithfulness()` verifies afterwards
+that every branch reached the answer, because a rule stated in a prompt is a
+request and a rule checked in code is a constraint.
+
+## What this builds on
 
 - `api_budget` — call `complete(messages=..., tier=Tier.JUDGE,
   step="b3_generation")`. Cached and logged.
 - `contract/gold.py` — the `Branch` structure you are verbalizing, and
   `gold_scoped_answer` / `selection_answer` on `GoldInstance` as references.
 
-## Metrics you own
+## Metrics
 
 PR, SR, SCR, and answer faithfulness (entailment of the generated answer against
 the resolved branch structure).

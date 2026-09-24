@@ -1,6 +1,4 @@
-# `extraction/` — Member B
-
-**Owner: Member B.** Member A must not implement this.
+# `extraction/`
 
 ## What goes here
 
@@ -30,7 +28,19 @@ CONTRASTIVE SCOPE PROBING(base_rule, other_passages):
   5. return admitted, rejected_rate
 ```
 
-## What already exists for you
+## Implementation
+
+`probing.py` implements this. `ContrastiveScopeProbe.probe_record()` runs the
+full loop; `gate()` is the grounding gate and is never disabled outside its own
+ablation.
+
+The rule-based fallback (`use_llm=False`) recovers explicitly-marked conditions
+only, by design. It lives in the same class as the probe rather than in a
+separate ablation file so the comparison is hard to avoid running: if the probe
+does not beat cue matching on unmarked conditions, it has not earned its API
+cost.
+
+## What this builds on
 
 - **The contract** — `contract/models.py`. `QueryRecord` is your input.
   `contract/routing.py` has the routing table as executable code, so you do not
@@ -50,7 +60,7 @@ CONTRASTIVE SCOPE PROBING(base_rule, other_passages):
   uses, which is what keeps the whole local stack inside the 6 GB VRAM floor.
   Pass `heuristic=True` for a no-download stand-in while developing.
 
-## Metrics you own
+## Metrics
 
 Condition-extraction accuracy (explicit and implicit reported **separately**,
 never averaged — implicit recovery is what the method is judged on), the

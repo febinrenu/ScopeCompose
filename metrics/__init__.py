@@ -21,8 +21,10 @@ from metrics.classification import (
 )
 from metrics.preservation import (
     BranchJudgement,
-    NotImplementedByMemberB,
     PreservationScores,
+    judge_branches,
+    score_preservation,
+    validate_judge,
 )
 
 __all__ = [
@@ -30,8 +32,10 @@ __all__ = [
     "BranchJudgement",
     "ClassificationScores",
     "ConfusionMatrix",
-    "NotImplementedByMemberB",
     "PreservationScores",
+    "judge_branches",
+    "score_preservation",
+    "validate_judge",
     "ScopeScores",
     "score_classification",
     "score_detection",

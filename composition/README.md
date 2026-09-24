@@ -1,6 +1,4 @@
-# `composition/` — Member B
-
-**Owner: Member B.** Member A must not implement this.
+# `composition/`
 
 ## What goes here
 
@@ -37,7 +35,13 @@ separately:
 Collapsing them into one "complex" flag throws away the distinction that makes
 the future-work argument concrete.
 
-## What already exists for you
+## Implementation
+
+`operator.py` implements this. `CompositionOperator.compose()` runs steps 1-6;
+`classify_exception_pair()` is step 4 and is exported separately because it is
+the part worth testing directly.
+
+## What this builds on
 
 - `contract/routing.py` — `route()` and `route_with_flags()` implement steps 1–2
   and 5 already, with the reasoning attached to each decision. Use them rather
@@ -49,7 +53,7 @@ the future-work argument concrete.
 - `python -m contract.mock` generates records including deliberately nested and
   crossed cases, so B2's flagging logic has test data before real annotation.
 
-## Metric you own
+## Metric
 
 Correctness of branch-structure assembly, plus the nested-flagged and
 crossed-flagged rates — reported separately, on both the natural corpus and the

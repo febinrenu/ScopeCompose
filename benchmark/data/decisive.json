@@ -20,17 +20,17 @@
   "baselines": [
     {
       "name": "long-context (structured)",
-      "PR": 0.5833,
+      "PR": 0.625,
       "SR": 0.0417,
-      "distortion": 0.375,
+      "distortion": 0.3333,
       "HCR": 0.0,
       "SCR": 0.0,
       "gold_branches": 24,
       "instances": 12,
       "PR_ci": {
-        "point": 0.583333,
-        "ci_low": 0.388347,
-        "ci_high": 0.755324,
+        "point": 0.625,
+        "ci_low": 0.4271,
+        "ci_high": 0.788406,
         "confidence": 0.95,
         "method": "wilson",
         "n": 24
@@ -40,16 +40,16 @@
   "comparison": {
     "mcnemar": {
       "b": 3,
-      "c": 5,
+      "c": 6,
       "both_right": 9,
-      "both_wrong": 7,
-      "p_value": 0.7265625,
+      "both_wrong": 6,
+      "p_value": 0.5078125,
       "method": "exact binomial",
       "n": 24
     },
     "pr_difference": {
-      "point": -0.083333,
-      "ci_low": -0.291667,
+      "point": -0.125,
+      "ci_low": -0.375,
       "ci_high": 0.125,
       "confidence": 0.95,
       "method": "bootstrap-diff",

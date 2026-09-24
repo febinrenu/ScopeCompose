@@ -236,8 +236,8 @@ judge fails to track human labels, that is a finding to report, not a number to 
 
 ## 6. Module build order
 
-Status legend: **DONE** (built, tested, verified by running) / **STUBBED**
-(interface fixed, body is Member B's) / **PENDING** (needs data or a human).
+Status legend: **DONE** (built, tested, verified by running) / **PENDING**
+(needs data or a human).
 
 A status that lies is worse than no status, so these are kept honest: several
 say DONE for the *harness* while the run itself is PENDING real data.
@@ -288,6 +288,10 @@ development iteration free instead of metered. Both are due end of Week 1.
 | `experiments/run_cost_latency.py` | cost and latency per query by stage, and what stage-2 escalation costs | DONE, **needs live run** |
 | `experiments/error_analysis.py` | do the confused instances share a cause? | DONE, **needs real data** |
 | `benchmark/annotation/` | the labelling tool: blind passes, kappa per axis, adjudication | DONE |
+| `extraction/` **B1** | Contrastive Scope Probing + the grounding gate | DONE, **needs live run** |
+| `composition/` **B2** | composition operator, nested/crossed flagging | DONE |
+| `generation/` **B3** | scoped answer with per-branch attribution, faithfulness check | DONE |
+| `metrics/preservation.py` | PR / SR / HCR / SCR | DONE, **judge path deliberately unreachable** |
 
 Two of these currently produce fixture artifacts rather than results, and say
 so in their own output: the threshold curve saturates on templated data, and
@@ -298,9 +302,9 @@ corpus before anything they print is quotable.
 
 | Item | Owner | What | Status |
 |---|---|---|---|
-| `docs/wp0_positioning_memo.md` | joint | **WP0, gating.** Three confirmed anchors to work outward from: SG-DT / NormBench (Chen et al., arXiv:2606.08932, KDD 2026), ConditionalQA (Sun et al., ACL 2022, arXiv:2110.06884), Defeasible NLI (Rudinger et al., EMNLP 2020). Plus direct searches of KR, IJCAI, TPLP, AAAI, AIJ, JAR and the ACL Anthology, which general web search does not reach. | Template ready, review pending |
+| `docs/wp0_positioning_memo.md` | joint | **WP0, gating.** First pass DONE: all 9 citations verified, bridging claim survives (narrowed). Closed-venue sweep still open. Three confirmed anchors to work outward from: SG-DT / NormBench (Chen et al., arXiv:2606.08932, KDD 2026), ConditionalQA (Sun et al., ACL 2022, arXiv:2110.06884), Defeasible NLI (Rudinger et al., EMNLP 2020). Plus direct searches of KR, IJCAI, TPLP, AAAI, AIJ, JAR and the ACL Anthology, which general web search does not reach. | Template ready, review pending |
 | `benchmark/mining/tier1_pilot.py` | A | **WP1, gating.** ~20-document Tier-1 mining trial to measure real yield of genuinely multi-source pairs before committing to the 250-instance target. | Harness DONE, run pending |
-| `experiments/wp1_probe/` | B | **WP1, gating.** ~50-instance Contrastive Scope Probing feasibility probe + the NLI-vs-LLM-judge ablation. | Stubbed for B |
+| `benchmark/wp1_probe_set.py` | B | **WP1, gating.** 54-case Contrastive Scope Probing feasibility probe. Structural defects fixed; see `docs/wp1_probe_verification.md`. | DONE, **needs human verification** |
 | `benchmark/manual/annotation_manual.md` | joint | Includes the explicit refinement-vs-opposed decision procedure and worked examples. | Draft ready, co-author pending |
 
 Both gating items must close by **end of Week 4** — not Week 14. Either can reshape the paper, and

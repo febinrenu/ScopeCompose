@@ -38,8 +38,21 @@ from contract.gold import Applicability, Branch
 from scope.attributes import SetRelation, compare
 
 _WORD_RE = re.compile(r"[a-z0-9']+")
+
+#: Note what is NOT here: "no" and "not". They were stopwords in the first
+#: version, and dropping them made an outcome and its negation identical --
+#: "no fee applies" against "a fee applies" scored a Jaccard of 1.00. Negation
+#: is the entire content of an outcome, never noise.
 _STOP = {"the", "a", "an", "is", "are", "of", "to", "for", "in", "on", "and",
-         "or", "be", "that", "this", "it", "with", "any", "all", "no", "not"}
+         "or", "be", "that", "this", "it", "with", "any", "all"}
+
+#: Syntactic negation markers. Deliberately syntactic only -- "waived",
+#: "exempt" and "free" negate semantically, but they are ordinary content words
+#: whose presence does not flip a clause, and treating them as negators would
+#: make "the fee is waived" conflict with "no fee applies", which is the same
+#: outcome. Semantic opposition is the NLI signal's job.
+_NEGATORS = {"no", "not", "never", "cannot", "neither", "nor", "without",
+             "non", "nothing", "none"}
 
 #: Outcome similarity above which two branches are treated as saying the same
 #: thing. Tuned to be forgiving on wording and strict on content: "a 3% fee
@@ -95,6 +108,59 @@ def numbers_conflict(a: str, b: str) -> bool:
     return bool(na and nb and not (na & nb))
 
 
+#: Comparative quantifier phrases whose "no"/"not" bounds a quantity rather
+#: than negating a clause. "Employment is permitted for no more than 20 hours"
+#: is a permission with a limit, not a prohibition -- but the bare negator made
+#: it read as the opposite polarity to "employment is permitted", so the branch
+#: it actually stated was scored as dropped.
+_QUANTIFIER_RE = re.compile(
+    r"\b(?:no|not)\s+(?:more|less|fewer|later|earlier|sooner|longer)\s+than\b",
+    re.IGNORECASE)
+
+
+def _strip_quantifiers(text: str) -> str:
+    return _QUANTIFIER_RE.sub(" ", text or "")
+
+
+def polarity_conflict(a: str, b: str) -> bool:
+    """Whether one outcome is negated and the other is not, over the same content.
+
+    The companion to :func:`numbers_conflict`, and it exists for the same
+    reason: two outcomes can share almost every word and mean opposite things.
+    "No fee applies" and "a fee applies" differ by one token that token-overlap
+    scoring treats as negligible -- they scored a Jaccard of 1.00 while "no" was
+    a stopword, so a system emitting the exact opposite of a gold branch was
+    scored as having preserved it.
+
+    Parity, not presence: "leave does not lapse" against "leave never lapses"
+    is two negations agreeing, not a conflict. Counting markers and comparing
+    parity handles that; checking "does either contain a negator" does not.
+
+    The content-overlap guard keeps this narrow. Without it, every negated
+    outcome would conflict with every unrelated positive one, and unrelated
+    outcomes are already handled by the similarity thresholds -- this is only
+    for the case where the two say the same thing with opposite sign.
+    """
+    a, b = _strip_quantifiers(a), _strip_quantifiers(b)
+    ta, tb = _tokens(a), _tokens(b)
+    parity_a = len(ta & _NEGATORS) % 2
+    parity_b = len(tb & _NEGATORS) % 2
+    if parity_a == parity_b:
+        return False
+
+    core_a, core_b = ta - _NEGATORS, tb - _NEGATORS
+    if not core_a or not core_b:
+        return False
+
+    # Asymmetric, for the same reason `containment` is. One side is typically a
+    # terse gold outcome and the other a clause of a generated answer carrying
+    # a citation and a figure; symmetric Jaccard is dragged below the threshold
+    # by those extra tokens, and "no fee applies" against "a 3% fee applies
+    # (per p0)" then slips through as non-contradictory.
+    overlap = len(core_a & core_b) / min(len(core_a), len(core_b))
+    return overlap >= 0.6
+
+
 def containment(gold: str, pred: str) -> float:
     """Fraction of the GOLD outcome's content words present in the prediction.
 
@@ -119,9 +185,10 @@ def outcomes_match(gold: str, pred: str, *, nli=None) -> bool:
 
     Three signals, cheapest first:
 
-    1. **Numeric disagreement is disqualifying.** "a 3% fee" and "a 5% fee"
-       share almost every word, so this is checked before any similarity score
-       and overrides both of them.
+    1. **Numeric or polarity disagreement is disqualifying.** "a 3% fee" and
+       "a 5% fee" share almost every word; so do "no fee applies" and "a fee
+       applies". Both are checked before any similarity score and override
+       both of them.
     2. **Lexical**, via symmetric Jaccard OR asymmetric containment. Either
        clearing its threshold is enough: containment catches the verbose-
        prediction case, Jaccard catches the terse-prediction case.
@@ -130,7 +197,7 @@ def outcomes_match(gold: str, pred: str, *, nli=None) -> bool:
        waived" shares nothing -- and this is the only signal that catches it.
        Optional because it costs a model load; supply it for reported numbers.
     """
-    if numbers_conflict(gold, pred):
+    if numbers_conflict(gold, pred) or polarity_conflict(gold, pred):
         return False
 
     if similarity(gold, pred) >= OUTCOME_MATCH:
