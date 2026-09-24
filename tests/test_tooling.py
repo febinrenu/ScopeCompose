@@ -620,3 +620,84 @@ def test_scripts_import_without_touching_the_network(script):
     """Import-time side effects are how a script that only runs under `-m`
     breaks silently. None of these may call out on import."""
     assert hasattr(_load_script(script), "main")
+
+
+# --------------------------------------------------------------------------- #
+# experiments/run_ablations.py
+# --------------------------------------------------------------------------- #
+
+from experiments.run_ablations import (  # noqa: E402
+    ConditionalTypeAblation,
+    _route_instances,
+    explicitness_breakdown,
+    tier_breakdown,
+)
+
+
+def test_removing_the_conditional_class_costs_exception_branches():
+    """The headline ablation. A four-class detector emits `factual` for a
+    general-rule/exception pair, which routes to selection -- and selection
+    keeps one passage, so the exception branch is gone before any resolver
+    sees it."""
+    instances = [_gold_conditional(f"c{i}") for i in range(5)]
+
+    baseline = _route_instances(instances, relabel_conditional_as_factual=False)
+    ablated = _route_instances(instances, relabel_conditional_as_factual=True)
+
+    assert baseline.exception_preservation_rate == 1.0
+    assert ablated.exception_preservation_rate == 0.0
+    assert ConditionalTypeAblation(baseline, ablated).preservation_drop == 1.0
+
+
+def test_ablation_routes_relabelled_pairs_to_prior_work_not_compose():
+    ablated = _route_instances([_gold_conditional()],
+                               relabel_conditional_as_factual=True)
+    assert ablated.composed == 0
+    assert ablated.prior_work == 1
+
+
+def test_ablation_leaves_non_conditional_pairs_alone():
+    """Only conditional pairs are relabelled; a factual distractor routes the
+    same way in both arms, so it cannot inflate the drop."""
+    factual = GoldInstance(
+        instance_id="f1", query="q", domain=Domain.FINANCIAL_TERMS,
+        construction=Construction.NATURAL, passages=_passages(2),
+        gold_conflict_type=ConflictType.FACTUAL, is_distractor=True,
+        gold_branches=[],
+    )
+    base = _route_instances([factual], relabel_conditional_as_factual=False)
+    abl = _route_instances([factual], relabel_conditional_as_factual=True)
+    assert base.prior_work == abl.prior_work == 1
+    assert base.exception_branches == abl.exception_branches == 0
+
+
+def test_preservation_drop_is_zero_with_no_exception_branches():
+    """A corpus with nothing to preserve cannot show a drop, and must not
+    report one as though the ablation had been informative."""
+    factual = GoldInstance(
+        instance_id="f1", query="q", domain=Domain.FINANCIAL_TERMS,
+        construction=Construction.NATURAL, passages=_passages(2),
+        gold_conflict_type=ConflictType.FACTUAL, is_distractor=True,
+        gold_branches=[],
+    )
+    abl = ConditionalTypeAblation(
+        baseline=_route_instances([factual], relabel_conditional_as_factual=False),
+        ablated=_route_instances([factual], relabel_conditional_as_factual=True),
+    )
+    assert abl.preservation_drop == 0.0
+
+
+def test_tier_breakdown_separates_the_two_construction_tiers():
+    natural = _gold_conditional("n1")
+    split = _gold_conditional("s1").model_copy(
+        update={"construction": Construction.SPLIT}
+    )
+    rows = tier_breakdown([natural, split]).rows
+    assert set(rows) == {"natural", "split"}
+    assert rows["natural"]["instances"] == 1
+    assert rows["split"]["instances"] == 1
+
+
+def test_explicitness_breakdown_counts_branches_not_instances_only():
+    rows = explicitness_breakdown([_gold_conditional()]).rows
+    assert rows["explicit"]["exception branches"] == 1

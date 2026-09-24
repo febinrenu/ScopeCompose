@@ -1,0 +1,538 @@
+<title>Scope-Relation Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --paper:      #FAFAF8;
+    --card:       #FFFFFF;
+    --ink:        #171A20;
+    --slate:      #5C6672;
+    --rule:       #E1E3DD;
+    --rule-soft:  #EFF0EC;
+    --accent:     #1F4E79;
+    --accent-dim: #E8EEF4;
+    --preserved:  #2F6B4F;
+    --suppressed: #9B2C2C;
+    --suppressed-dim: #F6EAE9;
+
+    --slide-w: 1000px;
+    --f-display: "Spectral", Georgia, "Times New Roman", serif;
+    --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #0F1216;
+      --card:       #161A20;
+      --ink:        #E8EAE6;
+      --slate:      #98A2AE;
+      --rule:       #2A3038;
+      --rule-soft:  #20262D;
+      --accent:     #7FB2DC;
+      --accent-dim: #182533;
+      --preserved:  #6FBF95;
+      --suppressed: #E0796F;
+      --suppressed-dim: #2C1D1C;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #0F1216;
+    --card:       #161A20;
+    --ink:        #E8EAE6;
+    --slate:      #98A2AE;
+    --rule:       #2A3038;
+    --rule-soft:  #20262D;
+    --accent:     #7FB2DC;
+    --accent-dim: #182533;
+    --preserved:  #6FBF95;
+    --suppressed: #E0796F;
+    --suppressed-dim: #2C1D1C;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 20px 80px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .deck { max-width: var(--slide-w); margin: 0 auto; display: flex; flex-direction: column; gap: 34px; }
+
+  /* ---- deck header ---- */
+  .masthead { padding-bottom: 22px; border-bottom: 2px solid var(--ink); }
+  .masthead .kicker {
+    font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--slate); margin: 0 0 10px;
+  }
+  .masthead h1 {
+    font-family: var(--f-display); font-weight: 700; font-size: 30px;
+    line-height: 1.2; margin: 0 0 8px; text-wrap: balance; letter-spacing: -.01em;
+  }
+  .masthead p { margin: 0; color: var(--slate); font-size: 14.5px; max-width: 68ch; }
+  .masthead .meta {
+    margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px 18px;
+    font-family: var(--f-mono); font-size: 11.5px; color: var(--slate);
+  }
+
+  /* ---- slide card ---- */
+  .slide {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 38px 44px 34px;
+    position: relative;
+    min-height: 500px;
+    display: flex; flex-direction: column;
+  }
+  .slide::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent);
+  }
+  .slide-num {
+    position: absolute; top: 20px; right: 26px;
+    font-family: var(--f-mono); font-size: 11px; color: var(--slate);
+    letter-spacing: .08em;
+  }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .15em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 12px; font-weight: 500;
+  }
+  .slide h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 25px;
+    line-height: 1.25; margin: 0 0 6px; text-wrap: balance; letter-spacing: -.01em;
+  }
+  .standfirst {
+    font-family: var(--f-display); font-style: italic; font-size: 16px;
+    color: var(--slate); margin: 0 0 24px; max-width: 72ch;
+  }
+  .slide h3 {
+    font-family: var(--f-body); font-weight: 600; font-size: 13px;
+    letter-spacing: .02em; margin: 0 0 8px; color: var(--ink);
+  }
+
+  p { margin: 0 0 12px; }
+  .lede { font-size: 16.5px; }
+  strong { font-weight: 600; }
+
+  ul { margin: 0 0 14px; padding-left: 18px; }
+  li { margin-bottom: 7px; }
+  li::marker { color: var(--accent); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .grow { flex: 1; }
+
+  /* ---- the example, used as the deck's spine ---- */
+  .example { display: grid; gap: 10px; margin: 0 0 20px; }
+  .passage {
+    border-left: 3px solid var(--rule); padding: 9px 0 9px 14px;
+    font-family: var(--f-display); font-size: 15.5px;
+  }
+  .passage .who {
+    display: block; font-family: var(--f-mono); font-size: 10px;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--slate);
+    margin-bottom: 3px;
+  }
+  .passage.default-branch { border-left-color: var(--accent); }
+  .passage.exception-branch { border-left-color: var(--suppressed); }
+
+  /* ---- metric tiles ---- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 0 0 18px; }
+  .tile { border: 1px solid var(--rule); border-radius: 2px; padding: 14px 16px; background: var(--paper); }
+  .tile .label {
+    font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--slate); display: block; margin-bottom: 6px;
+  }
+  .tile .value {
+    font-family: var(--f-mono); font-size: 27px; font-weight: 500;
+    line-height: 1; font-variant-numeric: tabular-nums; display: block;
+  }
+  .tile .sub { font-size: 12px; color: var(--slate); display: block; margin-top: 6px; line-height: 1.4; }
+  .tile.good .value { color: var(--preserved); }
+  .tile.bad .value { color: var(--suppressed); }
+  .tile.key { border-color: var(--accent); background: var(--accent-dim); }
+
+  /* ---- tables ---- */
+  .tw { overflow-x: auto; margin: 0 0 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule-soft); }
+  th {
+    font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--slate); font-weight: 500;
+    border-bottom: 1px solid var(--rule);
+  }
+  td.num, th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; padding-right: 0; }
+  tr.highlight td { background: var(--accent-dim); }
+
+  /* ---- callouts ---- */
+  .note {
+    border: 1px solid var(--rule); border-left: 3px solid var(--slate);
+    padding: 12px 16px; font-size: 13.5px; color: var(--slate);
+    background: var(--paper); margin: 0 0 16px; border-radius: 2px;
+  }
+  .note.caution { border-left-color: var(--suppressed); color: var(--ink); background: var(--suppressed-dim); }
+  .note strong { color: var(--ink); }
+  .note .tag {
+    font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .12em;
+    text-transform: uppercase; display: block; margin-bottom: 5px; color: var(--suppressed);
+  }
+
+  code, .mono { font-family: var(--f-mono); font-size: .89em; }
+  .chip {
+    display: inline-block; font-family: var(--f-mono); font-size: 10.5px;
+    padding: 2px 7px; border: 1px solid var(--rule); border-radius: 2px;
+    color: var(--slate); background: var(--paper); white-space: nowrap;
+  }
+  .chip.a { border-color: var(--accent); color: var(--accent); }
+  .chip.p { border-color: var(--preserved); color: var(--preserved); }
+  .chip.s { border-color: var(--suppressed); color: var(--suppressed); }
+
+  /* ---- pipeline diagram ---- */
+  .pipe { display: flex; align-items: stretch; gap: 0; margin: 4px 0 20px; flex-wrap: wrap; }
+  .stage {
+    flex: 1 1 130px; border: 1px solid var(--rule); border-right: none;
+    padding: 12px 14px; background: var(--paper); min-width: 130px;
+  }
+  .stage:last-child { border-right: 1px solid var(--rule); }
+  .stage.mine { background: var(--accent-dim); border-color: var(--accent); position: relative; z-index: 1; }
+  .stage .id {
+    font-family: var(--f-mono); font-size: 10px; color: var(--accent);
+    letter-spacing: .1em; display: block; margin-bottom: 4px; font-weight: 500;
+  }
+  .stage .nm { font-size: 12.5px; line-height: 1.35; display: block; }
+  .stage.theirs { opacity: .55; }
+  .stage.theirs .id { color: var(--slate); }
+
+  .relations { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 0 0 16px; }
+  .rel { border: 1px solid var(--rule); border-radius: 2px; padding: 12px 14px; }
+  .rel .nm {
+    font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; display: block; margin-bottom: 5px; font-weight: 500;
+  }
+  .rel .def { font-size: 12.5px; color: var(--slate); line-height: 1.45; display: block; }
+  .rel .act { font-size: 12px; margin-top: 7px; display: block; font-weight: 600; }
+  .rel.refine { border-left: 3px solid var(--preserved); }
+  .rel.refine .nm, .rel.refine .act { color: var(--preserved); }
+  .rel.disjoint { border-left: 3px solid var(--accent); }
+  .rel.disjoint .nm, .rel.disjoint .act { color: var(--accent); }
+  .rel.redundant { border-left: 3px solid var(--slate); }
+  .rel.redundant .nm, .rel.redundant .act { color: var(--slate); }
+  .rel.opposed { border-left: 3px solid var(--suppressed); }
+  .rel.opposed .nm, .rel.opposed .act { color: var(--suppressed); }
+
+  .timeline { display: grid; gap: 0; margin: 0 0 16px; }
+  .tl { display: grid; grid-template-columns: 78px 1fr; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--rule-soft); }
+  .tl:last-child { border-bottom: none; }
+  .tl .wk {
+    font-family: var(--f-mono); font-size: 11.5px; color: var(--slate);
+    font-variant-numeric: tabular-nums; padding-top: 1px;
+  }
+  .tl .what { font-size: 13.5px; }
+  .tl.gate .wk { color: var(--suppressed); font-weight: 500; }
+  .tl.done .wk { color: var(--preserved); }
+
+  .footnote {
+    margin-top: auto; padding-top: 16px; border-top: 1px solid var(--rule-soft);
+    font-size: 11.5px; color: var(--slate); line-height: 1.5;
+  }
+
+  .printnote {
+    max-width: var(--slide-w); margin: 30px auto 0; font-size: 12.5px;
+    color: var(--slate); border-top: 1px solid var(--rule); padding-top: 14px;
+  }
+
+  @media (max-width: 760px) {
+    .cols, .cols-3, .relations { grid-template-columns: 1fr; }
+    .slide { padding: 28px 22px; min-height: 0; }
+    body { padding: 24px 12px 50px; }
+  }
+
+  @media print {
+    body { padding: 0; background: #fff; }
+    .deck { gap: 0; }
+    .slide { page-break-after: always; border: none; min-height: 0; }
+    .masthead, .printnote { page-break-after: always; }
+  }
+</style>
+
+<div class="deck">
+
+  <header class="masthead">
+    <p class="kicker">Zeroth Review · Member A · Slides 4–8</p>
+    <h1>Retrieval-Coupled Detection and Scope-Relation Analysis of Conditional Knowledge Conflicts in RAG</h1>
+    <p>The front half of a two-member project. Slides 1–3 are shared with Member B and
+      establish the problem, the gap, and the pipeline. These five are mine: what I detect,
+      how I decide the relation between two competing passages, and what I can already show.</p>
+    <div class="meta">
+      <span>Umbrella paper · Beyond Source Selection</span>
+      <span>Member B · Extraction, Composition, Generation</span>
+    </div>
+  </header>
+
+  <!-- ==================== SLIDE 4 ==================== -->
+  <section class="slide">
+    <span class="slide-num">04</span>
+    <p class="eyebrow">My module · where it sits</p>
+    <h2>I decide whether two retrieved passages should be selected between, or composed</h2>
+    <p class="standfirst">Everything upstream of the resolution operator: retrieve, detect,
+      classify, and determine the formal relation between competing claims.</p>
+
+    <div class="example">
+      <div class="passage default-branch">
+        <span class="who">Passage A — general rule</span>
+        International transactions incur a 3% fee.
+      </div>
+      <div class="passage exception-branch">
+        <span class="who">Passage B — valid exception</span>
+        Fees are waived for premium-tier cardholders.
+      </div>
+    </div>
+
+    <p>Both are true. They describe <strong>different scopes</strong>. A selection-based system
+      ranks the sources and emits the winner, deleting the other branch along with the condition
+      that governs it — and answer-correctness cannot see that happen.</p>
+
+    <div class="pipe">
+      <div class="stage mine"><span class="id">A1</span><span class="nm">Hybrid retrieval<br>BM25 + dense, RRF, K=5</span></div>
+      <div class="stage mine"><span class="id">A2</span><span class="nm">Pairwise detection<br>two-stage, cost-aware</span></div>
+      <div class="stage mine"><span class="id">A3</span><span class="nm">Five-class classification<br>3 architectures, compared</span></div>
+      <div class="stage mine"><span class="id">A4</span><span class="nm">Four-way scope relation<br>+ order invariance</span></div>
+      <div class="stage theirs"><span class="id">B1–B3</span><span class="nm">Extraction, composition, generation<br>Member B</span></div>
+    </div>
+
+    <p>We meet at one frozen JSON contract. My output is a per-pair judgement —
+      <code>type</code> and <code>scope_relation</code> — and Member B's resolver routes on it.
+      Get the relation wrong and composition either fabricates a branch or discards a real one.</p>
+
+    <div class="footnote">
+      The contract is versioned and schema-validated; a mock record generator lets both halves
+      be built and tested independently before either detector exists.
+    </div>
+  </section>
+
+  <!-- ==================== SLIDE 5 ==================== -->
+  <section class="slide">
+    <span class="slide-num">05</span>
+    <p class="eyebrow">A2 + A3 · detection and classification</p>
+    <h2>The detector architecture is settled by experiment, not by assumption</h2>
+    <p class="standfirst">Three variants, compared head-to-head on one cell of the confusion
+      matrix — because that cell, not aggregate accuracy, decides whether the pipeline ever
+      reaches the case it exists for.</p>
+
+    <div class="cols">
+      <div>
+        <h3>A2 — two-stage, cost-aware</h3>
+        <p>K = 5 gives C(5,2) = 10 pairs per query. Sending all of them to an API is what makes a
+          full-corpus run infeasible on a capped tier.</p>
+        <ul>
+          <li><strong>Stage 1, local.</strong> DeBERTa-v3 NLI cross-encoder plus hand-authored
+            cue features and a learned head over embedding interactions.</li>
+          <li><strong>Stage 2, selective.</strong> Only pairs inside a tuned uncertainty band
+            escalate to an API call.</li>
+        </ul>
+        <p>The escalation band is tuned on a dev split and reported as a cost/accuracy curve —
+          the escalation rate <em>is</em> the API cost of detection.</p>
+      </div>
+      <div>
+        <h3>A3 — three architectures</h3>
+        <ul>
+          <li><strong>Lexical + NLI features.</strong> Inspectable; its decisions read off a
+            coefficient table.</li>
+          <li><strong>Fine-tuned transformer.</strong> DeBERTa-v3-base end-to-end, no hand-authored
+            features.</li>
+          <li><strong>Structured entailment.</strong> The cross-encoder called twice — condition-
+            and outcome-entailment scored <em>separately</em> — then combined by the A4 rule.</li>
+        </ul>
+        <div class="note">
+          <strong>The headline is one cell.</strong> Distractors dominate the label
+          distribution, so accuracy can look healthy while every real exception is routed to
+          selection. Both directions of the factual/conditional cell are reported, and a variant
+          that collapses onto one label is excluded as degenerate rather than ranked.
+        </div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      Selecting on one direction alone is gameable: a detector that labels everything
+      <code>conditional</code> scores a perfect conditional-leak while being useless. Found by
+      running the comparison, and fixed.
+    </div>
+  </section>
+
+  <!-- ==================== SLIDE 6 ==================== -->
+  <section class="slide">
+    <span class="slide-num">06</span>
+    <p class="eyebrow">A4 · the hard part</p>
+    <h2>“Is this even a conflict?” needs two determinations, not one</h2>
+    <p class="standfirst">Applicability and outcome agreement are decided independently and then
+      combined. Deciding only applicability cannot tell a restatement from a real exception.</p>
+
+    <div class="relations">
+      <div class="rel refine">
+        <span class="nm">Refinement</span>
+        <span class="def">One scope strictly inside the other, outcomes <em>differ</em> there.
+          A genuine exception.</span>
+        <span class="act">→ compose</span>
+      </div>
+      <div class="rel disjoint">
+        <span class="nm">Disjoint</span>
+        <span class="def">Scopes do not intersect. Outcome comparison is vacuous.</span>
+        <span class="act">→ compose trivially</span>
+      </div>
+      <div class="rel redundant">
+        <span class="nm">Redundant</span>
+        <span class="def">Scopes overlap or nest but outcomes <em>agree</em> throughout.
+          A restatement.</span>
+        <span class="act">→ merge, do not compose</span>
+      </div>
+      <div class="rel opposed">
+        <span class="nm">Opposed</span>
+        <span class="def">Scopes overlap, neither contains the other, outcomes disagree.</span>
+        <span class="act">→ fall back to selection</span>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3>Why both determinations</h3>
+        <p>A passage restating the general rule for a specific group has <em>nested scope</em>,
+          exactly like a real exception. Only the outcome separates them. Calling it a refinement
+          makes the resolver compose a branch that does not exist — inflating preservation while
+          corrupting the answer.</p>
+      </div>
+      <div>
+        <h3>Exact where possible</h3>
+        <p>Where a scope decomposes into typed attributes — an ordered tier, a numeric range, a
+          category set — subset and disjointness are <em>set operations</em> with definite answers,
+          not prose judgements handed to a model. Undecidable cases fall through to entailment
+          explicitly, and the split is reported.</p>
+        <span class="chip a">82% typed on representative passages</span>
+      </div>
+    </div>
+
+    <div class="footnote">
+      The two hardest annotation boundaries — refinement vs. redundant, and refinement vs. opposed —
+      get their own confusion-matrix cells rather than being folded into four-way accuracy.
+    </div>
+  </section>
+
+  <!-- ==================== SLIDE 7 ==================== -->
+  <section class="slide">
+    <span class="slide-num">07</span>
+    <p class="eyebrow">Results so far · what is measured, and what is not</p>
+    <h2>Two properties already hold; the rest awaits the annotated corpus</h2>
+    <p class="standfirst">Both results below are structural — they follow from the design rather
+      than from how realistic the test data is, which is why they can be shown now.</p>
+
+    <div class="tiles">
+      <div class="tile key">
+        <span class="label">Order invariance</span>
+        <span class="value">1.0000</span>
+        <span class="sub">Every scope relation, branch role and confidence identical under all
+          tested passage permutations. 66 of 72 role assignments went <em>against</em> positional
+          order — so the check is not passing vacuously.</span>
+      </div>
+      <div class="tile bad">
+        <span class="label">Cost of dropping the class</span>
+        <span class="value">95.0%</span>
+        <span class="sub">Exception branches lost at the <em>routing</em> step when the conditional
+          class is removed and pairs are relabelled factual, as a four-class detector would emit.</span>
+      </div>
+      <div class="tile bad">
+        <span class="label">NLI-filter branch loss</span>
+        <span class="value">26.8%</span>
+        <span class="sub">A reasonable-looking baseline that drops the “inconsistent” passage —
+          which, on a rule/exception pair, is the exception.</span>
+      </div>
+    </div>
+
+    <p>Why order invariance matters: if the answer changed when passages were reshuffled, every
+      downstream preservation number would be a function of retrieval order rather than of the
+      method. Branch roles derive solely from the applicability relation — whichever branch has
+      the wider scope is the default, full stop.</p>
+
+    <div class="note caution">
+      <span class="tag">Honesty guardrail</span>
+      <strong>These are not benchmark results.</strong> They are measured on hand-built and
+      generated instances, because the annotated corpus does not exist yet. Two further numbers
+      the tooling produces — the escalation-band curve and exception recall — are currently
+      <em>fixture artifacts</em> and the tools say so in their own output: the curve saturates on
+      templated data, and 65% of generated passages are near-duplicates, which floors retrieval
+      recall for reasons unrelated to the retriever. Nothing here is quoted as a benchmark number.
+    </div>
+
+    <div class="footnote">
+      Owned metrics: binary detection F1 · five-class accuracy and per-type F1 · the
+      factual/conditional confusion cell · four-way scope-relation accuracy · order-invariance
+      pass rate. Owned baselines: standard RAG, rerank-top-1, NLI-filter.
+    </div>
+  </section>
+
+  <!-- ==================== SLIDE 8 ==================== -->
+  <section class="slide">
+    <span class="slide-num">08</span>
+    <p class="eyebrow">Plan · risks · what could disprove us</p>
+    <h2>Both gating checkpoints are front-loaded, and one result could falsify the claim</h2>
+
+    <div class="cols">
+      <div>
+        <h3>Timeline and my slice</h3>
+        <div class="timeline">
+          <div class="tl done"><span class="wk">Wk 1</span><span class="what">Contract frozen, mock generator, API budget layer — <strong>built</strong></span></div>
+          <div class="tl gate"><span class="wk">Wk 1–3</span><span class="what"><strong>WP0 prior-art review</strong> — gating. My slice: conflict-aware RAG literature</span></div>
+          <div class="tl gate"><span class="wk">Wk 2–4</span><span class="what"><strong>WP1</strong> — gating. ~50 labelled cases <span class="chip p">drafted</span> and a 20-document Tier-1 mining trial</span></div>
+          <div class="tl"><span class="wk">Wk 4–11</span><span class="what">Benchmark: conflict type, four-way scope relation, distractors</span></div>
+          <div class="tl done"><span class="wk">Wk 6–13</span><span class="what">A1–A4 implementation — <strong>built and tested</strong></span></div>
+          <div class="tl"><span class="wk">Wk 13–19</span><span class="what">Baselines, experiments, all ablations</span></div>
+        </div>
+      </div>
+      <div>
+        <h3>Risks I own</h3>
+        <ul>
+          <li><strong>Detector novelty.</strong> The inspectable design is deliberately modest —
+            resolved empirically by comparing all three variants rather than assuming the modest
+            one wins.</li>
+          <li><strong>Annotation boundary.</strong> Refinement vs. opposed is expected to be the
+            hardest judgement. Explicit decision procedure, κ reported for that axis specifically,
+            third-reviewer adjudication.</li>
+          <li><strong>Tier-1 scarcity.</strong> Genuinely multi-source rule/exception pairs may be
+            rare. Mitigated by a named Tier 1 / Tier 2 split and a yield trial <em>before</em>
+            committing to the corpus target.</li>
+        </ul>
+
+        <div class="note caution">
+          <span class="tag">The falsifying experiment</span>
+          A frontier long-context model given all passages and asked for the same structured branch
+          output, scored on the same metrics. <strong>If it matches our preservation rate, the
+          central architectural claim does not hold</strong> — and we report that as prominently as
+          a positive result.
+        </div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      Expected outcome stated as a hypothesis, not a number: on conditional instances,
+      selection-based methods post acceptable answer-correctness alongside high suppression and low
+      preservation, while composition preserves those branches at comparable correctness.
+    </div>
+  </section>
+
+</div>
+
+<p class="printnote">
+  <strong>Using this deck.</strong> Each card is one slide — screenshot it straight into
+  PowerPoint, or print to PDF (each slide breaks to its own page). Every figure traces to a
+  command in the repository: order invariance from <code>scope.order_invariance</code>, the 95%
+  figure from <code>experiments.run_ablations</code>, branch loss from
+  <code>experiments.run_baselines</code>.
+</p>

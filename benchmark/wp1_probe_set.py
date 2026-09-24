@@ -1438,11 +1438,51 @@ def stats(cases: list[Case]) -> dict[str, dict[str, int]]:
     return out
 
 
+#: Cases whose label is a genuine judgement call rather than a clear read.
+#: Surfaced first because verification attention is finite and these are where
+#: a wrong label does the most damage -- each one sits on a boundary the
+#: proposal itself names as hard.
+HIGH_RISK: dict[str, str] = {
+    "wp1_fin_imp_008": "CONDITIONAL vs TEMPORAL. Both texts remain in force; which "
+                       "applies depends on loan origination date, not on which is newer. "
+                       "If you disagree, it belongs with the temporal distractors.",
+    "wp1_fin_imp_019": "CONDITIONAL vs FACTUAL. 'Non-refundable' against 'returned in "
+                       "full' reads as a flat contradiction on the surface.",
+    "wp1_fin_imp_020": "CONDITIONAL vs FACTUAL. Two different protection limits (85,000 "
+                       "vs 1 million) could be read as a numeric contradiction.",
+    "wp1_fin_red_049": "REDUNDANT vs REFINEMENT. Nested scope, agreeing outcome. The "
+                       "single most consequential case in the set: proposing a condition "
+                       "here fabricates a branch.",
+    "wp1_imm_red_050": "REDUNDANT vs REFINEMENT. Same shape as 049.",
+    "wp1_fin_opp_053": "OPPOSED vs REFINEMENT. Check neither scope contains the other.",
+    "wp1_imm_opp_054": "OPPOSED vs REFINEMENT. Same check. Note the credibility "
+                       "asymmetry is irrelevant to the relation.",
+    "wp1_fin_imp_009": "IMPLICIT vs EXPLICIT. Reworded once already to remove 'exempt "
+                       "from'. Confirm the current wording carries no cue for you.",
+    "wp1_fin_imp_005": "IMPLICIT vs EXPLICIT. 'Where the statement balance is settled' "
+                       "is a conditional marker, though not an exception marker.",
+    "wp1_imm_imp_021": "IMPLICIT vs EXPLICIT. Same 'Where the...' construction as 005; "
+                       "decide once and apply to both.",
+    "wp1_fin_imp_025": "POLARITY. The default is the favourable outcome and the exception "
+                       "is unfavourable -- the reverse of most of the set.",
+    "wp1_imm_imp_026": "NESTED DEFAULT. The default is itself already conditioned "
+                       "('resident in a listed country'). Check the listed-country clause "
+                       "is not being read as the exception.",
+    "wp1_imm_imp_016": "SUB-STRUCTURE. The exception branch contains its own carve-out "
+                       "(four years for Swiss nationals). First-order for the pair, but "
+                       "confirm the sub-case is not silently dropped.",
+    "wp1_fin_imp_007": "PARTIAL SCOPE. The exception applies to a slice of the balance "
+                       "(first 500), not the whole account.",
+}
+
+
 def review_sheet(cases: list[Case]) -> str:
     """Human-readable sheet for Member A to verify against.
 
-    Ordered so the hard ones come first: verification attention is finite, and
-    the implicit cases are where a wrong label does the most damage.
+    High-risk cases first, then the rest by group. Verification attention is
+    finite: the boundary cases are where a wrong label propagates furthest,
+    and a reviewer who runs out of patience should run out of it on the easy
+    ones.
     """
     lines = [
         "WP1 PROBE SET - VERIFICATION SHEET",
@@ -1461,6 +1501,23 @@ def review_sheet(cases: list[Case]) -> str:
         "     nothing invented?",
         "",
     ]
+    risky = [c for c in cases if c.id in HIGH_RISK]
+    if risky:
+        lines += ["", "!! VERIFY THESE FIRST -- genuine judgement calls", "=" * 100, ""]
+        for c in risky:
+            label = c.conflict_type.value + (f"/{c.relation.value}" if c.relation else "")
+            lines += [
+                f"[{c.id}]  proposed: {label}",
+                f"  Q:    {c.query}",
+                f"  p0:   {c.rule.text}",
+                f"  p1:   {c.other.text}",
+                f"  RISK: {HIGH_RISK[c.id]}",
+                "  DECISION: [ ] accept as proposed   [ ] relabel to ______________",
+                "",
+            ]
+        lines += ["", f"({len(risky)} judgement calls above; "
+                      f"{len(cases) - len(risky)} clearer cases below)", ""]
+
     for group, title in ((IMPLICIT, "A. IMPLICIT CONDITIONS (the probe's core)"),
                          (EXPLICIT, "B. EXPLICIT CONDITIONS (control arm)"),
                          (DISTRACTORS, "C. DISTRACTORS (SCR denominator)"),

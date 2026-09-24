@@ -11,6 +11,54 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-24 — Ablation runner, zeroth-review deck, probe triage
+
+Everything remaining that did not require Member A, Member B, or real data.
+
+**Done**
+
+- **`experiments/run_ablations.py`** — the two named ablations that had no
+  runner. The headline one (route conditional → factual) is Member A's alone:
+  it measures *routing*, so it needs no LLM judge and no generation step.
+  Relabel every conditional pair as factual — what a four-class detector emits
+  — and those pairs route to selection, which keeps one passage. Result on the
+  probe set: **95.0% of exception branches lost** at the routing step. That is
+  the argument for the conditional class existing, and it holds without the
+  metric suite. Plus Tier-1/Tier-2 and explicit/implicit breakdowns.
+- **Zeroth-review deck, slides 4–8** — `docs/zeroth_review_member_a.html`,
+  published as an artifact. Each card is one slide, sized to screenshot into
+  PowerPoint or print to PDF one page per slide. Every figure traces to a
+  command in the repo. The honesty guardrail is on the slide, not buried:
+  the deck says outright which numbers are structural results and which are
+  fixture artifacts awaiting the corpus.
+- **Probe review triage** — `--review` now surfaces **14 genuine judgement
+  calls** ahead of the other 40 cases, each with the specific boundary it sits
+  on and an accept/relabel line. Verification attention is finite; a reviewer
+  who runs out of patience should run out of it on the easy cases.
+- 6 more tests for the ablation runner. **Suite: 297 → 303.**
+
+**Note on the 95% figure**
+
+Measured on the 54-case probe set, which is conditional-heavy by construction.
+The denominator is exception branches only, so the rate is not inflated by the
+class balance — but it is still hand-built data, and the deck labels it as
+such. Re-run on the WP2 corpus before it appears in the paper.
+
+**Now genuinely blocked on Member A / Member B / real data**
+
+| # | Item | What unblocks it |
+|---|---|---|
+| 1 | Verify 54 probe cases | `--review`, start with the 14 flagged |
+| 2 | Contract sign-off | send `contract/schema/query_record-v1.0.0.json` to B |
+| 3 | Rotate the Groq key | console → revoke → reissue → update `.env` |
+| 4 | WP0 literature review | reading; the three anchors are in `docs/wp0_positioning_memo.md` |
+| 5 | Tier-1 mining | **~20 real provider URLs** — then the harness runs |
+| 6 | WP2 annotation | two annotators |
+| 7 | kappa pilot | two annotators |
+| 8 | Deck slides 1–3 | co-authored with Member B |
+
+---
+
 ### 2026-09-22 (later still) — Closed the debt from today's own work
 
 An audit of what I had built during the day, not of the original plan. Four
