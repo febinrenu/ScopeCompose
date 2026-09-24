@@ -50,7 +50,7 @@ def _family(model_id: str) -> str:
     """Coarse family name, used to keep SECOND_BACKBONE genuinely different."""
     lowered = model_id.lower()
     for fam in ("llama", "qwen", "deepseek", "mixtral", "mistral", "gemma",
-                "kimi", "gpt-oss", "compound", "allam", "claude", "gpt"):
+                "kimi", "gpt-oss", "compound", "allam", "gpt"):
         if fam in lowered:
             return fam
     return lowered.split("-")[0] if "-" in lowered else lowered

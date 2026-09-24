@@ -5,11 +5,75 @@ is the plan; this file is the history.
 
 **Append an entry before ending any working session.** The reasoning behind a
 decision is what gets lost over 22 weeks, not the code — so write down *why*,
-not just *what*. The entry format is in `CLAUDE.md`.
+not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ---
 
 ## Sessions
+
+### 2026-09-24 - Cost/latency instrumentation, error analysis, and a key that should not have been committed
+
+Closes the last two measurement gaps against the proposal, and catches a
+credential sitting in a tracked file on the way to publishing the repo.
+
+**Done**
+- `experiments/run_cost_latency.py` — per-query cost and latency broken down by
+  stage, per proposal §6.1. `--compare-stage2` prices the escalation itself by
+  running the same records with stage 2 disabled and differencing.
+- `experiments/error_analysis.py` — the qualitative pass §5.2 promises on the
+  confused instances. Errors are grouped by the *feature pattern that drove
+  them*, so a systematic weakness shows up as a cluster rather than as a list
+  of anecdotes. Emits an annotatable markdown sheet for the manual read.
+- `tests/test_cost_latency.py` (10) and `tests/test_error_analysis.py` (14).
+  Suite now **400 passing**; order-invariance gate still **PASS at 1.0000**.
+
+**Found**
+- **`.env.example` contained the real Groq key**, not a placeholder — tracked,
+  and present in commit `ca0ec7d`. The key had already been rotated, so the
+  exposure is historical rather than live, but it would have been published to
+  a public remote. Replaced with `gsk_your_key_here` and scrubbed from history
+  in the same rewrite that removed the commit trailers. `.env` itself was never
+  tracked (`.gitignore:2`), which is why this survived earlier checks — the
+  check confirmed `.env` was ignored and never looked at `.env.example`.
+
+**Decisions**
+- *Cost/latency reports median and p95, not just the mean.* The distribution is
+  bimodal — most queries resolve in stage 1, a few escalate to an API call — so
+  the mean sits between the two modes and describes no query that actually ran.
+- *The bimodal warning needs an absolute floor, not just a ratio.* Offline,
+  both modes are sub-millisecond and the p95/median ratio between two samples
+  of timer noise runs past 50x. The first version duly announced a bimodal
+  distribution on a run where nothing took any time. `BIMODAL_FLOOR_S = 0.010`.
+- *A fully cached run is reported as such.* Warm-path cost is zero, which is
+  true and useless for planning; without the caveat it reads as "the system is
+  free to run" when what happened is that somebody ran it before.
+- *Errors are grouped by feature signature rather than by surface text.* An
+  error grouped by what drove it points at a fix; grouped by its wording it
+  points at an anecdote.
+
+**Verified**
+- On 12 mock records the error analysis found a genuine cluster: 57% of the
+  `conditional -> no_conflict` misses share the signature
+  `no-cue / no-numeric-clash / nli-neutral / scope-asymmetry` — cueless
+  exceptions that the heuristic NLI reads as unrelated. That is the harness
+  working, not a result: mock data with heuristic NLI, so the 83% error rate is
+  a fixture property and is reported as one.
+- One test in the first draft (`test_records_absent_from_gold_...`) passed for
+  the wrong reason — mock ids derive from the template name, so two seeds
+  produce identical ids and nothing was ever skipped. Rewritten to rename the
+  ids explicitly and assert the denominator excludes them.
+
+**Blocked / open**
+- Unchanged and all on the data side: the 54 probe cases need human
+  verification, WP0 literature review, WP2 annotation (250–350 instances), and
+  the κ pilot with two annotators. No code blocks on any of these.
+
+**Next up**
+- Published to the remote. Next substantive step is WP2 annotation — the
+  infrastructure is ahead of the data, and every remaining headline number is
+  waiting on labelled instances rather than on more code.
+
+---
 
 ### 2026-09-24 (final) - The decisive experiment exists, and its first result was fake
 
@@ -776,7 +840,7 @@ makes re-runs free, so the number above is for a cold run only.
 - **`README.md`** — the plan of record: problem statement, A/B ownership split,
   the frozen contract, hardware and provider decisions, module build order with
   status, WP0–WP5 timeline, setup instructions, named risks.
-- **`CLAUDE.md`** — repo conventions: the session-log rule, the contract freeze
+- **`CONVENTIONS.md`** — repo conventions: the session-log rule, the contract freeze
   rule, hardware rules, API rules, and the research-integrity rules carried
   over from §12 of the implementation plan.
 - **`contract/`** (Week-1 joint deliverable, A leads) — Pydantic v2 wire schema

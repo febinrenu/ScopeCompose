@@ -180,7 +180,7 @@ def render(summary: dict[str, Any]) -> str:
             "",
             f"  !! {t['fell_back']:,} call(s) FELL BACK to the local model after rate-limiting.",
             "     Those results came from a different model than intended. This must be",
-            "     reported, not averaged in silently -- see CLAUDE.md, research-integrity rules.",
+            "     reported, not averaged in silently -- see CONVENTIONS.md, research-integrity rules.",
         ]
 
     if summary["by_tier"]:

@@ -5,9 +5,9 @@ protocol, so one backend class with a configurable ``base_url`` covers all
 three. That is the whole reason for choosing this shape: the zero-spend
 decision in README section 5 stays a config change rather than a rewrite.
 
-(If Anthropic is ever added, it gets its own backend using the ``anthropic``
-SDK rather than an OpenAI-compatible shim -- shims lag behind the real API and
-silently drop features.)
+(A provider that ships its own native SDK gets its own backend class rather
+than being reached through an OpenAI-compatible shim -- shims lag behind the
+real API and silently drop features.)
 
 The mock backend is the default in tests. It is deterministic and never touches
 the network, so the suite runs offline at zero cost.

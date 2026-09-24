@@ -3,7 +3,7 @@
 See ``contract/models.py`` for the wire format and ``contract/gold.py`` for the
 annotation format. Changing either requires bumping ``CONTRACT_VERSION``,
 updating ``contract/mock.py``, and regenerating the JSON Schema -- all in the
-same commit. See ``CLAUDE.md``.
+same commit. See ``CONVENTIONS.md``.
 """
 
 from contract.models import (

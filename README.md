@@ -135,7 +135,7 @@ Then: if two or more surviving exception branches are pairwise overlapping, B se
 `crossed` and routes to selection with the flag recorded.
 
 > **Freeze rule.** Once Member B signs off, any schema change requires bumping `CONTRACT_VERSION`
-> **and** updating `contract/mock.py` in the same commit. See `CLAUDE.md`.
+> **and** updating `contract/mock.py` in the same commit. See `CONVENTIONS.md`.
 
 ---
 
@@ -285,6 +285,8 @@ development iteration free instead of metered. Both are due end of Week 1.
 | `experiments/run_baselines.py` | do the baselines still have the exception passage at generation time? | DONE |
 | `experiments/run_retrieval_eval.py` | recall@k, and **exception** recall@k | DONE, **needs real data** |
 | `benchmark/wp1_probe_set.py` | 54 probe cases for Member B | DONE, **needs verification** |
+| `experiments/run_cost_latency.py` | cost and latency per query by stage, and what stage-2 escalation costs | DONE, **needs live run** |
+| `experiments/error_analysis.py` | do the confused instances share a cause? | DONE, **needs real data** |
 
 Two of these currently produce fixture artifacts rather than results, and say
 so in their own output: the threshold curve saturates on templated data, and
@@ -407,7 +409,7 @@ python -m benchmark.mining.tier1_pilot --docs docs.jsonl  # WP1 Tier-1 yield tri
 conflict-rag/
 ├── README.md              # this file — the plan of record
 ├── PROGRESS.md            # session log: what has actually been done
-├── CLAUDE.md              # conventions for AI-assisted sessions in this repo
+├── CONVENTIONS.md         # working conventions for this repo
 ├── config/                # hardware.yaml (VRAM profiles), models.yaml (tier map)
 ├── contract/              # interface schema + mock generator        [Week 1, joint, A leads]
 ├── api_budget/            # request cache, cost log, tiered client   [Week 1, joint]
