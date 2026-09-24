@@ -287,6 +287,7 @@ development iteration free instead of metered. Both are due end of Week 1.
 | `benchmark/wp1_probe_set.py` | 54 probe cases for Member B | DONE, **needs verification** |
 | `experiments/run_cost_latency.py` | cost and latency per query by stage, and what stage-2 escalation costs | DONE, **needs live run** |
 | `experiments/error_analysis.py` | do the confused instances share a cause? | DONE, **needs real data** |
+| `benchmark/annotation/` | the labelling tool: blind passes, kappa per axis, adjudication | DONE |
 
 Two of these currently produce fixture artifacts rather than results, and say
 so in their own output: the threshold curve saturates on templated data, and

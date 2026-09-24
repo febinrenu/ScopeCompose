@@ -135,6 +135,19 @@ class Case:
     attrs: list[ScopeAttribute] = field(default_factory=list)
     explicitness: Explicitness = Explicitness.IMPLICIT
 
+    # OPPOSED / DISJOINT only: the rule branch is itself scoped.
+    #
+    # For refinement and redundant, p0 states an unconditioned general rule and
+    # becomes the default branch. For opposed and disjoint it does not: "Reward
+    # account holders get lounge access" is already restricted to Reward
+    # holders, and "instant access savings earn 4.50%" to instant-access
+    # accounts. Encoding either as a default whose applicability is the whole
+    # case space makes the other branch a subset of it -- that is refinement,
+    # contradicting the relation the case exists to test.
+    rule_condition: str = ""
+    rule_applicability: str = ""
+    rule_attrs: list[ScopeAttribute] = field(default_factory=list)
+
     scoped_answer: str = ""
     selection_answer: str = ""
 
@@ -165,6 +178,22 @@ class Case:
                     applicability=Applicability(descriptor="all cases", is_default=True),
                     supporting_passage="p0",
                 )]
+            elif self.rule_condition:
+                # Two conditioned branches, no default. See rule_condition.
+                branches = [
+                    Branch(branch_id="b0", condition=self.rule_condition,
+                           outcome=self.default_outcome,
+                           applicability=Applicability(
+                               descriptor=self.rule_applicability,
+                               attributes=list(self.rule_attrs)),
+                           supporting_passage="p0"),
+                    Branch(branch_id="b1", condition=self.condition,
+                           outcome=self.exception_outcome,
+                           applicability=Applicability(descriptor=self.applicability,
+                                                       attributes=list(self.attrs)),
+                           explicitness=self.explicitness,
+                           supporting_passage="p1"),
+                ]
             else:
                 branches = [
                     Branch(branch_id="b0", condition=None, outcome=self.default_outcome,
@@ -1287,6 +1316,9 @@ EDGE_RELATIONS: list[Case] = [
                   SourceType.PRODUCT_TERMS, "2024-03", "savings_bonds"),
         conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.DISJOINT,
         default_outcome="4.50% AER variable",
+        rule_condition="the product is an instant access savings account",
+        rule_applicability="instant access savings accounts",
+        rule_attrs=[cat("product_type", "instant_access")],
         condition="the product is a fixed-term bond held to maturity",
         exception_outcome="5.20% AER",
         applicability="fixed-term bonds",
@@ -1310,6 +1342,9 @@ EDGE_RELATIONS: list[Case] = [
                   SourceType.GOVERNMENT_GUIDANCE, "2024-01", "gov_student_duration"),
         conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.DISJOINT,
         default_outcome="a stay of up to six months",
+        rule_condition="the applicant holds a standard visitor visa",
+        rule_applicability="standard visitor visa holders",
+        rule_attrs=[cat("visa_type", "visitor")],
         condition="the applicant holds a student visa",
         exception_outcome="the duration of the course plus a wrap-up period",
         applicability="student visa holders",
@@ -1331,6 +1366,9 @@ EDGE_RELATIONS: list[Case] = [
                   SourceType.THIRD_PARTY, "2024-06", "review_site"),
         conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.OPPOSED,
         default_outcome="lounge access is included",
+        rule_condition="the account is a Reward account",
+        rule_applicability="Reward account holders",
+        rule_attrs=[cat("account_type", "reward")],
         condition="the account was opened from January 2024 onwards",
         exception_outcome="lounge access is not included",
         applicability="accounts opened from January 2024",
@@ -1356,7 +1394,10 @@ EDGE_RELATIONS: list[Case] = [
                   "requirements of this route.",
                   SourceType.THIRD_PARTY, "2024-04", "advice_site"),
         conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.OPPOSED,
-        default_outcome="the requirement is met",
+        default_outcome="the skill requirement is met",
+        rule_condition="the applicant holds a recognised degree-level qualification",
+        rule_applicability="applicants with a degree-level qualification",
+        rule_attrs=[cat("qualification", "degree")],
         condition="the applicant is over 45 at the date of application",
         exception_outcome="the requirements are not met",
         applicability="applicants over 45",

@@ -358,7 +358,7 @@ def _gold(**kw) -> GoldInstance:
     return GoldInstance(**base)
 
 
-def test_gold_requires_exactly_one_default_branch():
+def test_gold_rejects_two_default_branches():
     two_defaults = [
         Branch(branch_id="b0", condition=None, outcome="x",
                applicability=Applicability(descriptor="all", is_default=True),
@@ -367,8 +367,53 @@ def test_gold_requires_exactly_one_default_branch():
                applicability=Applicability(descriptor="all", is_default=True),
                supporting_passage="p1"),
     ]
-    with pytest.raises(ValidationError, match="exactly one default branch"):
+    with pytest.raises(ValidationError, match="at most one default branch"):
         _gold(gold_branches=two_defaults)
+
+
+def test_an_opposed_instance_may_have_no_default_branch():
+    """Contract v1.1.0 relaxed 'exactly one default' to 'at most one'.
+
+    'Exactly one' encoded the refinement shape and silently imposed it on every
+    relation. A default branch's applicability is the whole case space, so the
+    other branch is necessarily a SUBSET of it -- which is refinement. An
+    opposed instance encoded that way carried a relation label saying 'opposed'
+    and a branch structure saying 'refinement'. Four WP1 probe cases and two
+    mock templates were built that way, and they were exactly the cases meant
+    to test telling refinement from the rest.
+    """
+    crossing = [
+        Branch(branch_id="b0", condition="the holder is in their first year",
+               outcome="permitted",
+               applicability=Applicability(descriptor="first-year holders"),
+               supporting_passage="p0"),
+        Branch(branch_id="b1", condition="the holder is part-time",
+               outcome="prohibited",
+               applicability=Applicability(descriptor="part-time holders"),
+               supporting_passage="p1"),
+    ]
+    inst = _gold(gold_branches=crossing,
+                 gold_conflict_type=ConflictType.CONDITIONAL,
+                 gold_scope_relation=ScopeRelation.OPPOSED)
+    assert sum(b.is_default for b in inst.gold_branches) == 0
+
+
+def test_a_refinement_still_requires_its_general_rule():
+    """The relaxation is scoped. Refinement and redundant ARE the
+    default-plus-carve-out shape, so dropping the default there would lose the
+    general rule the exception is an exception to."""
+    no_default = [
+        Branch(branch_id="b0", condition="premium", outcome="x",
+               applicability=Applicability(descriptor="premium"),
+               supporting_passage="p0"),
+        Branch(branch_id="b1", condition="platinum", outcome="y",
+               applicability=Applicability(descriptor="platinum"),
+               supporting_passage="p1"),
+    ]
+    with pytest.raises(ValidationError, match="needs that general rule as a default"):
+        _gold(gold_branches=no_default,
+              gold_conflict_type=ConflictType.CONDITIONAL,
+              gold_scope_relation=ScopeRelation.REFINEMENT)
 
 
 def test_exception_branch_must_be_grounded():

@@ -110,6 +110,29 @@ Worked example:
 Decide **two things separately**. Do not collapse them — this is the whole
 design:
 
+### Scopes are judged inside the query frame
+
+Before step 1: **the universe is the set of cases the query is about, not the
+whole world.** The default branch's applicability is "everything" *as the query
+restricts it*.
+
+For "Is a fee charged for early repayment?" against "An early repayment charge
+applies where a fixed-rate loan is settled before the end of its term", the
+rule passage is the default — even though it is visibly restricted to
+fixed-rate loans settled early — because the query has already narrowed the
+universe to early repayment.
+
+Apply this deliberately, and check it still holds before you use it. Carried
+into a relation where it does *not* hold, it silently forces the refinement
+shape: if one branch covers the whole universe, every other branch is nested
+inside it, and nested-with-differing-outcomes is refinement by definition. Four
+cases in the WP1 probe set were encoded that way and came out labelled
+`opposed` or `disjoint` while their structure said `refinement`.
+
+**A branch is only the default if nothing in the query frame falls outside it.**
+Where two branches each cover part of the frame — `disjoint` and `opposed` —
+there is no default, and the schema permits an instance with none.
+
 ### Step 1 — Do the applicability sets overlap?
 
 Write down who or what each passage applies to. Then:

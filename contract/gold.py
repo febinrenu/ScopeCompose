@@ -41,10 +41,26 @@ from contract.models import (
 
 
 class Explicitness(str, Enum):
-    """Whether a condition is stated or must be inferred.
+    """Whether the passage MARKS ITSELF as an exception to a general rule.
 
-    Reported separately, never averaged: implicit recovery is the hard case and
-    the one Contrastive Scope Probing exists to address. Averaging the two
+    The operational test, applied by ``benchmark.wp1_probe_set.check_implicitness``,
+    is the presence of a strong exception cue -- "except", "unless", "only if",
+    "does not apply to". Absent one, the case is ``IMPLICIT``.
+
+    **This is narrower than it sounds, and the difference matters for how the
+    number is reported.** It does not mean the condition is unstated. In
+    "Where the statement balance is settled in full by the due date, purchases
+    benefit from interest-free credit", the condition is stated plainly; what is
+    unstated is that it *overrides* the general rule that interest accrues from
+    the transaction date. So ``IMPLICIT`` means the reader must infer the
+    exception RELATIONSHIP, not that they must infer the condition itself.
+
+    Calling it "implicit condition recovery" in the paper would overclaim.
+    Nearly every passage in the probe set states its own condition somewhere;
+    what varies is whether the passage announces itself as a carve-out.
+
+    Reported separately, never averaged: the unmarked cases are the hard ones
+    and the ones Contrastive Scope Probing exists to address. Averaging the two
     hides exactly the number the method is judged on.
     """
 
@@ -248,10 +264,35 @@ class GoldInstance(BaseModel):
         if len(set(ids)) != len(ids):
             raise ValueError(f"{self.instance_id!r}: duplicate branch_ids {ids}")
 
+        # AT MOST one default, not exactly one.
+        #
+        # "Exactly one" encodes the refinement shape -- an unconditioned general
+        # rule plus a carve-out nested inside it -- and silently forces every
+        # other relation into that shape. For an OPPOSED or DISJOINT pair
+        # neither branch is the default: "Reward account holders get lounge
+        # access" against "accounts opened from January 2024 do not" has two
+        # conditioned branches whose scopes overlap without nesting.
+        #
+        # Forcing one of them to be the default is not a cosmetic compromise.
+        # A default branch's applicability is the whole case space, so the other
+        # branch necessarily becomes a SUBSET of it -- which is the definition of
+        # refinement. The instance then carries a relation label of 'opposed'
+        # and a branch structure that says 'refinement', and the two contradict
+        # each other. Four cases in the WP1 probe set were encoded that way, and
+        # they were precisely the four meant to test whether a system can tell
+        # refinement from the other three relations.
         defaults = [b for b in self.gold_branches if b.is_default]
-        if len(defaults) != 1:
+        if len(defaults) > 1:
             raise ValueError(
-                f"{self.instance_id!r}: expected exactly one default branch, found {len(defaults)}"
+                f"{self.instance_id!r}: at most one default branch, found {len(defaults)}"
+            )
+        if not defaults and self.gold_scope_relation in (
+            ScopeRelation.REFINEMENT, ScopeRelation.REDUNDANT
+        ):
+            raise ValueError(
+                f"{self.instance_id!r}: a {self.gold_scope_relation.value} instance is "
+                "defined by an exception sitting inside a general rule, so it needs "
+                "that general rule as a default branch"
             )
 
         known = {p.id for p in self.passages}

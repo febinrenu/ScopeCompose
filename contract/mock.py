@@ -295,9 +295,16 @@ def _build_disjoint(rng: random.Random, idx: int, tpl: Template) -> GoldInstance
         _passage("p1", f"A monthly maintenance charge of {fee_b} applies to {b}.",
                  SourceType.PRODUCT_TERMS, "2024-08", f"doc_b_{idx}"),
     ]
+    # Neither branch is the default. A disjoint pair has two separately scoped
+    # rules and no unconditioned general one; marking either as the default
+    # would make its applicability the whole case space, which would make the
+    # other a subset of it -- i.e. refinement, the relation this template
+    # exists to be distinguished from.
     branches = [
-        Branch(branch_id="b0", condition=None, outcome=f"{fee_a} charge",
-               applicability=Applicability(descriptor=f"holders of {a}", is_default=True),
+        Branch(branch_id="b0", condition=f"the account is one of the {a}",
+               outcome=f"{fee_a} charge",
+               applicability=Applicability(descriptor=f"holders of {a}",
+                                           attributes=[_cat_attr("account_kind", [a])]),
                supporting_passage="p0"),
         Branch(branch_id="b1", condition=f"the account is one of the {b}",
                outcome=f"{fee_b} charge",
@@ -363,25 +370,40 @@ def _build_redundant(rng: random.Random, idx: int, tpl: Template) -> GoldInstanc
 
 
 def _build_opposed(rng: random.Random, idx: int, tpl: Template) -> GoldInstance:
-    """Overlapping scope, neither nested, outcomes disagree. A real contradiction."""
+    """Overlapping scope, NEITHER NESTED, outcomes disagree. A real contradiction.
+
+    The non-nesting is the whole content of this template, and it is easy to get
+    wrong. An earlier version scoped the two branches as "first-year holders"
+    and "first-year holders at designated institutions" -- which is a nested
+    pair, and therefore a refinement, not an opposition. It trained the detector
+    to call refinements opposed.
+
+    Here the two scopes cross: first-year and part-time. A first-year full-time
+    holder is in the first only, a part-time holder in a later year is in the
+    second only, and a first-year part-time holder is in both with the outcomes
+    disagreeing. That is what opposed means.
+    """
     cat = rng.choice(_VISA_CATS)
     passages = [
         _passage("p0", f"{cat} holders in their first academic year may accept on-campus employment.",
                  SourceType.GOVERNMENT_GUIDANCE, "2024-01", f"doc_g_{idx}"),
-        _passage("p1", f"{cat} holders enrolled at a designated institution may not accept "
-                       f"on-campus employment during their first academic year.",
+        _passage("p1", f"{cat} holders enrolled on a part-time basis may not accept "
+                       f"on-campus employment.",
                  SourceType.THIRD_PARTY, "2024-05", f"doc_t_{idx}"),
     ]
     branches = [
-        Branch(branch_id="b0", condition=None, outcome="on-campus employment permitted",
-               applicability=Applicability(descriptor=f"first-year {cat} holders", is_default=True),
+        Branch(branch_id="b0", condition="the holder is in their first academic year",
+               outcome="on-campus employment permitted",
+               applicability=Applicability(
+                   descriptor=f"first-year {cat} holders",
+                   attributes=[_cat_attr("enrolment_year", ["first"])]),
                supporting_passage="p0"),
         Branch(branch_id="b1",
-               condition="enrolled at a designated institution in the first academic year",
+               condition="the holder is enrolled on a part-time basis",
                outcome="on-campus employment prohibited",
                applicability=Applicability(
-                   descriptor=f"first-year {cat} holders at designated institutions",
-                   attributes=[_cat_attr("visa_category", [cat])]),
+                   descriptor=f"part-time {cat} holders",
+                   attributes=[_cat_attr("enrolment_mode", ["part_time"])]),
                supporting_passage="p1"),
     ]
     return GoldInstance(
