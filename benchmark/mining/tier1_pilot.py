@@ -30,14 +30,76 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from detection.features import EXCEPTION_CUES, RESTRICTION_CUES
+from detection.features import RESTRICTION_CUES, STRONG_EXCEPTION_CUES
 
 #: The floor from the proposal: below this, Tier 2 must make up the remainder
 #: of the 250-instance target and the paper states the composition explicitly.
 TIER1_FLOOR = 150
 TARGET_INSTANCES = 250
 
-_SENT_RE = re.compile(r"(?<=[.!?])\s+")
+# Sentence boundaries: terminal punctuation OR a newline. The newline matters
+# on real pages -- headings and list items sit on their own line with no
+# terminal punctuation, and splitting on punctuation alone glues a heading to
+# the sentence after it ("When to apply When you can apply depends on...").
+_SENT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
+
+#: Sentences that are navigation, not policy. On a real page these are a large
+#: fraction of the text and they match cue words readily -- "the register of
+#: licensed student sponsors can be found at ..." contains a restriction cue
+#: and states no rule at all.
+_BOILERPLATE_RE = re.compile(
+    r"(https?://|www\.|can be found at|read (?:the |more)|find out (?:more|if)|"
+    r"^(?:you (?:can|must|should) )?(?:check|see|view|download|contact|call|email)\b|"
+    r"^(?:related|guidance|collection|published|last updated|print this page)\b|"
+    r"^(?:apply now|start now|sign in|get help)\b)",
+    re.I,
+)
+
+#: A rule and its exception have to be ABOUT the same thing. Without this the
+#: miner takes the cross product of every rule sentence against every
+#: exception-looking sentence in the same provider, which on a 60,000-character
+#: statutory appendix is thousands of pairs and almost entirely noise.
+MIN_TOPIC_OVERLAP = 0.18
+
+#: One general rule should not generate dozens of candidate pairs. Keeping the
+#: best few per rule is what makes the yield figure mean "distinct rule/
+#: exception pairs a human could verify" rather than "size of a cross product".
+MAX_PAIRS_PER_RULE = 2
+
+#: Long enough to drop headings and link text, short enough to keep a terse
+#: rule. "Fees are waived for some applicants." is 36 characters.
+MIN_SENTENCE_CHARS = 30
+
+#: Verbs that mark a sentence as STATING a rule rather than describing one.
+#: Deliberately broad: this is a candidate generator feeding human
+#: verification, so a false positive costs a reviewer ten seconds and a false
+#: negative costs a real instance. "is payable" and "is granted" were missing
+#: and are common in exactly this register.
+_RULE_VERB_RE = re.compile(
+    r"\b(incur|incurs|applies|apply|must|shall|may not|will be|are charged|"
+    r"is charged|required|prohibited|permitted|payable|entitled|granted|"
+    r"refused|allowed|eligible)\b",
+    re.I,
+)
+
+_CONTENT_RE = re.compile(r"[a-z']{3,}")
+_STOP = {
+    "the", "and", "you", "your", "for", "with", "that", "this", "are", "have",
+    "from", "not", "but", "can", "will", "must", "any", "all", "may", "who",
+    "them", "they", "been", "which", "when", "what", "were", "into",
+}
+
+
+def _content_words(text: str) -> set[str]:
+    return {w for w in _CONTENT_RE.findall(text.lower()) if w not in _STOP}
+
+
+def topic_overlap(a: str, b: str) -> float:
+    """Jaccard over content words. Cheap proxy for 'about the same thing'."""
+    wa, wb = _content_words(a), _content_words(b)
+    if not wa or not wb:
+        return 0.0
+    return len(wa & wb) / len(wa | wb)
 
 
 @dataclass
@@ -53,6 +115,23 @@ class SourceDoc:
     url: str | None = None
     text: str = ""
 
+    content_id: str | None = None
+    """Publisher's identifier for the underlying document, where the source
+    exposes one.
+
+    This is what actually decides Tier 1, and ``doc_id`` cannot substitute for
+    it. A gov.uk 'guide' is ONE content item with many parts, each with its own
+    URL: ``/student-visa`` and ``/student-visa/money`` are separately
+    retrievable and share a content_id. Comparing URLs would count them as two
+    documents and inflate the naturally-occurring claim, which is precisely the
+    Tier-1 scarcity risk the proposal names.
+    """
+
+    @property
+    def identity(self) -> str:
+        """What 'the same document' means for the Tier-1 test."""
+        return self.content_id or self.doc_id
+
 
 @dataclass
 class CandidatePair:
@@ -65,6 +144,19 @@ class CandidatePair:
     exception_sentence: str
     cue_matched: str
     same_document: bool = False
+    """True when both sentences came from one underlying document -- including
+    two parts of a single multi-part guide."""
+
+    topic_overlap: float = 0.0
+    """Content-word Jaccard between the rule and the exception sentence. A
+    human verifier reads the highest-overlap candidates first."""
+
+    same_guide_parts: bool = False
+    """The pair spans two PARTS of one document. Separately retrievable, so a
+    RAG chunker would index them apart and a retriever can surface one without
+    the other -- but not separately authored. A third category the proposal's
+    Tier 1 / Tier 2 binary does not cover, reported on its own rather than
+    folded into either."""
 
     @property
     def is_tier1(self) -> bool:
@@ -78,6 +170,7 @@ class PilotReport:
     candidates_total: int = 0
     candidates_tier1: int = 0
     candidates_tier2: int = 0
+    candidates_same_guide: int = 0
     by_provider: dict[str, int] = field(default_factory=dict)
     examples: list[dict] = field(default_factory=list)
 
@@ -136,7 +229,8 @@ class PilotReport:
             f"  providers            {self.providers:>8,}",
             f"  candidate pairs      {self.candidates_total:>8,}",
             f"    Tier 1 (separate documents)  {self.candidates_tier1:>6,}",
-            f"    Tier 2 (same document)       {self.candidates_tier2:>6,}",
+            f"    same document                {self.candidates_tier2:>6,}",
+            f"      of which: separate parts   {self.candidates_same_guide:>6,}",
             f"  Tier-1 share         {self.tier1_share:>8.1%}",
             f"  yield per document   {self.yield_per_document:>8.2f}",
         ]
@@ -175,7 +269,23 @@ def _wrap(text: str, width: int) -> list[str]:
 
 
 def sentences(text: str) -> list[str]:
-    return [s.strip() for s in _SENT_RE.split(text) if len(s.strip()) > 20]
+    """Split to policy-bearing sentences, dropping navigation.
+
+    A modest length floor drops headings and link text -- "When to apply",
+    "Overview" -- which now arrive as their own fragments because the splitter
+    treats a newline as a boundary. It has to stay modest: real policy
+    sentences are often short ("Fees are waived for some applicants."), and a
+    floor set high enough to feel safe silently discards them.
+    """
+    out = []
+    for raw in _SENT_RE.split(text):
+        s = " ".join(raw.split())
+        if len(s) < MIN_SENTENCE_CHARS:
+            continue
+        if _BOILERPLATE_RE.search(s):
+            continue
+        out.append(s)
+    return out
 
 
 def find_exception_sentences(text: str) -> list[tuple[str, str]]:
@@ -188,7 +298,7 @@ def find_exception_sentences(text: str) -> list[tuple[str, str]]:
     out = []
     for sent in sentences(text):
         low = sent.lower()
-        for cue in EXCEPTION_CUES:
+        for cue in STRONG_EXCEPTION_CUES:
             if cue in low:
                 out.append((sent, cue))
                 break
@@ -209,12 +319,11 @@ def find_rule_sentences(text: str) -> list[str]:
     out = []
     for sent in sentences(text):
         low = sent.lower()
-        if any(c in low for c in EXCEPTION_CUES):
+        if any(c in low for c in STRONG_EXCEPTION_CUES):
             continue
         if any(r in low for r in RESTRICTION_CUES):
             continue
-        if re.search(r"\b(incur|applies|apply|must|shall|may not|will be|are charged|"
-                     r"is charged|required|prohibited|permitted)\b", low):
+        if _RULE_VERB_RE.search(low):
             out.append(sent)
     return out
 
@@ -228,20 +337,51 @@ def mine(docs: list[SourceDoc], *, max_examples: int = 10) -> PilotReport:
         by_provider.setdefault(d.provider, []).append(d)
     report.providers = len(by_provider)
 
+    seen_exceptions: set[tuple[str, str]] = set()
+
     for provider, group in by_provider.items():
         rules = [(d, s) for d in group for s in find_rule_sentences(d.text)]
         exceptions = [(d, s, cue) for d in group for s, cue in find_exception_sentences(d.text)]
 
         for rule_doc, rule_sent in rules:
+            # Score every exception against THIS rule and keep only the few
+            # that are plausibly about the same subject. Taking the full cross
+            # product instead is what turned a 32-document run into 4,648
+            # "candidates" that were overwhelmingly one rule sentence paired
+            # with every cue-bearing sentence on the site.
+            scored: list[tuple[float, SourceDoc, str, str]] = []
             for exc_doc, exc_sent, cue in exceptions:
                 if rule_sent == exc_sent:
                     continue
+                overlap = topic_overlap(rule_sent, exc_sent)
+                if overlap < MIN_TOPIC_OVERLAP:
+                    continue
+                scored.append((overlap, exc_doc, exc_sent, cue))
+
+            scored.sort(key=lambda t: (-t[0], t[2]))
+
+            kept = 0
+            for overlap, exc_doc, exc_sent, cue in scored:
+                if kept >= MAX_PAIRS_PER_RULE:
+                    break
+                # One exception sentence should back one candidate, not be
+                # re-proposed against every rule that happens to mention the
+                # same words.
+                key = (provider, exc_sent)
+                if key in seen_exceptions:
+                    continue
+                seen_exceptions.add(key)
+                kept += 1
+
+                same_doc = rule_doc.identity == exc_doc.identity
                 pair = CandidatePair(
                     provider=provider,
                     rule_doc=rule_doc.doc_id, rule_sentence=rule_sent,
                     exception_doc=exc_doc.doc_id, exception_sentence=exc_sent,
                     cue_matched=cue,
-                    same_document=(rule_doc.doc_id == exc_doc.doc_id),
+                    same_document=same_doc,
+                    same_guide_parts=same_doc and rule_doc.doc_id != exc_doc.doc_id,
+                    topic_overlap=round(overlap, 3),
                 )
                 report.candidates_total += 1
                 if pair.is_tier1:
@@ -251,8 +391,60 @@ def mine(docs: list[SourceDoc], *, max_examples: int = 10) -> PilotReport:
                         report.examples.append(asdict(pair))
                 else:
                     report.candidates_tier2 += 1
+                    if pair.same_guide_parts:
+                        report.candidates_same_guide += 1
 
     return report
+
+
+def sensitivity(docs: list[SourceDoc],
+                thresholds=(0.30, 0.25, 0.20, 0.18, 0.15, 0.12, 0.10, 0.08, 0.05)
+                ) -> str:
+    """How much does the Tier-1 count depend on the topic-overlap threshold?
+
+    The threshold is a judgement call, so the headline yield must be reported
+    as a range rather than as whatever a single setting produced. What this
+    sweep is really for is separating the robust finding from the tunable one:
+    the Tier-1 SHARE stays low across the whole range even though the absolute
+    count moves several-fold.
+    """
+    global MIN_TOPIC_OVERLAP
+    original = MIN_TOPIC_OVERLAP
+    rows = []
+    try:
+        for th in thresholds:
+            MIN_TOPIC_OVERLAP = th
+            r = mine(docs)
+            rows.append((th, r.candidates_total, r.candidates_tier1,
+                         r.candidates_tier2, r.tier1_share,
+                         r.yield_per_document))
+    finally:
+        MIN_TOPIC_OVERLAP = original
+
+    lines = [
+        "Sensitivity to the topic-overlap threshold",
+        "=" * 72,
+        "",
+        "  The threshold is a judgement call, so the yield is a range, not a number.",
+        "",
+        f"  {'threshold':>10} {'total':>8} {'tier 1':>8} {'same doc':>10} "
+        f"{'t1 share':>10} {'per doc':>9}",
+        "  " + "-" * 62,
+    ]
+    for th, tot, t1, t2, share, per in rows:
+        lines.append(f"  {th:>10.2f} {tot:>8,} {t1:>8,} {t2:>10,} "
+                     f"{share:>9.1%} {per:>9.2f}")
+
+    t1s = [r[2] for r in rows]
+    shares = [r[4] for r in rows]
+    lines += [
+        "",
+        f"  Tier-1 count ranges {min(t1s)}-{max(t1s)} across the sweep; the Tier-1 SHARE "
+        f"stays between {min(shares):.0%} and {max(shares):.0%}.",
+        "  The share is the robust finding. The count is tunable, and every candidate",
+        "  still needs human verification before it is an instance.",
+    ]
+    return "\n".join(lines)
 
 
 def load_docs(path: Path) -> list[SourceDoc]:
@@ -295,6 +487,8 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--docs", type=Path, help="JSONL of SourceDoc records")
     src.add_argument("--demo", action="store_true", help="run on a synthetic set")
     ap.add_argument("--report", type=Path, default=None, help="write the JSON report here")
+    ap.add_argument("--sensitivity", action="store_true",
+                    help="sweep the topic-overlap threshold and report the yield as a range")
     args = ap.parse_args(argv)
 
     docs = demo_docs() if args.demo else load_docs(args.docs)
@@ -303,6 +497,10 @@ def main(argv: list[str] | None = None) -> int:
 
     report = mine(docs)
     print(report.render())
+
+    if args.sensitivity:
+        print()
+        print(sensitivity(docs))
 
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)

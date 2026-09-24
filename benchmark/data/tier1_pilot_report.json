@@ -1,0 +1,62 @@
+{
+  "documents_scanned": 32,
+  "providers": 17,
+  "candidates_total": 74,
+  "candidates_tier1": 4,
+  "candidates_tier2": 70,
+  "candidates_same_guide": 3,
+  "by_provider": {
+    "gov_uk_student_rules": 1,
+    "gov_uk_graduate": 2,
+    "gov_uk_innovator_settlement": 1
+  },
+  "examples": [
+    {
+      "provider": "gov_uk_student_rules",
+      "rule_doc": "student-visa#overview",
+      "rule_sentence": "Your new course must begin within 28 days of your current visa expiring.",
+      "exception_doc": "guidance/immigration-rules/immigration-rules-appendix-student",
+      "exception_sentence": "A Student may begin studying on a new course with their current student sponsor if:",
+      "cue_matched": "restriction_without_cue",
+      "same_document": false,
+      "topic_overlap": 0.333,
+      "same_guide_parts": false
+    },
+    {
+      "provider": "gov_uk_graduate",
+      "rule_doc": "student-visa#overview",
+      "rule_sentence": "The earliest you can apply for a visa is 6 months before you start your course.",
+      "exception_doc": "graduate-visa#overview",
+      "exception_sentence": "If your course is eligible for a Student visa, you can extend your Student visa instead.",
+      "cue_matched": "restriction_without_cue",
+      "same_document": false,
+      "topic_overlap": 0.182,
+      "same_guide_parts": false
+    },
+    {
+      "provider": "gov_uk_graduate",
+      "rule_doc": "student-visa#overview",
+      "rule_sentence": "You must apply before your current visa expires.",
+      "exception_doc": "graduate-visa#overview",
+      "exception_sentence": "your current visa is a Student visa or Tier 4 (General) student visa",
+      "cue_matched": "restriction_without_cue",
+      "same_document": false,
+      "topic_overlap": 0.25,
+      "same_guide_parts": false
+    },
+    {
+      "provider": "gov_uk_innovator_settlement",
+      "rule_doc": "innovator-founder-visa#overview",
+      "rule_sentence": "You can apply for an Innovator Founder visa if:",
+      "exception_doc": "indefinite-leave-to-remain-innovator-founder-visa#overview",
+      "exception_sentence": "You may be eligible for indefinite leave to remain if you have an Innovator Founder visa.",
+      "cue_matched": "restriction_without_cue",
+      "same_document": false,
+      "topic_overlap": 0.375,
+      "same_guide_parts": false
+    }
+  ],
+  "tier1_share": 0.05405405405405406,
+  "yield_per_document": 0.125,
+  "recommendation": "Yield is only 0.12 per document; the 150 floor would need about 1200 documents. That is not realistic in WP2. Commit to the Tier 1 / Tier 2 split, report the composition explicitly, and do NOT let Tier 2 instances carry the naturally-occurring claim."
+}

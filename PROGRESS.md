@@ -11,6 +11,72 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-24 (later) — WP1 Tier-1 gate ANSWERED on real gov.uk data
+
+**The gating question is closed: Tier-1 pairs are scarce. Commit to the
+Tier 1 / Tier 2 split.** Full write-up in `docs/wp1_tier1_findings.md`.
+
+**Done**
+
+- `benchmark/mining/fetch_govuk.py` — fetches through the **gov.uk Content
+  API** rather than scraping. The API returns a `content_id`, and that field
+  turned out to decide the whole question.
+- Fetched 34 URLs / 17 candidate pairings / 32 documents, audited each pair,
+  ran the miner, swept the threshold.
+- `docs/wp1_tier1_findings.md` — the gating deliverable.
+- 316 tests pass (up from 303).
+
+**Three findings**
+
+1. **Most "pairs" are one document wearing two URLs.** Only **5 of 17**
+   pairings are genuinely distinct content items. Ten are two *parts* of one
+   gov.uk guide — `/student-visa` and `/student-visa/money` share a
+   `content_id`. URL-based mining would have counted those as Tier 1 and
+   inflated the naturally-occurring claim about 3x.
+
+2. **There is a third category the Tier 1 / Tier 2 binary does not cover.**
+   "Two parts of one guide" is not Tier 1 (one document, one author) and not
+   Tier 2 (nothing was artificially split — a RAG chunker really does index
+   them apart). Needs its own reporting; do not silently absorb it into either.
+
+3. **Yield: 4 Tier-1 candidates from 32 documents (0.12/doc).** The 150-floor
+   would need ~1,200 documents. Across a threshold sweep the count moves 2→21,
+   but the **Tier-1 share stays 5–18%** — same-document pairs outnumber Tier-1
+   pairs by 5x to 50x at every setting. The share is the robust finding; the
+   count is tunable.
+
+**Four harness bugs, found because the first run's answer was obviously wrong**
+
+The first run reported **939 Tier-1 candidates, 29.34 per document, "proceed
+with Tier 1 as the primary corpus"**. It had passed its synthetic demo cleanly.
+
+- **Cross product** — every rule sentence paired with every exception-looking
+  sentence in the provider. Fixed with a topic-overlap requirement and a cap
+  per rule.
+- **Sentence splitting** — gov.uk headings have no terminal punctuation, so
+  they glued to the next sentence. Now splits on newlines, with a length floor
+  and a navigation filter.
+- **Weak cues treated as exception markers** — `subject to`, `where the`,
+  `if the` appear constantly in this register. Strong cues only now.
+- **Five regex word boundaries were literal backspace bytes** (``), written
+  by a shell heredoc that interpreted the escape. Those patterns silently never
+  matched. Repaired; a repo-wide scan found no other affected file.
+
+None of the four changed the conclusion, but the first run would have produced
+exactly the inflated number the honesty guardrail exists to prevent. Worth
+remembering that a harness passing a synthetic demo says little about how it
+behaves on real prose.
+
+**The caveat that could still move the answer**
+
+All 34 URLs are gov.uk immigration. The proposal specifies **two** domains and
+**financial terms are untested**. Banks publish separate product pages,
+standalone fee schedules and dated amendment notices — a more Tier-1-friendly
+structure than a government guide with parts. Testing that domain is the
+cheapest remaining action that could change the corpus plan.
+
+---
+
 ### 2026-09-24 — Ablation runner, zeroth-review deck, probe triage
 
 Everything remaining that did not require Member A, Member B, or real data.

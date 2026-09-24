@@ -701,3 +701,150 @@ def test_tier_breakdown_separates_the_two_construction_tiers():
 def test_explicitness_breakdown_counts_branches_not_instances_only():
     rows = explicitness_breakdown([_gold_conditional()]).rows
     assert rows["explicit"]["exception branches"] == 1
+
+
+# --------------------------------------------------------------------------- #
+# benchmark/mining/tier1_pilot.py  +  fetch_govuk.py
+# --------------------------------------------------------------------------- #
+
+from benchmark.mining.fetch_govuk import html_to_text, parse_pairs  # noqa: E402
+from benchmark.mining.tier1_pilot import (  # noqa: E402
+    MIN_TOPIC_OVERLAP,
+    SourceDoc,
+    find_exception_sentences,
+    find_rule_sentences,
+    mine,
+    sentences,
+    topic_overlap,
+)
+
+
+def test_headings_split_off_instead_of_gluing_to_the_next_sentence():
+    """Real pages put headings on their own line with no terminal
+    punctuation. Splitting on punctuation alone produced
+    'When to apply When you can apply depends on...' as one sentence."""
+    got = sentences("When to apply\nYou must apply from outside the UK before you travel.")
+    assert got == ["You must apply from outside the UK before you travel."]
+
+
+def test_short_policy_sentences_survive_the_length_floor():
+    """The floor drops headings, not terse rules. A floor set high enough to
+    feel safe silently discards real content."""
+    assert "Fees are waived for some applicants." in sentences(
+        "Overview\nFees are waived for some applicants."
+    )
+
+
+def test_navigation_is_not_mistaken_for_policy():
+    """'The register of licensed student sponsors can be found at www.gov.uk/...'
+    carries a restriction cue and states no rule. On a real page this class of
+    sentence is a large fraction of the text."""
+    text = ("The register of licensed student sponsors can be found at "
+            "www.gov.uk/government/publications/register-of-licensed-sponsors.")
+    assert sentences(text) == []
+
+
+def test_topic_overlap_separates_related_from_unrelated():
+    rule = "International transactions incur a three percent fee."
+    related = "The transaction fee is waived for premium cardholders."
+    unrelated = "Biometric appointments are booked through the online portal."
+    assert topic_overlap(rule, related) > topic_overlap(rule, unrelated)
+    assert topic_overlap(rule, unrelated) < MIN_TOPIC_OVERLAP
+
+
+def test_strong_cues_only_when_finding_exceptions():
+    """A weak conditional marker is not an exception. 'Transfers subject to
+    verification are released next day' states a rule, not a carve-out."""
+    found = dict(find_exception_sentences(
+        "Payments are subject to verification before they are released to you."
+    ))
+    assert not any("subject to" == cue for cue in found.values())
+
+
+def test_rule_sentences_exclude_ones_carrying_an_exception_cue():
+    text = "All applicants must pay the fee. The fee does not apply to under-18s."
+    rules = find_rule_sentences(text)
+    assert any("must pay" in r for r in rules)
+    assert not any("does not apply" in r for r in rules)
+
+
+def _doc(doc_id, provider, text, content_id=None):
+    return SourceDoc(doc_id=doc_id, provider=provider, kind="guide",
+                     text=text, content_id=content_id)
+
+
+def test_guide_parts_are_not_counted_as_two_documents():
+    """The Tier-1 test is about separate DOCUMENTS. Two parts of one gov.uk
+    guide have distinct URLs and one content_id; counting them as Tier 1 would
+    inflate the naturally-occurring claim."""
+    shared = "c0a2a4d9"
+    docs = [
+        _doc("student-visa#overview", "p",
+             "A fee of 490 is payable on every application submitted online.",
+             content_id=shared),
+        _doc("student-visa#money", "p",
+             "The application fee does not apply where the form is submitted by post.",
+             content_id=shared),
+    ]
+    report = mine(docs)
+    assert report.candidates_tier1 == 0
+    assert report.candidates_same_guide >= 1
+
+
+def test_genuinely_separate_documents_count_as_tier_1():
+    docs = [
+        _doc("terms", "p",
+             "A fee of 490 is payable on every application submitted online.",
+             content_id="aaa"),
+        _doc("appendix", "p",
+             "The application fee does not apply where the form is submitted by post.",
+             content_id="bbb"),
+    ]
+    assert mine(docs).candidates_tier1 >= 1
+
+
+def test_unrelated_sentences_do_not_pair():
+    """Without a topical constraint the miner takes the cross product of every
+    rule against every cue-bearing sentence, which on a 60,000-character
+    statutory appendix is thousands of pairs and almost entirely noise."""
+    docs = [
+        _doc("a", "p", "A fee of 490 is payable on every application submitted online.",
+             content_id="aaa"),
+        _doc("b", "p", "Biometric enrolment does not apply where fingerprints are on file.",
+             content_id="bbb"),
+    ]
+    assert mine(docs).candidates_total == 0
+
+
+def test_one_rule_cannot_generate_unlimited_candidates():
+    exceptions = " ".join(
+        f"The application fee does not apply to a form submitted in case {i} online."
+        for i in range(12)
+    )
+    docs = [
+        _doc("a", "p", "A fee of 490 is payable on every application submitted online.",
+             content_id="aaa"),
+        _doc("b", "p", exceptions, content_id="bbb"),
+    ]
+    from benchmark.mining.tier1_pilot import MAX_PAIRS_PER_RULE
+
+    assert mine(docs).candidates_total <= MAX_PAIRS_PER_RULE
+
+
+def test_html_to_text_puts_each_block_on_its_own_line():
+    html = "<h2>When to apply</h2><p>You must apply before you travel.</p><ul><li>Item one here</li></ul>"
+    lines = html_to_text(html).splitlines()
+    assert "When to apply" in lines
+    assert "You must apply before you travel." in lines
+
+
+def test_html_to_text_drops_scripts():
+    assert "alert" not in html_to_text("<p>Real text</p><script>alert(1)</script>")
+
+
+def test_pairs_file_groups_urls_by_provider(tmp_path):
+    f = tmp_path / "pairs.txt"
+    f.write_text("# comment\nprov_a  https://x/1\nprov_a  https://x/2\n\nprov_b  https://y/1\n",
+                 encoding="utf-8")
+    pairs = parse_pairs(f)
+    assert pairs == {"prov_a": ["https://x/1", "https://x/2"], "prov_b": ["https://y/1"]}

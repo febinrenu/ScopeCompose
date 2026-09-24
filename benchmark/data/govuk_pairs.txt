@@ -1,0 +1,52 @@
+# Member A's WP1 Tier-1 mining candidates, 2026-09-24.
+# Format: provider<space>url   (two or more URLs per provider = one candidate pair)
+gov_uk_student    https://www.gov.uk/student-visa
+gov_uk_student    https://www.gov.uk/student-visa/money
+
+gov_uk_student_rules    https://www.gov.uk/student-visa
+gov_uk_student_rules    https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-student
+
+gov_uk_student_dependants    https://www.gov.uk/student-visa
+gov_uk_student_dependants    https://www.gov.uk/student-visa/family-members
+
+gov_uk_student_finance    https://www.gov.uk/student-visa/money
+gov_uk_student_finance    https://www.gov.uk/guidance/financial-evidence-for-student-and-child-student-visa-applicants
+
+gov_uk_skilled_worker    https://www.gov.uk/skilled-worker-visa
+gov_uk_skilled_worker    https://www.gov.uk/skilled-worker-visa/how-much-it-costs
+
+gov_uk_health_care    https://www.gov.uk/health-care-worker-visa
+gov_uk_health_care    https://www.gov.uk/health-care-worker-visa/how-much-it-costs
+
+gov_uk_health_care_change    https://www.gov.uk/health-care-worker-visa
+gov_uk_health_care_change    https://www.gov.uk/health-care-worker-visa/update-your-visa-if-you-change-job-or-employer
+
+gov_uk_graduate    https://www.gov.uk/graduate-visa
+gov_uk_graduate    https://www.gov.uk/student-visa
+
+gov_uk_youth_mobility    https://www.gov.uk/youth-mobility
+gov_uk_youth_mobility    https://www.gov.uk/youth-mobility/eligibility
+
+gov_uk_youth_mobility_ballot    https://www.gov.uk/youth-mobility
+gov_uk_youth_mobility_ballot    https://www.gov.uk/guidance/youth-mobility-scheme-visa-ballot-system
+
+gov_uk_family_partner    https://www.gov.uk/uk-family-visa/partner-spouse
+gov_uk_family_partner    https://www.gov.uk/uk-family-visa/proof-income-partner
+
+gov_uk_family_evidence    https://www.gov.uk/uk-family-visa/provide-information
+gov_uk_family_evidence    https://www.gov.uk/uk-family-visa/proof-income-partner
+
+gov_uk_family_parent    https://www.gov.uk/uk-family-visa/parent
+gov_uk_family_parent    https://www.gov.uk/uk-family-visa/child
+
+gov_uk_innovator_founder    https://www.gov.uk/innovator-founder-visa
+gov_uk_innovator_founder    https://www.gov.uk/innovator-founder-visa/switch-to-this-visa
+
+gov_uk_innovator_settlement    https://www.gov.uk/innovator-founder-visa
+gov_uk_innovator_settlement    https://www.gov.uk/indefinite-leave-to-remain-innovator-founder-visa
+
+gov_uk_global_talent_tech    https://www.gov.uk/global-talent-digital-technology
+gov_uk_global_talent_tech    https://www.gov.uk/global-talent-researcher-academic
+
+gov_uk_standard_visitor    https://www.gov.uk/standard-visitor
+gov_uk_standard_visitor    https://www.gov.uk/standard-visitor-visa
