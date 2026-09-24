@@ -37,6 +37,7 @@ from contract.gold import GoldInstance
 from contract.models import ConflictType, QueryRecord, ScopeRelation
 from detection.stage1 import Stage1Filter
 from detection.variants.base import DetectorVariant, labels_from_record
+from metrics.stats import holm_adjust, mcnemar, wilson
 
 
 @dataclass
@@ -52,6 +53,12 @@ class VariantResult:
     confusion: dict[str, dict[str, int]] = field(default_factory=dict)
     relation_confusion: dict[str, dict[str, int]] = field(default_factory=dict)
     error: str | None = None
+
+    #: Per-item correctness, keyed (query_id, pair). The variants are scored on
+    #: identical pairs, so the comparison between them is PAIRED -- and an
+    #: unpaired test throws away exactly the information that makes a modest
+    #: but consistent difference detectable.
+    item_correct: dict[tuple[str, tuple[str, str]], bool] = field(default_factory=dict)
 
     # -- headline numbers ------------------------------------------------------ #
 
@@ -80,6 +87,15 @@ class VariantResult:
     @property
     def n_gold_factual(self) -> int:
         return sum(self.confusion.get("factual", {}).values())
+
+    def type_accuracy_ci(self, alpha: float = 0.05):
+        return wilson(self.correct_type, self.n_pairs, alpha=alpha)
+
+    def conditional_leak_ci(self, alpha: float = 0.05):
+        return wilson(self.conditional_as_factual, self.n_gold_conditional, alpha=alpha)
+
+    def factual_leak_ci(self, alpha: float = 0.05):
+        return wilson(self.factual_as_conditional, self.n_gold_factual, alpha=alpha)
 
     @property
     def conditional_leak_rate(self) -> float:
@@ -180,7 +196,9 @@ def evaluate(
         for cand, (p_type, p_rel) in zip(candidates, predictions):
             g_type, g_rel = gold[cand.key]
             res.n_pairs += 1
-            res.correct_type += int(p_type is g_type)
+            correct = p_type is g_type
+            res.correct_type += int(correct)
+            res.item_correct[(rec.query_id, cand.key)] = correct
             _bump(res.confusion, g_type.value, p_type.value)
 
             if g_rel is not None:
@@ -190,6 +208,67 @@ def evaluate(
                       p_rel.value if p_rel else "none")
 
     return res
+
+
+def pairwise_significance(results: list[VariantResult], *, alpha: float = 0.05) -> str:
+    """McNemar between every pair of variants, Holm-corrected.
+
+    Two things this guards against. First, reading a leaderboard as though the
+    ordering were meaningful: on a few hundred pairs a three-point accuracy gap
+    is often indistinguishable from noise. Second, running several comparisons
+    and reporting the one that cleared 0.05 -- with three variants there are
+    three comparisons, and Holm keeps the family-wise error rate at alpha.
+    """
+    usable = [r for r in results if not r.error and r.item_correct]
+    if len(usable) < 2:
+        return ""
+
+    tests: dict[str, object] = {}
+    p_values: dict[str, float] = {}
+    for i, a in enumerate(usable):
+        for b in usable[i + 1:]:
+            shared = sorted(set(a.item_correct) & set(b.item_correct))
+            if not shared:
+                continue
+            label = f"{a.name} vs {b.name}"
+            result = mcnemar([a.item_correct[k] for k in shared],
+                             [b.item_correct[k] for k in shared])
+            tests[label] = result
+            p_values[label] = result.p_value
+
+    if not tests:
+        return ""
+
+    adjusted = holm_adjust(p_values, alpha=alpha)
+    lines = [
+        "",
+        "Is the ranking real? (McNemar, paired on identical items)",
+        "=" * 86,
+        "",
+        "  A leaderboard ordering is not a result. These variants are scored on the",
+        "  same pairs, so the comparison is paired; Holm correction accounts for",
+        "  running three of them.",
+        "",
+        f"  {'comparison':<44} {'b':>5} {'c':>5} {'raw p':>10} {'Holm p':>10}  verdict",
+        "  " + "-" * 82,
+    ]
+    for label, result in sorted(tests.items(), key=lambda kv: kv[1].p_value):
+        adj, reject = adjusted[label]
+        verdict = "DIFFERENT" if reject else "not distinguishable"
+        lines.append(f"  {label:<44} {result.b:>5} {result.c:>5} "
+                     f"{result.p_value:>10.4g} {adj:>10.4g}  {verdict}")
+
+    underpowered = [l for l, r in tests.items() if r.n_discordant < 10]
+    if underpowered:
+        lines += [
+            "",
+            "  Underpowered comparisons (fewer than 10 items where the two disagree):",
+        ]
+        for label in underpowered:
+            lines.append(f"    {label} - {tests[label].n_discordant} discordant items. "
+                         f"Absence of significance here is absence of evidence, not "
+                         f"evidence of equivalence.")
+    return "\n".join(lines)
 
 
 def render(results: list[VariantResult]) -> str:
@@ -230,12 +309,16 @@ def render(results: list[VariantResult]) -> str:
         lines += [
             "",
             f"  Best on the combined factual/conditional boundary: {best.name}",
-            f"    cond->fact {best.conditional_leak_rate:.1%} "
+            f"    cond->fact {best.conditional_leak_ci().render()}  "
             f"(true exceptions lost to selection)",
-            f"    fact->cond {best.factual_leak_rate:.1%} "
+            f"    fact->cond {best.factual_leak_ci().render()}  "
             f"(real contradictions sent to composition)",
-            f"    accuracy   {best.type_accuracy:.3f}",
+            f"    accuracy   {best.type_accuracy_ci().render()}",
             "  -> this is the variant to report as 'the' detector, per proposal section 5.2.",
+            "",
+            "  Intervals are Wilson at 95%. The leak rates are computed over the",
+            "  conditional and factual subsets only, so their denominators are small",
+            "  and the intervals correspondingly wide.",
         ]
 
     degenerate = [r for r in usable if r.degenerate]
@@ -354,6 +437,9 @@ def main(argv: list[str] | None = None) -> int:
         results.append(evaluate(v, test, stage1))
 
     print(render(results))
+    sig = pairwise_significance(results)
+    if sig:
+        print(sig)
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)

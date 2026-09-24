@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from contract.models import ConflictPair, ConflictType, QueryRecord, ScopeRelation
+from metrics.stats import Interval, bootstrap, mcnemar, wilson
 
 
 # --------------------------------------------------------------------------- #
@@ -53,6 +54,22 @@ class BinaryScores:
     def support(self) -> int:
         return self.tp + self.fn
 
+    # -- uncertainty --------------------------------------------------------- #
+    #
+    # Precision and recall are proportions with a clear denominator, so Wilson
+    # is exact enough and needs no resampling. F1 is a ratio of ratios and has
+    # no closed form, so it is left to the bootstrap in score_detection_ci().
+
+    def precision_ci(self, alpha: float = 0.05) -> Interval:
+        return wilson(self.tp, self.tp + self.fp, alpha=alpha)
+
+    def recall_ci(self, alpha: float = 0.05) -> Interval:
+        return wilson(self.tp, self.tp + self.fn, alpha=alpha)
+
+    def accuracy_ci(self, alpha: float = 0.05) -> Interval:
+        return wilson(self.tp + self.tn, self.tp + self.fp + self.fn + self.tn,
+                      alpha=alpha)
+
     def as_dict(self) -> dict[str, float]:
         return {
             "precision": round(self.precision, 4),
@@ -60,13 +77,16 @@ class BinaryScores:
             "f1": round(self.f1, 4),
             "accuracy": round(self.accuracy, 4),
             "tp": self.tp, "fp": self.fp, "fn": self.fn, "tn": self.tn,
+            "precision_ci": self.precision_ci().as_dict(),
+            "recall_ci": self.recall_ci().as_dict(),
         }
 
     def render(self, title: str = "Binary conflict detection") -> str:
         return (
             f"{title}\n" + "-" * 56 + "\n"
-            f"  precision {self.precision:.4f}   recall {self.recall:.4f}   "
-            f"f1 {self.f1:.4f}\n"
+            f"  precision {self.precision_ci().render()}\n"
+            f"  recall    {self.recall_ci().render()}\n"
+            f"  f1        {self.f1:.4f}   (interval via score_detection_ci)\n"
             f"  tp {self.tp:<6} fp {self.fp:<6} fn {self.fn:<6} tn {self.tn:<6}"
         )
 
@@ -392,3 +412,129 @@ def split_by_construction(
     for r in records:
         out.setdefault(r.construction.value, []).append(r)
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Interval-bearing variants of the scorers
+# --------------------------------------------------------------------------- #
+#
+# These resample INSTANCES, not pairs. Ten pairs from one record share
+# passages; resampling them independently pretends the corpus holds more
+# information than it does and returns intervals that are too narrow. The unit
+# of independence is the instance, so that is the unit of resampling.
+
+
+def _paired(predicted: list[QueryRecord], gold: list[QueryRecord]
+            ) -> list[tuple[QueryRecord, QueryRecord]]:
+    gold_by_id = {r.query_id: r for r in gold}
+    return [(p, gold_by_id[p.query_id]) for p in predicted if p.query_id in gold_by_id]
+
+
+def score_detection_ci(
+    predicted: list[QueryRecord],
+    gold: list[QueryRecord],
+    *,
+    alpha: float = 0.05,
+    n_resamples: int = 2000,
+    seed: int = 0,
+) -> dict[str, Interval]:
+    """Bootstrap intervals for detection F1, precision and recall."""
+    units = _paired(predicted, gold)
+
+    def _scores(sample) -> BinaryScores:
+        return score_detection([p for p, _ in sample], [g for _, g in sample])
+
+    return {
+        "f1": bootstrap(units, lambda s: _scores(s).f1,
+                        n_resamples=n_resamples, alpha=alpha, seed=seed),
+        "precision": bootstrap(units, lambda s: _scores(s).precision,
+                               n_resamples=n_resamples, alpha=alpha, seed=seed),
+        "recall": bootstrap(units, lambda s: _scores(s).recall,
+                            n_resamples=n_resamples, alpha=alpha, seed=seed),
+    }
+
+
+def score_classification_ci(
+    predicted: list[QueryRecord],
+    gold: list[QueryRecord],
+    *,
+    alpha: float = 0.05,
+    n_resamples: int = 2000,
+    seed: int = 0,
+) -> dict[str, Interval]:
+    """Intervals for the numbers the detector is actually judged on.
+
+    The two leak rates matter more than accuracy here, and they are computed
+    over small denominators -- the conditional and factual subsets -- so their
+    intervals are wide. Reporting the point estimate alone would suggest a
+    precision the corpus size does not support.
+    """
+    units = _paired(predicted, gold)
+
+    def _s(sample) -> ClassificationScores:
+        return score_classification([p for p, _ in sample], [g for _, g in sample])
+
+    return {
+        "accuracy": bootstrap(units, lambda s: _s(s).matrix.accuracy,
+                              n_resamples=n_resamples, alpha=alpha, seed=seed),
+        "macro_f1": bootstrap(units, lambda s: _s(s).matrix.macro_f1,
+                              n_resamples=n_resamples, alpha=alpha, seed=seed),
+        "conditional_leak_rate": bootstrap(
+            units, lambda s: _s(s).conditional_leak_rate,
+            n_resamples=n_resamples, alpha=alpha, seed=seed),
+        "factual_leak_rate": bootstrap(
+            units, lambda s: _s(s).factual_leak_rate,
+            n_resamples=n_resamples, alpha=alpha, seed=seed),
+    }
+
+
+def score_scope_ci(
+    predicted: list[QueryRecord],
+    gold: list[QueryRecord],
+    *,
+    alpha: float = 0.05,
+    n_resamples: int = 2000,
+    seed: int = 0,
+) -> dict[str, Interval]:
+    units = _paired(predicted, gold)
+
+    def _s(sample) -> ScopeScores:
+        return score_scope_relations([p for p, _ in sample], [g for _, g in sample])
+
+    return {
+        "four_way_accuracy": bootstrap(units, lambda s: _s(s).matrix.accuracy,
+                                       n_resamples=n_resamples, alpha=alpha, seed=seed),
+        "macro_f1": bootstrap(units, lambda s: _s(s).matrix.macro_f1,
+                              n_resamples=n_resamples, alpha=alpha, seed=seed),
+    }
+
+
+def compare_detectors_mcnemar(
+    predicted_a: list[QueryRecord],
+    predicted_b: list[QueryRecord],
+    gold: list[QueryRecord],
+):
+    """McNemar's test between two detectors on the same pairs.
+
+    The three A3 variants are scored on identical pairs, so the comparison is
+    paired. An unpaired test discards exactly the information that makes a
+    modest but consistent difference detectable, and on a few hundred pairs
+    that is usually the difference between a result and a shrug.
+
+    Correctness is per-pair agreement with the gold five-class label.
+    """
+    gold_by_id = {r.query_id: {p.key: p.type for p in r.conflict_pairs} for r in gold}
+    by_a = {r.query_id: {p.key: p.type for p in r.conflict_pairs} for r in predicted_a}
+    by_b = {r.query_id: {p.key: p.type for p in r.conflict_pairs} for r in predicted_b}
+
+    correct_a: list[bool] = []
+    correct_b: list[bool] = []
+    for qid, gold_pairs in gold_by_id.items():
+        a_pairs, b_pairs = by_a.get(qid, {}), by_b.get(qid, {})
+        for key, truth in gold_pairs.items():
+            if key not in a_pairs or key not in b_pairs:
+                continue   # only items BOTH systems judged are comparable
+            correct_a.append(a_pairs[key] is truth)
+            correct_b.append(b_pairs[key] is truth)
+
+    return mcnemar(correct_a, correct_b)

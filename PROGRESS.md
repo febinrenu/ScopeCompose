@@ -11,6 +11,90 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-24 (final) - Statistical rigour layer, and a broken invariance guarantee
+
+Answering "is this journal-ready?" honestly: no, and the largest closable gap
+was that **every number in the repo was N=1 with no interval**. That is now
+fixed. The data gap remains and is not closable by code.
+
+**A real defect found while auditing**
+
+`interaction_features` claimed order-symmetry by sorting the two embeddings
+into a canonical position on their element sum. Two different embeddings can
+share a sum, and on that tie the sort is arbitrary and the vector genuinely
+differs under swap. **The bug survived its own unit test** because the test
+used embeddings with unequal sums.
+
+It matters more than a normal defect: order invariance is a CLAIMED DESIGN
+PROPERTY of this pipeline, and one that holds "almost always" is not a
+property. Now `[e_i + e_j; |e_i - e_j|; e_i * e_j]` - every term symmetric, so
+invariance holds by construction. Added a tie-case test and a randomised
+property test across 3/64/384 dimensions.
+
+**New: `metrics/stats.py`**
+
+- **Wilson intervals** for proportions. Chosen over the normal approximation
+  because this project's rates sit at the boundaries, where the normal
+  interval misbehaves: 72/72 returns [1.0, 1.0] and claims certainty from 72
+  observations.
+- **Bootstrap intervals** for F1, macro-F1 and the leak rates, resampled over
+  **instances, not pairs** - pairs within a record share passages, and
+  resampling them independently understates every interval.
+- **`bootstrap_difference`** resamples both systems together, preserving the
+  pairing. Checking whether two separate intervals overlap is a weaker and
+  different test, and a common mistake.
+- **McNemar** with the exact binomial below 25 discordant items, because on a
+  few hundred instances the disagreement count is often single digits and
+  chi-square is unreliable there.
+- **Holm correction**, because three variants means three comparisons and
+  reporting the one that cleared 0.05 is how a null result becomes a finding.
+
+**New: `reproducibility.py`**
+
+`seed_everything()` covers all four random sources (random, numpy, torch CPU
+and CUDA, PYTHONHASHSEED) plus cuDNN determinism. `run_manifest()` records git
+commit and dirty state, contract version, hardware profile, tier map and
+whether the threshold band was ever tuned - a seed alone does not reproduce a
+number if the checkpoint moved underneath it.
+
+**What the intervals immediately revealed**
+
+On the three-variant comparison:
+
+    cond->fact  0.0% [0.0%, 16.8%]
+    accuracy  100.0% [89.3%, 100.0%]
+
+A perfect zero leak rate - consistent with up to **16.8%** leakage, because
+there were only 19 conditional instances. That is the entire argument for this
+layer: the point estimate said "flawless", the interval says "we have not
+measured enough to tell".
+
+Also: `lexical_nli vs structured_entailment`, McNemar p = 1.5e-05, Holm-adjusted
+p = 1.5e-05 - that ranking is real, and now demonstrably so rather than
+asserted from a leaderboard.
+
+**Wired in**
+
+- `compare.py` records per-item correctness and prints Holm-corrected pairwise
+  McNemar, flagging underpowered comparisons explicitly.
+- `run_pipeline.py --evaluate` prints the provenance block and bootstrap
+  intervals for every headline metric.
+- 354 tests pass (up from 319), 35 of them on the statistics itself.
+
+**One note on method**
+
+My first hand-computed Wilson reference was wrong, and the test caught the
+docstring rather than the code. Corrected, with the derivation written out so
+the reference is checkable rather than asserted.
+
+**Still not journal-ready, and not closable by code**
+
+Zero annotated instances. No kappa. WP0 not started. The structured
+long-context baseline still does not exist. Every number above is on mock or
+hand-built data.
+
+---
+
 ### 2026-09-24 (final) - WP1 batch 2: the estimate was optimistic, and that matters
 
 **Done**

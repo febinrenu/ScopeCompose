@@ -30,6 +30,7 @@ import json
 import sys
 from pathlib import Path
 
+import reproducibility
 from contract.models import QueryRecord
 from contract.routing import Action, route_with_flags
 from detection.pipeline import TwoStageDetector
@@ -100,7 +101,16 @@ def main(argv: list[str] | None = None) -> int:
                     help="score against the gold labels in the input file")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("-o", "--output", type=Path, default=None, help="write records here")
+    ap.add_argument("--seed", type=int, default=0,
+                    help="global seed for every random source")
+    ap.add_argument("--no-ci", action="store_true",
+                    help="skip bootstrap intervals (faster, but a point estimate "
+                         "alone is not reportable)")
     args = ap.parse_args(argv)
+
+    # Seed first, and print the provenance: a number nobody can trace back to
+    # a commit, a seed and a model checkpoint is not a result.
+    reproducibility.start_run(args.seed)
 
     if args.query:
         if not args.corpus:
@@ -147,10 +157,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.evaluate and gold:
         from metrics.classification import (
             score_classification,
+            score_classification_ci,
             score_detection,
+            score_detection_ci,
+            score_scope_ci,
             score_scope_relations,
             split_by_construction,
         )
+        from metrics.stats import render_intervals
 
         print()
         print(score_detection(analysed, gold).render())
@@ -158,6 +172,19 @@ def main(argv: list[str] | None = None) -> int:
         print(score_classification(analysed, gold).render())
         print()
         print(score_scope_relations(analysed, gold).render())
+
+        if not args.no_ci:
+            print()
+            print(render_intervals(
+                {**score_detection_ci(analysed, gold, seed=args.seed),
+                 **score_classification_ci(analysed, gold, seed=args.seed),
+                 **score_scope_ci(analysed, gold, seed=args.seed)},
+                title="95% bootstrap intervals (resampled over INSTANCES)",
+            ))
+            print()
+            print("  Pairs within an instance share passages and are not independent,")
+            print("  so the resampling unit is the instance. Resampling pairs would")
+            print("  understate every interval above.")
 
         tiers = split_by_construction(gold)
         if len(tiers) > 1:
