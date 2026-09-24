@@ -1,7 +1,8 @@
 # WP1 — Tier-1 mining pilot: findings
 
 **Status: complete. Gating checkpoint answered.**
-**Date: 2026-09-24 · Member A · 32 documents, 17 candidate pairings, all gov.uk**
+**Date: 2026-09-24 · Member A**
+**Two domains: 32 gov.uk documents / 17 pairings, and 21 banking documents / 11 pairings.**
 
 ---
 
@@ -18,9 +19,20 @@ target and the corpus has to be built as an explicit Tier 1 / Tier 2 mix.
 
 ## Answer
 
-**Tier-1 pairs are scarce. Commit to the Tier 1 / Tier 2 split.**
+**Tier-1 pairs are scarce in both domains. Commit to the Tier 1 / Tier 2
+split.** The proposal's §8 scarcity risk is confirmed, not avoided.
 
-The proposal's §8 scarcity risk is confirmed, not avoided.
+Two refinements the pilot added, both actionable:
+
+1. **Banking is the better Tier-1 domain by a wide margin** — 91% of banking
+   pairings are genuinely separate documents against 29% for gov.uk. Make
+   financial terms the primary Tier-1 source.
+2. **The lexical miner was under-implementing the proposal.** §6.2 specifies
+   that *a model* proposes candidate pairs. Swapping the cue-and-overlap miner
+   for an LLM proposer on the same documents took cross-document pairs from
+   1 to 4, and three of those four look genuinely right.
+
+Neither refinement rescues Tier-1 abundance. Both change how WP2 should run.
 
 ---
 
@@ -110,6 +122,69 @@ candidates*, not instances.
 
 ---
 
+## Domain 2 — financial terms (the comparison that mattered)
+
+Same method, 11 pairings across NatWest, HSBC, Barclays and Lloyds: product
+pages plus separate charges schedules, and four PDFs. `robots.txt` is checked
+per host before every fetch; one URL pointed at an origin-server hostname that
+disallows crawling and was skipped rather than fetched.
+
+### Document separation — banking wins decisively
+
+| | gov.uk | banking |
+|---|---|---|
+| distinct-document pairings | **5 / 17 (29%)** | **10 / 11 (91%)** |
+| same document | 10 / 17 | 0 / 11 |
+| broken or blocked | 2 / 17 | 1 / 11 |
+
+Banks genuinely publish the rule and the charge in separate documents — a
+product page and a rates-and-charges page, or a terms PDF and a fee-information
+PDF. gov.uk publishes one guide with parts. That is a structural difference,
+and it is the strongest argument for making financial terms the primary Tier-1
+domain.
+
+### Pair density — neither domain is abundant
+
+Separation is necessary, not sufficient. The documents are separate; the
+question is whether a *rule* in one has a *scope-narrowing exception* in the
+other.
+
+| method | cross-document pairs found (11 banking pairings) |
+|---|---|
+| lexical miner (cues + word overlap) | 1 |
+| LLM proposer | **4** |
+
+Three of the four look genuinely right on inspection:
+
+- *"Removing foreign transaction fees for Reward and Premier Reward debit
+  cards"* against *"Non-Sterling Transaction Fee 2.75% of transaction"* — the
+  fee applies generally and is waived for two named tiers.
+- *"You can only have one Reward Platinum account in your sole name"* against
+  *"You can have more than one joint Reward Platinum account…"* — a clean
+  refinement on account-holding capacity.
+- *"With a Reward Silver account, you won't pay any non-sterling transaction
+  fees when paying with your card"* against *"Not valid for ATM withdrawals."*
+  — an **implicit** narrowing, exactly the hard case Contrastive Scope Probing
+  targets.
+
+The fourth pairs a real rule against a fragment of a rates table and is noise.
+
+### Why the lexical miner missed them
+
+A product page and a charges schedule are written in different registers and
+share few content words, so a bag-of-words bridge fails even where the pairing
+is obvious to a reader. The proposal always specified a model proposer; the
+lexical miner was the under-implementation, and this measured the gap rather
+than assuming it.
+
+**One tuning note worth keeping.** Shrinking the model's input window from
+9,000 to 5,500 characters per document fixed a rate-limit problem and made the
+results *worse* — the proposer stopped finding fee-waiver pairs and started
+returning October price changes, because truncation had removed the section
+where the rules live. Pacing the calls is the right lever; truncation is not.
+
+---
+
 ## Three harness bugs found and fixed on the way
 
 The first run of the pilot reported **939 Tier-1 candidates and 29.34 per
@@ -145,19 +220,18 @@ the inflated number the project's honesty guardrail exists to prevent.
 
 ## Caveats
 
-1. **One domain.** All 34 URLs are gov.uk immigration. The proposal specifies
-   **two** domains, and financial terms are untested. Banks may well yield
-   better: they publish separate product pages, standalone fee schedules and
-   dated amendment notices, which is a more Tier-1-friendly structure than a
-   government guide with parts. **Worth testing before finalising the corpus
-   plan** — it could change the mix.
-2. **Candidates, not instances.** The 4 are unverified. A human has to confirm
-   each is a genuine rule/exception pair before it counts.
-3. **One publisher.** gov.uk has a house style. Other publishers structure
-   differently, and the 5/17 distinct-document ratio is partly a fact about
-   gov.uk's CMS rather than about policy documents generally.
-4. **High recall by design.** The miner over-generates for human verification.
-   Precision is deliberately not the target.
+1. **Candidates, not instances.** Every pair above is unverified. A human
+   confirms each before it counts.
+2. **Small samples.** 17 and 11 pairings — enough to answer a go/no-go, not
+   enough to estimate a yield precisely.
+3. **Four banks, one government.** Publishers have house styles, and the
+   91%-versus-29% separation gap is partly a fact about CMS architecture
+   rather than about policy documents generally.
+4. **High recall by design.** Both miners over-generate for human
+   verification. Precision is deliberately not the target.
+5. **The LLM proposer ran on the BULK tier** — the smallest model in the tier
+   map. A stronger model would likely propose more and better candidates, so
+   4 is a floor, not a ceiling.
 
 ---
 
@@ -168,10 +242,15 @@ the inflated number the project's honesty guardrail exists to prevent.
    State the composition explicitly in the paper.
 2. **Do not let Tier 2 carry the naturally-occurring claim.** Report the two
    tiers separately in every headline number, as §6.2 requires.
-3. **Test the financial-terms domain before fixing the corpus plan.** This is
-   the cheapest remaining action that could still move the answer.
-4. **Decide how to report same-guide pairs.** They are a real third category
-   and the honest options are a new `construction` value or a labelled subset
-   of Tier 2 — not silence.
-5. **Revisit the 150-instance Tier-1 floor.** On this evidence it is not
-   reachable from gov.uk alone within WP2.
+3. **Make financial terms the primary Tier-1 domain.** 91% document separation
+   against gov.uk's 29%. Keep immigration as the second domain the proposal
+   requires, but do not expect Tier-1 volume from it.
+4. **Switch WP2 mining to the LLM proposer.** Four times the lexical miner on
+   identical documents, and it is what §6.2 specified all along.
+   `benchmark/mining/llm_proposer.py` is written, paced and cached.
+5. **Decide how to report same-guide pairs.** A real third category: either a
+   new `construction` value or a labelled subset of Tier 2 — not silence.
+6. **Revisit the 150-instance Tier-1 floor.** At roughly 0.4 plausible pairs
+   per curated pairing, reaching 150 needs on the order of 375 hand-picked
+   document pairs. Tight, and far more realistic than gov.uk's ~1,200 — but it
+   should be planned, not assumed.

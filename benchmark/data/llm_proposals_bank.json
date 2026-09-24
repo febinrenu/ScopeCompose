@@ -1,0 +1,48 @@
+{
+  "lexical_tier1": 1,
+  "llm_cross_document": 4,
+  "pairings_attempted": 10,
+  "pairings_failed": 0,
+  "proposals": [
+    {
+      "provider": "natwest_current_terms",
+      "rule": "Removing foreign transaction fees for Reward and Premier Reward debit cards (General Term 7.4)",
+      "exception": "Debit card payment in a foreign currency • Non‑Sterling Transaction Fee 2.75% of transaction",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception applies only to the Reward account, where a foreign‑currency transaction fee is charged, contrary to the general rule that such fees are removed for Reward and Premie",
+      "confidence": 0.95,
+      "cross_document": true
+    },
+    {
+      "provider": "natwest_reward_platinum",
+      "rule": "You can only have one Reward Platinum account in your sole name.",
+      "exception": "You can have more than one joint Reward Platinum account, as long as the other account holder is different on each one.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception allows multiple Reward Platinum accounts when held jointly with different partners, which is a narrower case than the sole‑name rule.",
+      "confidence": 0.95,
+      "cross_document": true
+    },
+    {
+      "provider": "natwest_reward_silver",
+      "rule": "With a Reward Silver account, you won't pay any non-sterling transaction fees when paying with your debit card anywhere in the world.",
+      "exception": "Not valid for ATM withdrawals.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception limits the fee‑free benefit to card payments only, excluding ATM withdrawals.",
+      "confidence": 0.95,
+      "cross_document": true
+    },
+    {
+      "provider": "hsbc_current",
+      "rule": "Most of our accounts (except our Basic Bank Account) come with an interest‑free amount.",
+      "exception": "Bank Account\n34.05%\n39.9% EAR variable\nNo interest on the first £25 of your arranged or unarranged overdraft.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception applies only to the standard Bank Account, specifying the exact interest‑free amount (£25) and overriding the general rule for all other accounts.",
+      "confidence": 0.95,
+      "cross_document": true
+    }
+  ]
+}

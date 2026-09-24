@@ -1,0 +1,27 @@
+{
+  "documents_scanned": 21,
+  "providers": 11,
+  "candidates_total": 40,
+  "candidates_tier1": 1,
+  "candidates_tier2": 39,
+  "candidates_same_guide": 0,
+  "by_provider": {
+    "lloyds_current": 1
+  },
+  "examples": [
+    {
+      "provider": "lloyds_current",
+      "rule_doc": "assets/media/pdfs/current-accounts/personal_banking_terms_and_conditions.pdf",
+      "rule_sentence": "facility where interest is charged if you use it, you",
+      "exception_doc": "current-accounts/overdrafts.html",
+      "exception_sentence": "Interest charged daily, only if you use it - Daily arranged overdraft interest is charged at the end of each day that you use your arranged overdraft.",
+      "cue_matched": "only if",
+      "same_document": false,
+      "topic_overlap": 0.25,
+      "same_guide_parts": false
+    }
+  ],
+  "tier1_share": 0.025,
+  "yield_per_document": 0.047619047619047616,
+  "recommendation": "Yield is only 0.05 per document; the 150 floor would need about 3150 documents. That is not realistic in WP2. Commit to the Tier 1 / Tier 2 split, report the composition explicitly, and do NOT let Tier 2 instances carry the naturally-occurring claim."
+}

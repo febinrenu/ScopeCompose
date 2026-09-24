@@ -1,0 +1,39 @@
+# Financial-terms Tier-1 candidates, 2026-09-24.
+# The second domain the proposal specifies. Banks publish product pages and
+# separate charges schedules, which is a more Tier-1-friendly structure than a
+# government guide with parts.
+natwest_current_terms    https://www.natwest.com/content/dam/natwest/personal/current-accounts/documents/your-current-account-terms.pdf.coredownload.pdf
+natwest_current_terms    https://www.natwest.com/content/dam/natwest/personal/permanent/current-accounts/documents/fee-information-document/nw-fee-information-document.pdf
+
+natwest_reward_platinum  https://www.natwest.com/current-accounts/reward_platinum_account.html
+natwest_reward_platinum  https://www.natwest.com/current-accounts/rates-and-charges.html
+
+natwest_reward_black     https://www.natwest.com/premier-banking/products/current-accounts/existing-customers/premier-reward-black.html
+natwest_reward_black     https://www.natwest.com/current-accounts/rates-and-charges.html
+
+natwest_select_silver    https://www.natwest.com/current-accounts/existing-customers/select-silver.html
+natwest_select_silver    https://www.natwest.com/current-accounts/rates-and-charges.html
+
+natwest_reward_silver    https://www.natwest.com/current-accounts/existing-customers/reward-silver.html
+natwest_reward_silver    https://www.natwest.com/current-accounts/rates-and-charges.html
+
+natwest_premier_select   https://www.natwest.com/premier-banking/products/current-accounts/premier-select-account-b.html
+natwest_premier_select   https://www.natwest.com/current-accounts/rates-and-charges.html
+
+natwest_graduate         https://www.natwest.com/current-accounts/existing-customers/graduate-account.html
+natwest_graduate         https://www.natwest.com/current-accounts/rates-and-charges.html
+
+hsbc_current             https://www.hsbc.co.uk/current-accounts/products/bank-account/
+hsbc_current             https://www.hsbc.co.uk/current-accounts/interest-rates-and-charges/
+
+# NOTE: origin-www.hsbc.co.uk is an origin-server hostname and robots.txt
+# disallows it. Left in so the skip is visible in the audit rather than the
+# pairing silently disappearing. Substitute the public www.hsbc.co.uk URL.
+hsbc_overdraft           https://www.hsbc.co.uk/current-accounts/products/overdrafts/
+hsbc_overdraft           https://origin-www.hsbc.co.uk/content/dam/hsbc/gb/pdf/pre-contract-credit-information.pdf
+
+barclays_current         https://www.barclays.co.uk/current-accounts/basic-account/
+barclays_current         https://www.barclays.co.uk/current-accounts/account-service-charges/
+
+lloyds_current           https://www.lloydsbank.com/current-accounts/overdrafts.html
+lloyds_current           https://www.lloydsbank.com/assets/media/pdfs/current-accounts/personal_banking_terms_and_conditions.pdf

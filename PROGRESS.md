@@ -11,6 +11,75 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-24 (later still) - WP1 domain 2: banking, and the proposer swap
+
+**Two findings that change how WP2 should run.** Full write-up in
+`docs/wp1_tier1_findings.md`.
+
+**Done**
+
+- `benchmark/mining/fetch_web.py` - general fetcher for HTML and PDF, with
+  per-host `robots.txt` checked before every request and content-hash identity
+  (commercial sites expose no `content_id`).
+- `benchmark/mining/llm_proposer.py` - the proposer the proposal actually
+  specifies, compared head-to-head against the lexical miner.
+- 11 banking pairings fetched across NatWest, HSBC, Barclays, Lloyds. One URL
+  was an origin-server hostname that `robots.txt` disallows; skipped and
+  reported rather than fetched.
+- 316 tests pass. Whole WP1 exercise cost 0.00 USD and 157K tokens.
+
+**Finding 1 - banking is the far better Tier-1 domain**
+
+| | gov.uk | banking |
+|---|---|---|
+| distinct-document pairings | 5 / 17 (29%) | **10 / 11 (91%)** |
+
+Banks publish the rule and the charge in separate documents. gov.uk publishes
+one guide with parts. Make financial terms the primary Tier-1 source.
+
+**Finding 2 - the lexical miner was under-implementing the proposal**
+
+Section 6.2 says *a model* proposes candidate pairs. The miner was cue words
+plus word overlap. On identical documents:
+
+| method | cross-document pairs |
+|---|---|
+| lexical | 1 |
+| LLM proposer | **4** |
+
+Three of four look genuinely right, including an implicit one: *"you won't pay
+any non-sterling transaction fees when paying with your card"* against *"Not
+valid for ATM withdrawals."* A product page and a charges schedule share few
+content words, so a bag-of-words bridge fails even where the pairing is obvious
+to a reader.
+
+**A tuning result worth keeping**
+
+Shrinking the proposer's input window from 9,000 to 5,500 chars per document
+fixed a rate-limit problem and made the output WORSE - it stopped finding
+fee-waiver pairs and started returning October price changes, because
+truncation had cut the section where the rules live. Pacing the calls is the
+right lever; truncation is not. `PACE_S = 22` now carries the TPM limit and the
+window stays wide.
+
+**Two more bugs, both caught by running it**
+
+- The console crashed on a non-breaking hyphen (cp1252) *after* the work was
+  done but *before* the JSON was written - the worst place to fail. Output is
+  now sanitised for display and the JSON is written first.
+- Four of ten pairings had failed on TPM exhaustion because the client's
+  exponential backoff tops out well short of the 60-second rate-limit window.
+  Backoff cannot clear a per-minute cap; pacing can.
+
+**Net WP1 position**
+
+Tier-1 pairs are scarce in both domains - the section 8 risk is confirmed.
+Commit to the Tier 1 / Tier 2 split. But banking plus an LLM proposer makes the
+150-instance floor plausible at roughly 375 curated document pairs, against
+~1,200 documents for gov.uk. That should be planned, not assumed.
+
+---
+
 ### 2026-09-24 (later) — WP1 Tier-1 gate ANSWERED on real gov.uk data
 
 **The gating question is closed: Tier-1 pairs are scarce. Commit to the
