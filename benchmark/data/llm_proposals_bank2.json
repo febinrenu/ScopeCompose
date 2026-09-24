@@ -1,0 +1,28 @@
+{
+  "lexical_tier1": 0,
+  "llm_cross_document": 2,
+  "pairings_attempted": 7,
+  "pairings_failed": 0,
+  "proposals": [
+    {
+      "provider": "santander_123_select",
+      "rule": "From 20 June 2023, we removed the 1|2|3 Current Account and Select Current Account from our product range.",
+      "exception": "From 11 May 2026, we’re increasing the monthly fee on our 1|2|3, Select and Private current accounts from £4 to £5.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception applies to existing 1|2|3 and Select accounts that are still held, while the rule applies to new customers who can no longer open those accounts.",
+      "confidence": 0.95,
+      "cross_document": true
+    },
+    {
+      "provider": "monzo_extra",
+      "rule": "If you cancel Extra you’ll lose access to its benefits, but we’ll keep your Monzo Current Account open.",
+      "exception": "If you cancel Extra you can continue using your benefits until your next payment date, but you won’t get a refund.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "covers cancellations after the 14‑day cooling‑off period",
+      "confidence": 0.95,
+      "cross_document": true
+    }
+  ]
+}

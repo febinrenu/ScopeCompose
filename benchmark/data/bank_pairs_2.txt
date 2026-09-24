@@ -1,0 +1,33 @@
+# Financial-terms Tier-1 batch 2, 2026-09-24.
+# Santander, Nationwide, Starling, Monzo. Same shape as batch 1: a terms or
+# product document paired with a separate charges / changes / fee-information
+# document.
+santander_edge  https://www.santander.co.uk/personal/support/current-accounts/current-account-important-information
+santander_edge  https://www.santander.co.uk/personal/support/current-accounts/changes-to-your-current-account
+
+santander_123_select  https://www.santander.co.uk/personal/support/current-accounts/important-information-for-accounts-no-longer-available-to-open
+santander_123_select  https://www.santander.co.uk/personal/support/current-accounts/changes-to-your-current-account
+
+nationwide_flexplus  https://www.nationwide.co.uk/current-accounts/help/terms
+nationwide_flexplus  https://www.nationwide.co.uk/about-us/fairer-share/terms-and-conditions
+
+nationwide_flexdirect  https://www.nationwide.co.uk/current-accounts/help/terms
+nationwide_flexdirect  https://www.nationwide.co.uk/current-accounts/flexdirect
+
+nationwide_flexstudent  https://www.nationwide.co.uk/current-accounts/help/terms
+nationwide_flexstudent  https://www.nationwide.co.uk/current-accounts/flexstudent
+
+starling_personal  https://www.starlingbank.com/legal/
+starling_personal  https://www.starlingbank.com/current-account/service-information/
+
+starling_personal_terms  https://www.starlingbank.com/docs/legal/terms/starling-personal-account-general-terms-may-2026.pdf
+starling_personal_terms  https://www.starlingbank.com/current-account/service-information/
+
+monzo_extra  https://monzo.com/legal/extra/terms-and-conditions
+monzo_extra  https://monzo.com/legal/plans/fee-information
+
+monzo_perks  https://monzo.com/legal/perks/terms-and-conditions
+monzo_perks  https://monzo.com/legal/plans/fee-information
+
+monzo_max  https://monzo.com/legal/max/terms-and-conditions
+monzo_max  https://monzo.com/legal/plans/fee-information

@@ -11,6 +11,62 @@ not just *what*. The entry format is in `CLAUDE.md`.
 
 ## Sessions
 
+### 2026-09-24 (final) - WP1 batch 2: the estimate was optimistic, and that matters
+
+**Done**
+
+- Fetched and audited 10 more banking pairings: Santander, Nationwide,
+  Starling, Monzo. Three Nationwide pairings were unfetchable - their
+  `robots.txt` disallows `/current-accounts/` wholesale.
+- Ran both miners on the 7 usable pairings.
+- Consolidated `docs/wp1_tier1_findings.md` across all 38 pairings.
+- 316 tests pass.
+
+**The finding that changed the plan**
+
+| batch | pairings | distinct docs | lexical | LLM | plausible on inspection |
+|---|---|---|---|---|---|
+| gov.uk | 17 | 5 (29%) | 4 | not run | unverified |
+| banking 1 | 11 | 10 (91%) | 1 | 4 | **3** |
+| banking 2 | 10 | 7 (70%) | 0 | 2 | **0** |
+| **total** | **38** | **22 (58%)** | **5** | **6** | **3** |
+
+Batch 2 produced two LLM proposals and both fail on reading: Santander pairs
+two dated fee changes (temporal, not conditional), Monzo pairs two statements
+about the same scope with inconsistent outcomes (closer to a contradiction).
+
+**Batch 1 was the lucky batch.** An estimate built on it alone - roughly 0.4
+plausible pairs per pairing, "~375 curated pairs for the floor" - was
+optimistic by about five times. Across all 38 pairings the real rate is about
+**0.08 per pairing**, which puts the 150-instance floor at ~1,900 pairings.
+
+**Revised recommendation: Tier 1 cannot carry the corpus.** Set a Tier-1 target
+the evidence supports (20-40 instances, reported as the naturally occurring
+subset) and let Tier 2 carry the volume. A small, honestly labelled Tier-1 set
+is worth more than a large blended count.
+
+**Why the pairs are scarce even when documents are separate**
+
+Banking scores 81% on document separation and still yields almost nothing. The
+cross-document content is a product page saying what the account does and a
+charges page saying what it costs - **complementary information**, the DRAGged
+into Conflicts category section 4 already distinguishes this project from. The
+genuine conditional structure sits inside one document, because an author
+writing one clause states the carve-out next to the rule. Splitting a rule from
+its exception across documents is simply not how organisations write.
+
+That is a finding about the phenomenon, not only about the mining method, and
+it belongs in the paper: it explains why the Tier 1 / Tier 2 construction is
+necessary rather than merely convenient.
+
+**Note to self on estimating**
+
+I reported "~375 curated pairs" after one batch. One more batch moved it to
+~1,900. Single-batch yield estimates on small samples are worth very little,
+and the honest move would have been to label the first figure provisional.
+
+---
+
 ### 2026-09-24 (later still) - WP1 domain 2: banking, and the proposer swap
 
 **Two findings that change how WP2 should run.** Full write-up in
