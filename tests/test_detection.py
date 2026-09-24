@@ -158,10 +158,10 @@ def test_pairs_come_back_in_canonical_order():
 # --------------------------------------------------------------------------- #
 
 
-def test_interaction_block_has_four_times_the_width():
+def test_interaction_block_has_three_times_the_width():
     e_i = np.array([[1.0, 2.0, 3.0]])
     e_j = np.array([[4.0, 5.0, 6.0]])
-    assert interaction_features(e_i, e_j).shape == (1, 12)
+    assert interaction_features(e_i, e_j).shape == (1, 9)
 
 
 def test_interaction_block_is_order_symmetric():
@@ -175,6 +175,44 @@ def test_interaction_block_is_order_symmetric():
     np.testing.assert_allclose(
         interaction_features(e_i, e_j), interaction_features(e_j, e_i)
     )
+
+
+def test_interaction_block_is_symmetric_on_the_tie_case():
+    """Two DIFFERENT embeddings sharing an element sum.
+
+    This is the case the previous implementation got wrong: it sorted the two
+    vectors into a canonical position on their sum, and on a tie the sort was
+    arbitrary, so the vector genuinely differed under swap. The old test used
+    unequal sums and never exercised it. A claimed design property that holds
+    'almost always' is not a property.
+    """
+    e_i = np.array([[1.0, -1.0, 2.0]])   # sum 2.0
+    e_j = np.array([[2.0, -1.0, 1.0]])   # sum 2.0, different vector
+    assert e_i.sum() == e_j.sum()
+    assert not np.allclose(e_i, e_j)
+    np.testing.assert_allclose(
+        interaction_features(e_i, e_j), interaction_features(e_j, e_i)
+    )
+
+
+def test_interaction_block_is_symmetric_on_random_pairs():
+    """Property check over many random pairs, including high dimensions where
+    a real encoder operates."""
+    rs = np.random.RandomState(0)
+    for dim in (3, 64, 384):
+        a = rs.normal(size=(1, dim))
+        b = rs.normal(size=(1, dim))
+        np.testing.assert_allclose(
+            interaction_features(a, b), interaction_features(b, a), atol=1e-12
+        )
+
+
+def test_interaction_block_still_distinguishes_different_pairs():
+    """Symmetry must not be bought by collapsing distinct pairs together."""
+    a = np.array([[1.0, 2.0, 3.0]])
+    b = np.array([[4.0, 5.0, 6.0]])
+    c = np.array([[9.0, 1.0, 0.0]])
+    assert not np.allclose(interaction_features(a, b), interaction_features(a, c))
 
 
 # --------------------------------------------------------------------------- #

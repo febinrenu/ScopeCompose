@@ -63,26 +63,30 @@ class StaleHeadError(RuntimeError):
 
 
 def interaction_features(e_i: np.ndarray, e_j: np.ndarray) -> np.ndarray:
-    """Build ``[e_i; e_j; |e_i - e_j|; e_i * e_j]`` for one or many pairs.
+    """Build ``[e_i + e_j; |e_i - e_j|; e_i * e_j]`` for one or many pairs.
 
-    Made ORDER-SYMMETRIC by sorting the two embeddings into a canonical
-    position before concatenation. Without that, swapping the passage order
-    changes the feature vector and the detector can return a different answer
-    for the same pair -- which would break the order-invariance property A4 is
-    required to satisfy, and would do it invisibly.
+    Every term is a SYMMETRIC function of the two embeddings, so the vector is
+    order-invariant by construction rather than by convention.
+
+    The earlier version concatenated the raw ``[e_i; e_j]`` and tried to rescue
+    symmetry by sorting the two vectors into a canonical position on their
+    element sum. That is not a guarantee: two different embeddings can share a
+    sum, and on that tie the sort is arbitrary and the vector genuinely differs
+    under swap. The bug survived its own unit test because the test used
+    embeddings with unequal sums.
+
+    It mattered more than a normal defect. Order invariance is a *claimed
+    design property* of this pipeline -- branch roles derive from the
+    applicability relation, never from retrieval order -- and a tie in a
+    768-dimensional float sum is rare rather than impossible. A property that
+    holds "almost always" is not a property; a reviewer is entitled to break it.
+
+    The sum term replaces the concatenation: ``e_i + e_j`` carries the same
+    joint information in a symmetric form, at half the width.
     """
     e_i = np.atleast_2d(e_i)
     e_j = np.atleast_2d(e_j)
-
-    # Canonical ordering: whichever vector has the smaller first-element sign
-    # pattern goes first. Using a scalar summary keeps this cheap and stable.
-    key_i = e_i.sum(axis=1, keepdims=True)
-    key_j = e_j.sum(axis=1, keepdims=True)
-    swap = (key_i > key_j).astype(e_i.dtype)
-    a = e_i * (1 - swap) + e_j * swap
-    b = e_j * (1 - swap) + e_i * swap
-
-    return np.concatenate([a, b, np.abs(a - b), a * b], axis=1)
+    return np.concatenate([e_i + e_j, np.abs(e_i - e_j), e_i * e_j], axis=1)
 
 
 @dataclass
