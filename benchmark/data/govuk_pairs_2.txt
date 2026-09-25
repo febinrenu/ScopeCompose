@@ -1,0 +1,57 @@
+# gov.uk Tier-1 candidates, batch 2 — 2026-09-25.
+#
+# Deliberately different in shape from batch 1. These pair a PUBLIC GUIDE with
+# either the IMMIGRATION RULES APPENDIX or the CASEWORKER GUIDANCE for the same
+# route — three genuinely separate publications with different audiences,
+# rather than two sections of one guide. Batch 1 found that 10 of 17 pairings
+# were the same guide wearing two URLs; this shape should not have that problem.
+#
+# Several entries below are the same two URLs in the opposite order. Kept as
+# supplied, because the fetcher deduplicates by content hash and the proposer
+# is not symmetric — which document is presented as "A" changes what it looks
+# for. Yield is reported per distinct document pair regardless.
+
+govuk_skilled_worker        https://www.gov.uk/skilled-worker-visa
+govuk_skilled_worker        https://www.gov.uk/government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible
+
+govuk_skilled_worker_rules  https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-skilled-worker
+govuk_skilled_worker_rules  https://www.gov.uk/government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible
+
+govuk_global_talent         https://www.gov.uk/global-talent
+govuk_global_talent         https://www.gov.uk/government/publications/global-talent-appendix-w-workers/global-talent-caseworker-guidance-accessible
+
+govuk_global_talent_rules   https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-global-talent
+govuk_global_talent_rules   https://www.gov.uk/government/publications/global-talent-appendix-w-workers/global-talent-caseworker-guidance-accessible
+
+govuk_innovator_founder     https://www.gov.uk/innovator-founder-visa
+govuk_innovator_founder     https://www.gov.uk/government/publications/innovator-appendix-w-workers/innovator-founder-caseworker-guidance-accessible
+
+govuk_innovator_rules       https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-innovator-founder
+govuk_innovator_rules       https://www.gov.uk/government/publications/innovator-appendix-w-workers/innovator-founder-caseworker-guidance-accessible
+
+govuk_student_2             https://www.gov.uk/student-visa
+govuk_student_2             https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-student
+
+govuk_student_work          https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-student
+govuk_student_work          https://www.gov.uk/government/publications/student-sponsor-guidance/student-sponsor-guidance-accessible
+
+govuk_scaleup               https://www.gov.uk/scale-up-worker-visa
+govuk_scaleup               https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-scale-up-worker
+
+govuk_visitor_2             https://www.gov.uk/standard-visitor
+govuk_visitor_2             https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-v-visitor
+
+govuk_visitor_medical       https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-v-visitor
+govuk_visitor_medical       https://www.gov.uk/standard-visitor/visit-for-medical-reasons
+
+govuk_healthcare_2          https://www.gov.uk/health-care-worker-visa
+govuk_healthcare_2          https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-health-and-care-worker
+
+govuk_family_partner_2      https://www.gov.uk/uk-family-visa/partner-spouse
+govuk_family_partner_2      https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-fm-family-members
+
+govuk_youth_mobility_2      https://www.gov.uk/youth-mobility
+govuk_youth_mobility_2      https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-youth-mobility-scheme
+
+govuk_graduate_2            https://www.gov.uk/graduate-visa
+govuk_graduate_2            https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-graduate

@@ -400,3 +400,66 @@ on inspection. Pipeline: LLM proposer → human verification → gold annotation
 Keep recall high at the discovery stage; precision is not the objective there,
 and a human filter follows. `tier1_pilot.py` now prints this at the end of
 every run so the decision is visible where it applies.
+
+
+---
+
+## Batch 2 — the pairing SHAPE was the problem, not gov.uk
+
+**2026-09-25.** Batch 1 concluded that gov.uk pairings were mostly one guide
+wearing two URLs: 10 of 17 same-guide, 7 distinct. Batch 2 changed what gets
+paired and the result inverted.
+
+| | batch 1 | batch 2 |
+|---|---|---|
+| pairing shape | guide section vs guide section | **public guide vs rules appendix / caseworker guidance** |
+| distinct documents | 7 / 17 (41%) | **12 / 15 (80%)** |
+| same guide, two URLs | 10 / 17 | **0 / 15** |
+| broken | 0 | 3 (404) |
+
+gov.uk publishes three genuinely separate things per immigration route: the
+public-facing guide, the Immigration Rules appendix, and the caseworker
+guidance. Different audiences, different publication pipelines, different
+content ids. Pairing *across* those layers is cross-document in a way that
+pairing two anchors of one guide never was.
+
+**This revises batch 1's conclusion.** The scarcity was partly a property of the
+phenomenon and partly a property of how the pairings were chosen. Tier 1 is
+still not going to carry the corpus at 300 instances — but the 60-instance
+target is more reachable than the 0.08-per-pairing figure implied, and the
+figure itself was measured on the weaker shape.
+
+For anyone supplying more URLs: **pair a public guide against its rules appendix
+or caseworker guidance.** Do not pair two sections of the same guide.
+
+### Financial terms, batch 3
+
+Monzo, Starling, Santander: 14 distinct of 29 pairings, 15 broken. The failures
+are worth recording because they are not all the same kind:
+
+- **Starling PDFs returned 403** on direct access (9 pairings). Bot protection
+  rather than robots.txt — the one Starling pairing that fetched was the legal
+  index page plus a PDF. Fetching those documents needs a different approach or
+  manual download.
+- **404s** on four Santander and three Monzo URLs, which have moved.
+
+The plan/terms-vs-fee-information shape is right — Monzo yielded 9 distinct
+pairings from that structure alone, because banks are required to publish a
+standalone fee information document. It is the URL rot that cost the batch.
+
+### Where the candidate pool stands
+
+| corpus | proposals |
+|---|---:|
+| gov.uk batch 1 | 5 |
+| gov.uk batch 2 | 7 |
+| NatWest / HSBC / Barclays / Lloyds | 4 |
+| Santander / Nationwide / Starling / Monzo (batch 2) | 2 |
+| Monzo / Starling / Santander (batch 3) | 2 |
+| **total** | **20** |
+
+Built into `benchmark/data/pilot2_batch.jsonl`: **19 unlabelled instances, 16
+cross-document and 3 same-guide.** One proposal was dropped as a duplicate.
+
+One of twelve gov.uk batch-2 pairings failed on a rate limit, so the LLM figure
+covers 11 against the lexical miner's 12.

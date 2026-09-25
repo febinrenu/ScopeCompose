@@ -1,0 +1,100 @@
+# Financial-terms Tier-1 candidates, batch 3 — 2026-09-25.
+#
+# Monzo, Starling and Santander. The shape that worked in batch 2: a product or
+# plan's TERMS against a separate FEE INFORMATION document. Banks are required
+# to publish a standalone fee information document, which is what makes this
+# structure reliably cross-document in a way gov.uk guides are not.
+#
+# Monzo in particular pairs many plan-specific terms against ONE shared fee
+# schedule. That repetition is deliberate on their side and useful here: the
+# general rule sits in the shared schedule and the carve-out in the plan.
+#
+# Several Starling entries are PDFs. fetch_web handles those, and robots.txt is
+# checked per host before any request.
+
+monzo_extra              https://monzo.com/legal/extra/terms-and-conditions
+monzo_extra              https://monzo.com/legal/plans/fee-information
+
+monzo_perks              https://monzo.com/legal/perks/terms-and-conditions
+monzo_perks              https://monzo.com/legal/plans/fee-information
+
+monzo_max                https://monzo.com/legal/max/terms-and-conditions
+monzo_max                https://monzo.com/legal/plans/fee-information
+
+monzo_premium            https://monzo.com/legal/premium/terms-and-conditions
+monzo_premium            https://monzo.com/legal/premium/fee-information
+
+monzo_plus               https://monzo.com/legal/plus/terms-and-conditions
+monzo_plus               https://monzo.com/legal/plus/fee-information
+
+monzo_connected_banks    https://monzo.com/legal/plans/connected-banks-terms-and-conditions
+monzo_connected_banks    https://monzo.com/legal/plans/fee-information
+
+monzo_max_family         https://monzo.com/legal/max/family-add-on-terms-and-conditions
+monzo_max_family         https://monzo.com/legal/plans/fee-information
+
+monzo_current_account    https://monzo.com/legal/terms-and-conditions
+monzo_current_account    https://monzo.com/legal/plans/fee-information
+
+monzo_credit_insights    https://monzo.com/legal/plans/credit-insights-terms-and-conditions
+monzo_credit_insights    https://monzo.com/legal/plans/fee-information
+
+monzo_virtual_cards      https://monzo.com/legal/plans/virtual-cards-free-trial-terms-and-conditions
+monzo_virtual_cards      https://monzo.com/legal/plans/fee-information
+
+monzo_max_insurance      https://monzo.com/legal/max/terms-and-conditions
+monzo_max_insurance      https://monzo.com/legal/max/travel-insurance-terms-and-conditions
+
+monzo_max_breakdown      https://monzo.com/legal/max/terms-and-conditions
+monzo_max_breakdown      https://monzo.com/legal/max/breakdown-cover-terms-and-conditions
+
+starling_personal        https://www.starlingbank.com/legal/
+starling_personal        https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-GBP-PCA.pdf
+
+starling_personal_terms  https://www.starlingbank.com/docs/legal/account/starling-personal-account-general-terms.pdf
+starling_personal_terms  https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-GBP-PCA.pdf
+
+starling_joint           https://www.starlingbank.com/docs/legal/account/starling-joint-account-general-terms.pdf
+starling_joint           https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-GBP-JCA.pdf
+
+starling_business        https://www.starlingbank.com/docs/legal/business/starling-business-account-general-terms.pdf
+starling_business        https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-GBP-BCA.pdf
+
+starling_euro            https://www.starlingbank.com/docs/legal/account/starling-euro-account-general-terms.pdf
+starling_euro            https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-EUR-PCA.pdf
+
+starling_additional_personal  https://www.starlingbank.com/docs/legal/account/starling-additional-personal-account-terms.pdf
+starling_additional_personal  https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-GBP-APA.pdf
+
+starling_additional_joint     https://www.starlingbank.com/docs/legal/account/starling-additional-joint-account-terms.pdf
+starling_additional_joint     https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-GBP-AJA.pdf
+
+starling_marketplace     https://www.starlingbank.com/docs/legal/marketplace/consumer-account-holder-terms.pdf
+starling_marketplace     https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-GBP-PCA.pdf
+
+starling_payments        https://www.starlingbank.com/docs/legal/payments/payment-services-terms.pdf
+starling_payments        https://www.starlingbank.com/docs/legal/account/Fee-Information-Doc-GBP-PCA.pdf
+
+santander_current_2      https://www.santander.co.uk/personal/support/current-accounts/current-account-important-information
+santander_current_2      https://www.santander.co.uk/personal/support/current-accounts/changes-to-your-current-account
+
+santander_123_2          https://www.santander.co.uk/personal/current-accounts/123-current-account
+santander_123_2          https://www.santander.co.uk/personal/support/current-accounts/current-account-important-information
+
+santander_select_2       https://www.santander.co.uk/personal/current-accounts/select-current-account
+santander_select_2       https://www.santander.co.uk/personal/support/current-accounts/changes-to-your-current-account
+
+santander_edge           https://www.santander.co.uk/personal/current-accounts/edge-current-account
+santander_edge           https://www.santander.co.uk/personal/support/current-accounts/current-account-important-information
+
+santander_private        https://www.santander.co.uk/personal/current-accounts/private-current-account
+santander_private        https://www.santander.co.uk/personal/support/current-accounts/changes-to-your-current-account
+
+santander_business       https://www.santander.co.uk/business/current-accounts
+santander_business       https://www.santander.co.uk/business/support/current-accounts/changes-to-current-accounts
+
+santander_business_2     https://www.santander.co.uk/business/support/current-accounts/changes-to-current-accounts
+santander_business_2     https://www.santander.co.uk/business/support/current-accounts/current-account-important-information
+
+santander_savings        https://www.santander.co.uk/personal/savings
+santander_savings        https://www.santander.co.uk/personal/support/savings

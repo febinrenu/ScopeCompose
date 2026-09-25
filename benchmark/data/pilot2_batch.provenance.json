@@ -66,6 +66,97 @@
   },
   {
     "instance_id": "wp2_0005",
+    "provider": "govuk_skilled_worker_rules",
+    "proposer_why": "The exception narrows the rule to exclude dependants of care workers, senior care workers and medium skilled roles.",
+    "proposer_confidence": 0.95,
+    "rule_doc": "guidance/immigration-rules/immigration-rules-appendix-skilled-worker",
+    "exception_doc": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "same_guide": false,
+    "same_document": false,
+    "located_by": "recorded",
+    "located": true,
+    "needs_review": false
+  },
+  {
+    "instance_id": "wp2_0006",
+    "provider": "govuk_innovator_founder",
+    "proposer_why": "The exception narrows the switching rule to exclude applicants who previously held certain types of UK permission",
+    "proposer_confidence": 0.95,
+    "rule_doc": "innovator-founder-visa#overview",
+    "exception_doc": "government/publications/innovator-appendix-w-workers/innovator-founder-caseworker-guidance-accessible",
+    "same_guide": false,
+    "same_document": false,
+    "located_by": "recorded",
+    "located": true,
+    "needs_review": false
+  },
+  {
+    "instance_id": "wp2_0007",
+    "provider": "govuk_innovator_rules",
+    "proposer_why": "The exception narrows the PhD study requirement from 24 months to 12 months for applicants who have completed a PhD course.",
+    "proposer_confidence": 0.95,
+    "rule_doc": "guidance/immigration-rules/immigration-rules-appendix-innovator-founder",
+    "exception_doc": "government/publications/innovator-appendix-w-workers/innovator-founder-caseworker-guidance-accessible",
+    "same_guide": false,
+    "same_document": false,
+    "located_by": "recorded",
+    "located": true,
+    "needs_review": false
+  },
+  {
+    "instance_id": "wp2_0008",
+    "provider": "govuk_visitor_2",
+    "proposer_why": "The exception narrows the general study permission to those studying as a Visitor, adding extra eligibility requirements",
+    "proposer_confidence": 0.85,
+    "rule_doc": "standard-visitor#overview",
+    "exception_doc": "guidance/immigration-rules/immigration-rules-appendix-v-visitor",
+    "same_guide": false,
+    "same_document": false,
+    "located_by": "recorded",
+    "located": true,
+    "needs_review": false
+  },
+  {
+    "instance_id": "wp2_0009",
+    "provider": "govuk_visitor_medical",
+    "proposer_why": "The exception allows stays longer than the usual 6\u2011month limit for medical treatment, extending the stay to up to 11 months or more.",
+    "proposer_confidence": 0.95,
+    "rule_doc": "guidance/immigration-rules/immigration-rules-appendix-v-visitor",
+    "exception_doc": "standard-visitor#visit-for-medical-reasons",
+    "same_guide": false,
+    "same_document": false,
+    "located_by": "recorded",
+    "located": true,
+    "needs_review": false
+  },
+  {
+    "instance_id": "wp2_0010",
+    "provider": "govuk_youth_mobility_2",
+    "proposer_why": "exception narrows to professional sportspersons, excluding them from the general work allowance",
+    "proposer_confidence": 0.95,
+    "rule_doc": "youth-mobility#overview",
+    "exception_doc": "guidance/immigration-rules/immigration-rules-appendix-youth-mobility-scheme",
+    "same_guide": false,
+    "same_document": false,
+    "located_by": "recorded",
+    "located": true,
+    "needs_review": false
+  },
+  {
+    "instance_id": "wp2_0011",
+    "provider": "govuk_graduate_2",
+    "proposer_why": "excludes work as a professional sportsperson",
+    "proposer_confidence": 0.95,
+    "rule_doc": "graduate-visa#overview",
+    "exception_doc": "guidance/immigration-rules/immigration-rules-appendix-graduate",
+    "same_guide": false,
+    "same_document": false,
+    "located_by": "recorded",
+    "located": true,
+    "needs_review": false
+  },
+  {
+    "instance_id": "wp2_0012",
     "provider": "natwest_current_terms",
     "proposer_why": "The exception applies only to the Reward account, where a foreign\u2011currency transaction fee is charged, contrary to the general rule that such fees are removed for Reward and Premie",
     "proposer_confidence": 0.95,
@@ -78,7 +169,7 @@
     "needs_review": false
   },
   {
-    "instance_id": "wp2_0006",
+    "instance_id": "wp2_0013",
     "provider": "natwest_reward_platinum",
     "proposer_why": "The exception allows multiple Reward Platinum accounts when held jointly with different partners, which is a narrower case than the sole\u2011name rule.",
     "proposer_confidence": 0.95,
@@ -91,7 +182,7 @@
     "needs_review": false
   },
   {
-    "instance_id": "wp2_0007",
+    "instance_id": "wp2_0014",
     "provider": "natwest_reward_silver",
     "proposer_why": "The exception limits the fee\u2011free benefit to card payments only, excluding ATM withdrawals.",
     "proposer_confidence": 0.95,
@@ -104,7 +195,7 @@
     "needs_review": false
   },
   {
-    "instance_id": "wp2_0008",
+    "instance_id": "wp2_0015",
     "provider": "hsbc_current",
     "proposer_why": "The exception applies only to the standard Bank Account, specifying the exact interest\u2011free amount (\u00a325) and overriding the general rule for all other accounts.",
     "proposer_confidence": 0.95,
@@ -117,7 +208,7 @@
     "needs_review": false
   },
   {
-    "instance_id": "wp2_0009",
+    "instance_id": "wp2_0016",
     "provider": "santander_123_select",
     "proposer_why": "The exception applies to existing 1|2|3 and Select accounts that are still held, while the rule applies to new customers who can no longer open those accounts.",
     "proposer_confidence": 0.95,
@@ -130,12 +221,25 @@
     "needs_review": false
   },
   {
-    "instance_id": "wp2_0010",
+    "instance_id": "wp2_0017",
     "provider": "monzo_extra",
     "proposer_why": "covers cancellations after the 14\u2011day cooling\u2011off period",
     "proposer_confidence": 0.95,
     "rule_doc": "legal/extra/terms-and-conditions",
     "exception_doc": "legal/plans/fee-information",
+    "same_guide": false,
+    "same_document": false,
+    "located_by": "recorded",
+    "located": true,
+    "needs_review": false
+  },
+  {
+    "instance_id": "wp2_0018",
+    "provider": "monzo_premium",
+    "proposer_why": "The exception applies only after the 6\u2011month minimum term has ended, a narrower time window where the cancellation fee is waived.",
+    "proposer_confidence": 0.95,
+    "rule_doc": "legal/premium/terms-and-conditions",
+    "exception_doc": "legal/premium/fee-information",
     "same_guide": false,
     "same_document": false,
     "located_by": "recorded",

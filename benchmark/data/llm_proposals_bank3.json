@@ -1,0 +1,36 @@
+{
+  "lexical_tier1": 1,
+  "llm_cross_document": 2,
+  "pairings_attempted": 14,
+  "pairings_failed": 0,
+  "proposals": [
+    {
+      "provider": "monzo_extra",
+      "rule": "If you cancel Extra you’ll lose access to its benefits, but we’ll keep your Monzo Current Account open.",
+      "exception": "If you cancel Extra you can continue using your benefits until your next payment date, but you won’t get a refund.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "covers cancellations after the 14‑day cooling‑off period",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "legal/extra/terms-and-conditions",
+      "exception_doc_id": "legal/plans/fee-information",
+      "rule_content_id": "f8f9cdbe788c592e",
+      "exception_content_id": "006cf95f7c5d278d"
+    },
+    {
+      "provider": "monzo_premium",
+      "rule": "After 14 days, but within 6 months of signing up £50 fee (if you've ordered a metal card). We'll refund you for any remaining days in the month you cancel.",
+      "exception": "After your 6-month minimum terms ends No fee. We'll refund you for any remaining days in the month you cancel.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception applies only after the 6‑month minimum term has ended, a narrower time window where the cancellation fee is waived.",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "legal/premium/terms-and-conditions",
+      "exception_doc_id": "legal/premium/fee-information",
+      "rule_content_id": "b17ad38e073809d3",
+      "exception_content_id": "716f2aa265c6a83b"
+    }
+  ]
+}
