@@ -33,7 +33,14 @@ class AgreementError(RuntimeError):
 
 #: Annotator ids that denote a model rather than a person. Two of these, or one
 #: of these against itself, cannot produce an inter-annotator statistic.
-MODEL_ANNOTATORS = frozenset({"model", "model_proposed", "llm", "auto", "silver"})
+#:
+#: ``"model-proposed"`` is the exact string ``benchmark.wp1_probe_set`` writes,
+#: and it was missing here while only the underscored spelling was listed -- so
+#: the guard would have let the project's own model-proposed labels through.
+MODEL_ANNOTATORS = frozenset({
+    "model", "model_proposed", "model-proposed", "modelproposed",
+    "llm", "auto", "silver", "proposed", "gpt", "ai",
+})
 
 #: Landis & Koch bands. Included because a bare kappa invites the reader to
 #: supply their own threshold, and the bands are what the field actually uses.

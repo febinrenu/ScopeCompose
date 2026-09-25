@@ -1,13 +1,16 @@
 """WP1 probe set — ~50 hand-built cases for Member B's feasibility probe.
 
-**STATUS: MODEL-PROPOSED DRAFT. NOT GOLD DATA.**
+**STATUS: model-proposed, human-verified 2026-09-25. Usable as gold.**
 
-Every instance here carries ``annotator_a="model-proposed"`` and an empty
-``annotator_b``, which is the schema's way of saying no human has verified it.
-That is deliberate and it is the workflow the proposal specifies: a model
-proposes candidate general/exception pairs, human annotators verify and label.
-Member A must review every case before Member B's numbers mean anything.
-Reviewing is much faster than authoring, which is the point of this file.
+Every instance carries ``annotator_a="model-proposed"`` and an ``annotator_b``
+recording the human sign-off. Both are kept: dropping the first would erase the
+fact that a model drafted these, and that provenance is why the set can never
+enter a kappa -- the two passes share a starting point, so their agreement
+measures the proposal rather than the task.
+
+The review changed three cases and dropped one; ``docs/wp1_probe_verification.md``
+records every decision. Reviewing is much faster than authoring, which was the
+point of drafting them this way.
 
 **What the probe needs.** WP1 asks whether Contrastive Scope Probing recovers
 *implicit* conditions better than direct extraction, without inflating the
@@ -68,6 +71,7 @@ from contract.models import (
     ConflictType,
     Construction,
     Domain,
+    MultiExceptionFlags,
     Passage,
     ScopeRelation,
     SourceType,
@@ -75,6 +79,15 @@ from contract.models import (
 
 FIN = Domain.FINANCIAL_TERMS
 IMM = Domain.IMMIGRATION_ELIGIBILITY
+
+#: Recorded as ``annotator_b`` on every case: a human reviewed the whole set on
+#: 2026-09-25 and signed off case by case (see docs/wp1_probe_verification.md).
+#:
+#: This is model-proposed plus human-adjudicated, which is NOT two independent
+#: annotations. It is valid gold and it is not valid input to a kappa -- the two
+#: passes share a starting point, so their agreement measures the proposal, not
+#: the task. benchmark.annotation.agreement refuses it for that reason.
+VERIFIED_BY = "human-verified-2026-09-25"
 
 
 # --------------------------------------------------------------------------- #
@@ -148,6 +161,16 @@ class Case:
     rule_applicability: str = ""
     rule_attrs: list[ScopeAttribute] = field(default_factory=list)
 
+    # A third branch, nested inside the exception. Set only where the exception
+    # passage carves itself back again ("five years, or four for Swiss
+    # nationals"). Encoding that as two branches forces one of the three real
+    # outcomes to be dropped or folded into another, and a system that
+    # correctly produced all three would then be penalised for the extra one.
+    sub_condition: str = ""
+    sub_outcome: str = ""
+    sub_applicability: str = ""
+    sub_attrs: list[ScopeAttribute] = field(default_factory=list)
+
     scoped_answer: str = ""
     selection_answer: str = ""
 
@@ -207,6 +230,15 @@ class Case:
                            supporting_passage="p1"),
                 ]
 
+            if self.sub_condition:
+                branches.append(Branch(
+                    branch_id="b2", condition=self.sub_condition,
+                    outcome=self.sub_outcome,
+                    applicability=Applicability(descriptor=self.sub_applicability,
+                                                attributes=list(self.sub_attrs)),
+                    explicitness=self.explicitness,
+                    supporting_passage="p1"))
+
         return GoldInstance(
             instance_id=self.id,
             query=self.query,
@@ -222,9 +254,15 @@ class Case:
             gold_branches=branches,
             gold_scoped_answer=self.scoped_answer or None,
             selection_answer=self.selection_answer or None,
+            # A sub-branch nested inside the exception is second-order
+            # structure, which this project flags rather than composes. Setting
+            # the flag here is what makes the gold agree with what B2 will do
+            # with the instance.
+            gold_multi_exception_flags=MultiExceptionFlags(
+                nested=bool(self.sub_condition)),
             annotation=Annotation(
                 annotator_a="model-proposed",
-                annotator_b=None,
+                annotator_b=VERIFIED_BY,
                 notes=self.why or None,
             ),
         )
@@ -606,18 +644,27 @@ IMPLICIT: list[Case] = [
         conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.REFINEMENT,
         default_outcome="leave lapses after two years outside the country",
         condition="the holder has settled status",
-        exception_outcome="the period is five years, or four for Swiss nationals",
+        exception_outcome="the period is five years",
         applicability="holders of settled status",
         attrs=[flag("settled_status", True)],
+        sub_condition="the holder is a Swiss national or their family member with "
+                      "settled status",
+        sub_outcome="the period is four years",
+        sub_applicability="Swiss nationals and their family members with settled status",
+        sub_attrs=[flag("settled_status", True), cat("nationality", "swiss")],
         scoped_answer="Leave normally lapses after two continuous years abroad (per p0); "
-                      "for settled status holders the period is five years, or four for "
-                      "Swiss nationals and their family members (per p1).",
+                      "for settled status holders the period is five years, and four "
+                      "years for Swiss nationals and their family members (per p1).",
         selection_answer="Leave will lapse after a continuous period of two years outside "
                          "the country.",
-        why="Device: NESTED SUB-CASE. p1 contains its own internal carve-out (Swiss "
-            "nationals). This is a first-order case for the pair, but the exception "
-            "branch itself has structure -- useful for checking whether the probe "
-            "flattens it or silently drops the four-year sub-case.",
+        why="Device: NESTED SUB-CASE. Three distinct outcomes, not two -- two years "
+            "generally, five with settled status, four for Swiss nationals holding "
+            "settled status. The Swiss branch is nested inside the settled-status "
+            "branch and disagrees with it, which is second-order structure: gold "
+            "carries nested=True and the instance is expected to be FLAGGED rather "
+            "than composed. Encoding it as two branches would have forced one of the "
+            "three real outcomes to be dropped, and penalised a system that "
+            "recovered all three.",
     ),
     Case(
         id="wp1_fin_imp_017", domain=FIN,
@@ -829,22 +876,29 @@ IMPLICIT: list[Case] = [
         other=Src("Those who have been living in the United Kingdom for the six months "
                   "immediately before applying are not asked for one.",
                   SourceType.FAQ, "2024-04", "gov_tb_faq"),
-        conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.REFINEMENT,
+        conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.DISJOINT,
         default_outcome="a tuberculosis test certificate is required",
+        rule_condition="the applicant is resident in a listed country",
+        rule_applicability="applicants resident in a listed country",
+        rule_attrs=[cat("residence", "listed_country")],
         condition="the applicant has lived in the UK for the six months immediately before applying",
         exception_outcome="no certificate is required",
         applicability="applicants resident in the UK for the preceding six months",
-        attrs=[num("months_uk_residence", 6)],
+        attrs=[cat("residence", "uk_six_months")],
         scoped_answer="A tuberculosis test certificate is required from applicants "
                       "resident in a listed country (per p0), but not from those who have "
                       "lived in the UK for the six months immediately before applying "
-                      "(per p1).",
+                      "(per p1). These describe different populations.",
         selection_answer="Applicants resident in a listed country must provide a "
                          "tuberculosis test certificate.",
-        why="Device: RECENT RESIDENCE HISTORY. Note the default is itself already "
-            "conditioned ('resident in a listed country'), so the exception narrows an "
-            "already-narrow rule. Check that the probe does not treat the listed-country "
-            "clause as the exception.",
+        why="Device: RECENT RESIDENCE HISTORY. Relabelled from refinement to DISJOINT on "
+            "review. The text never establishes that someone who has lived in the UK for "
+            "the preceding six months is a subset of those resident in a listed country "
+            "-- in practice the two populations barely meet -- so the nesting refinement "
+            "requires is not supported by what the passages actually say. Both branches "
+            "are separately scoped and neither is the default; the hard case here is "
+            "resisting the pull to treat p0 as a general rule just because it is stated "
+            "first.",
     ),
     Case(
         id="wp1_fin_imp_027", domain=FIN,
@@ -1384,33 +1438,22 @@ EDGE_RELATIONS: list[Case] = [
             "the overlap. Routes to selection, not composition. The hardest relation to "
             "tell from refinement.",
     ),
-    Case(
-        id="wp1_imm_opp_054", domain=IMM,
-        query="Do I qualify under this route?",
-        rule=Src("Applicants holding a recognised degree-level qualification meet the "
-                 "skill requirement.",
-                 SourceType.GOVERNMENT_GUIDANCE, "2023-09", "gov_skill_requirement"),
-        other=Src("Applicants aged over 45 at the date of application do not meet the "
-                  "requirements of this route.",
-                  SourceType.THIRD_PARTY, "2024-04", "advice_site"),
-        conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.OPPOSED,
-        default_outcome="the skill requirement is met",
-        rule_condition="the applicant holds a recognised degree-level qualification",
-        rule_applicability="applicants with a degree-level qualification",
-        rule_attrs=[cat("qualification", "degree")],
-        condition="the applicant is over 45 at the date of application",
-        exception_outcome="the requirements are not met",
-        applicability="applicants over 45",
-        attrs=[num("age", 46)],
-        scoped_answer="The sources disagree for degree-holding applicants over 45. The "
-                      "more authoritative source (p0, government guidance) is reported.",
-        selection_answer="Applicants holding a recognised degree-level qualification meet "
-                         "the skill requirement.",
-        why="OPPOSED. A 50-year-old graduate satisfies both descriptions and the outcomes "
-            "conflict; neither set contains the other. Note the credibility asymmetry "
-            "(government guidance vs an advice site) is what selection would resolve on "
-            "-- irrelevant to the RELATION, which is decided by scope and outcome alone.",
-    ),
+    # wp1_imm_opp_054 was DROPPED on review (2026-09-25).
+    #
+    # It read as opposed but the two passages never contradicted each other:
+    # p0 concerned satisfaction of "the skill requirement" and p1 satisfaction
+    # of "the requirements of this route", which are different propositions. A
+    # 46-year-old graduate meets the first and fails the second, both true at
+    # once -- so it was closer to a no-conflict distractor than an opposed pair.
+    #
+    # Dropped rather than reworded: changing p0 to say "the requirements of this
+    # route" would have made it a valid case, but a different one from the case
+    # that was originally reviewed, and quietly editing evidence to fit a label
+    # is the wrong habit to build into a benchmark.
+    #
+    # Consequence: OPPOSED now has a single instance (wp1_fin_opp_053). Thin
+    # coverage of the relation that is hardest to tell from refinement, and a
+    # known limitation of this probe set until a replacement is authored.
 ]
 
 
@@ -1496,8 +1539,6 @@ HIGH_RISK: dict[str, str] = {
                        "here fabricates a branch.",
     "wp1_imm_red_050": "REDUNDANT vs REFINEMENT. Same shape as 049.",
     "wp1_fin_opp_053": "OPPOSED vs REFINEMENT. Check neither scope contains the other.",
-    "wp1_imm_opp_054": "OPPOSED vs REFINEMENT. Same check. Note the credibility "
-                       "asymmetry is irrelevant to the relation.",
     "wp1_fin_imp_009": "IMPLICIT vs EXPLICIT. Reworded once already to remove 'exempt "
                        "from'. Confirm the current wording carries no cue for you.",
     "wp1_fin_imp_005": "IMPLICIT vs EXPLICIT. 'Where the statement balance is settled' "
@@ -1529,7 +1570,7 @@ def review_sheet(cases: list[Case]) -> str:
         "WP1 PROBE SET - VERIFICATION SHEET",
         "=" * 100,
         "",
-        "MODEL-PROPOSED. Not gold until Member A signs off on each case.",
+        "Human-verified 2026-09-25. Re-run this sheet after any edit.",
         "",
         "For each case check, in this order:",
         "  1. Are BOTH passages true at once, for different cases?  -> conditional",
@@ -1602,7 +1643,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     s = stats(ALL_CASES)
-    print(f"WP1 probe set: {len(instances)} instances (MODEL-PROPOSED, unverified)\n")
+    print(f"WP1 probe set: {len(instances)} instances (human-verified 2026-09-25)\n")
     for section, counts in s.items():
         body = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
         print(f"  {section:<16} {body}")
@@ -1621,7 +1662,8 @@ def main(argv: list[str] | None = None) -> int:
                                     ensure_ascii=False) + "\n")
         print(f"\nwrote {len(instances)} instances -> {args.output}")
         print("\nNEXT: `python -m benchmark.wp1_probe_set --review` and check every case.")
-        print("Until Member A signs off, nothing measured on this set is a result.")
+        print("NOTE: OPPOSED has one instance only -- thin coverage of the relation")
+        print("that is hardest to tell from refinement. A known limitation.")
     else:
         print("\n(no -o given; nothing written)", file=sys.stderr)
     return 0

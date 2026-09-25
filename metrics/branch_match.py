@@ -95,6 +95,45 @@ def similarity(a: str, b: str) -> float:
     return len(ta & tb) / len(ta | tb)
 
 
+#: Spelled-out cardinals, because policy text writes small quantities in words
+#: far more often than in digits -- "a continuous period of two years", "held
+#: for 28 consecutive days", "within 14 days". Digit-only extraction read "the
+#: period is five years" and "the period is four years" as the same outcome:
+#: they share "period" and "years", and the only tokens that differ carried the
+#: entire meaning.
+_CARDINALS = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+    "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+    "seventeen": 17, "eighteen": 18, "nineteen": 19,
+}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60,
+         "seventy": 70, "eighty": 80, "ninety": 90}
+
+
+def _numbers(text: str) -> set[str]:
+    """Figures in a string, as canonical strings, digits and words alike."""
+    found = {n.strip() for n in _NUM_RE.findall(text or "")}
+
+    words = _WORD_RE.findall((text or "").lower())
+    i = 0
+    while i < len(words):
+        w = words[i]
+        if w in _TENS:
+            # "twenty-eight" tokenises to two words, and reading them as 20 and
+            # 8 would make it conflict with the digits "28" for no reason.
+            nxt = words[i + 1] if i + 1 < len(words) else ""
+            if nxt in _CARDINALS and 1 <= _CARDINALS[nxt] <= 9:
+                found.add(str(_TENS[w] + _CARDINALS[nxt]))
+                i += 2
+                continue
+            found.add(str(_TENS[w]))
+        elif w in _CARDINALS:
+            found.add(str(_CARDINALS[w]))
+        i += 1
+    return found
+
+
 def numbers_conflict(a: str, b: str) -> bool:
     """Whether two outcome strings quote different figures.
 
@@ -102,9 +141,12 @@ def numbers_conflict(a: str, b: str) -> bool:
     "a 5% fee applies" share almost every word. Lexical similarity alone would
     call them the same outcome, which is exactly the distortion the metric
     exists to catch.
+
+    Any shared figure means no conflict. Two outcomes quoting the same rate and
+    differing elsewhere are not a numeric disagreement, and flagging them would
+    make the veto fire on detail rather than on substance.
     """
-    na = {n.strip() for n in _NUM_RE.findall(a or "")}
-    nb = {n.strip() for n in _NUM_RE.findall(b or "")}
+    na, nb = _numbers(a), _numbers(b)
     return bool(na and nb and not (na & nb))
 
 

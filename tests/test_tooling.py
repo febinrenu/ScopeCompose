@@ -515,12 +515,37 @@ def test_probe_set_includes_a_redundant_distractor():
     assert any(c.relation is ScopeRelation.REDUNDANT for c in DISTRACTORS)
 
 
-def test_probe_instances_are_marked_unverified():
-    """They are model-proposed. If this ever passes with a real annotator name,
-    the set has been verified and the assertion should be updated deliberately."""
+def test_probe_instances_record_both_proposer_and_verifier():
+    """Updated deliberately on 2026-09-25, when the set was verified.
+
+    The previous version asserted ``annotator_b is None`` and said that if it
+    ever failed with a real name, the set had been verified and the assertion
+    should be changed on purpose. It failed; this is that change.
+
+    Both fields are kept. Dropping ``annotator_a`` would erase the fact that
+    the cases were model-proposed, and that provenance is what makes the
+    kappa guard below necessary.
+    """
     for inst in build_all():
         assert inst.annotation.annotator_a == "model-proposed"
-        assert inst.annotation.annotator_b is None
+        assert inst.annotation.annotator_b, "the set has been human-verified"
+
+
+def test_a_verified_probe_case_still_cannot_produce_a_kappa():
+    """Verified is not the same as independently double-annotated.
+
+    Every case here was proposed by a model and then adjudicated by one person.
+    Those two passes share a starting point, so their agreement measures the
+    proposal rather than the task. The guard has to match the exact string this
+    repo writes -- ``"model-proposed"``, hyphenated -- or it silently lets the
+    one thing it exists to prevent straight through.
+    """
+    from benchmark.annotation.agreement import AgreementError, cohen_kappa
+
+    labels = {"i1": "conditional", "i2": "factual"}
+    with pytest.raises(AgreementError, match="not an inter-annotator"):
+        cohen_kappa(labels, labels, axis="t",
+                    annotator_a="model-proposed", annotator_b="johann")
 
 
 def test_probe_instances_are_never_counted_as_tier_1():

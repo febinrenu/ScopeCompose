@@ -1,20 +1,23 @@
 # WP1 probe set — verification pass
 
-**Status: model-verified, not human-verified.** Read this before using the set.
+**Status: HUMAN-VERIFIED, 2026-09-25.** All 54 cases reviewed case by case.
+Three changed, one dropped, 50 accepted as proposed. The set is 53 instances and
+is usable as gold.
 
-The 54 probe cases were model-proposed. This document records a second,
-adversarial pass over them — also by a model. That catches encoding bugs and
-internal contradictions, which it did, and it does **not** substitute for human
-sign-off, which it cannot: the reviewer and the proposer share a failure mode,
-so a case both got wrong in the same direction survives unchallenged.
+This document records two passes: the model pass that found the structural
+defects (sections 1-5), and the human pass that resolved them (section 7).
 
-What this pass is good for: the four structural defects below, all of which are
-checkable against the schema and the manual rather than against judgement, and
-all of which are now fixed. What it is not good for: confirming that a case
-reads naturally to a domain expert, or that the label is the one a careful
-human would assign. Those are still open.
+The cases were model-proposed. Sections 1-6 record an adversarial model pass
+that found four structural defects — mechanical contradictions between a case's
+label and its own branch structure, checkable against the schema rather than
+against judgement. Section 7 records the human pass that reviewed all 54 case by
+case and resolved the three it could not settle.
 
-Cases needing a human eye are listed in the last section, ranked.
+The model pass could not have replaced the human one: reviewer and proposer
+share a failure mode, so a case both got wrong in the same direction would have
+survived unchallenged. It did, however, catch things a reader would not — the
+`016` re-encoding exposed a matcher bug that had been silently equating "five
+years" with "four years".
 
 ---
 
@@ -22,10 +25,11 @@ Cases needing a human eye are listed in the last section, ranked.
 
 | | count |
 |---|---|
-| cases | 54 |
-| confirmed as labelled | 49 |
-| **re-encoded** (label right, structure wrong) | **4** |
-| **rejected** (label wrong) | **1** |
+| cases reviewed | 54 |
+| **accepted as proposed** | **50** |
+| **changed** | **3** (`016`, `026`, plus the §1 re-encodings) |
+| **dropped** | **1** (`054`) |
+| final set | **53** |
 | definitional issue affecting the whole implicit subset | see §3 |
 
 ---
@@ -206,3 +210,84 @@ so the four-way relation is judged inside that frame consistently.
 
 Items 1–3 are three cases. Item 6 is the real work, and with the structural
 defects cleared it should be a read-through rather than an audit.
+
+
+---
+
+## 7. Human verification — decisions, 2026-09-25
+
+All 54 cases reviewed. **50 accepted as proposed, 3 changed, 1 dropped.**
+
+### Changed
+
+**`wp1_imm_imp_016` — refinement, re-encoded as THREE branches**
+
+There are three distinct outcomes, not two: two years generally, five years
+with settled status, four years for Swiss nationals and their family members
+holding settled status. The Swiss branch is nested inside the settled-status
+branch and disagrees with it.
+
+Two consequences, both applied:
+
+- The `Case` schema gained `sub_condition` / `sub_outcome` /
+  `sub_applicability` / `sub_attrs` so a third branch can be expressed at all.
+- The instance now carries `gold_multi_exception_flags.nested = True`, and B2
+  routes it to **selection with the nested flag** rather than composing it.
+  That is the correct first-order behaviour: exception-to-exception precedence
+  is outside this project's scope and is flagged, not guessed. Gold and B2 now
+  agree on the flag.
+
+**`wp1_imm_imp_026` — refinement → DISJOINT**
+
+The text never establishes that someone who has lived in the UK for the six
+preceding months is a *subset* of those resident in a listed country. In
+practice the two populations barely meet. Refinement requires nesting, and the
+passages do not support it.
+
+Re-encoded with both branches separately scoped and **no default**, per the
+v1.1.0 schema rule. `compare()` now returns `disjoint`, matching the label.
+
+**`wp1_imm_opp_054` — DROPPED**
+
+The two passages never contradicted each other. p0 concerns satisfaction of
+*the skill requirement*; p1 concerns satisfaction of *the requirements of the
+route*. A 46-year-old graduate meets the first and fails the second, both true
+at once.
+
+Dropped rather than reworded. Changing p0 to say "the requirements of this
+route" would have produced a valid case, but a **different** case from the one
+reviewed — and editing the evidence to fit the label is the wrong habit to
+build into a benchmark.
+
+### A bug the re-encoding exposed
+
+Encoding `016` as three branches immediately disagreed with B2: the operator
+read "the period is five years" and "the period is four years" as the *same*
+outcome, so it never flagged the nesting.
+
+`numbers_conflict` only extracted **digits**, and policy text spells small
+quantities out constantly — "a continuous period of two years", "within 14
+days". The two outcomes share "period" and "years", and the only tokens that
+differed carried the entire meaning. Now handles spelled cardinals, including
+compounds ("twenty-eight" and "28" resolve to the same figure rather than
+conflicting).
+
+This is the third bug of its kind in the matcher, after negation-as-stopword
+and passage-ids-as-figures. The pattern is consistent: **two outcomes that
+differ in one small token that carries all the meaning.**
+
+### Open limitation
+
+`OPPOSED` now has **one instance** (`wp1_fin_opp_053`). That is thin coverage of
+the relation hardest to tell from refinement, and the confusion cell the paper
+reports. Authoring a replacement is worthwhile before the probe is run — a
+candidate can be drafted and verified the same way these were.
+
+### Provenance
+
+Every instance now carries `annotator_a="model-proposed"` and
+`annotator_b="human-verified-2026-09-25"`. Both are kept deliberately: the first
+records that a model drafted the case, which is why this set can **never** enter
+a Cohen's kappa. The two passes share a starting point, so their agreement would
+measure the proposal rather than the task. `benchmark.annotation.agreement`
+refuses it, and a test pins that refusal against the exact string used here.

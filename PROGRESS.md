@@ -11,6 +11,77 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-09-25 - WP1 probe set human-verified. Gating item closed.
+
+All 54 cases reviewed case by case by a human. **50 accepted as proposed, 3
+changed, 1 dropped.** The set is 53 instances and is usable as gold.
+
+This closes the last gating item that was blocking Member B's feasibility probe.
+
+**Changed**
+- `wp1_imm_imp_016` - re-encoded from two branches to **three**: two years
+  generally, five with settled status, four for Swiss nationals holding settled
+  status. The `Case` schema gained `sub_condition` / `sub_outcome` /
+  `sub_applicability` / `sub_attrs` to express a branch nested inside an
+  exception. The instance now carries `gold_multi_exception_flags.nested=True`
+  and B2 routes it to **selection with the flag**, which is the correct
+  first-order behaviour -- exception-to-exception precedence is out of scope and
+  is flagged, not guessed.
+- `wp1_imm_imp_026` - refinement -> **disjoint**. The text never establishes
+  that someone who has lived in the UK for six months is a subset of those
+  resident in a listed country, and refinement requires that nesting. Re-encoded
+  with both branches separately scoped and no default, per v1.1.0.
+- `wp1_imm_opp_054` - **dropped**. p0 concerns "the skill requirement", p1 "the
+  requirements of this route" -- different propositions, so a 46-year-old
+  graduate satisfies both and there was never a contradiction. Dropped rather
+  than reworded: changing p0 would have produced a valid case, but a different
+  one from the case reviewed, and editing evidence to fit a label is the wrong
+  habit to build into a benchmark.
+
+**A fourth matcher bug, exposed by the 016 re-encoding**
+Encoding three branches immediately disagreed with B2, which read *"the period
+is five years"* and *"the period is four years"* as the **same outcome**.
+`numbers_conflict` extracted digits only, and policy text spells small
+quantities out constantly. The two strings share "period" and "years"; the only
+tokens that differed carried the whole meaning.
+
+Now handles spelled cardinals including compounds, so "twenty-eight" and "28"
+resolve to one figure rather than conflicting. Gold and B2 now agree on `016`.
+
+This is the third bug of the same shape after negation-as-stopword and
+passage-ids-as-figures: **two outcomes differing in one small token that carries
+all the meaning.** Worth watching for a fourth.
+
+**Provenance and the kappa guard**
+Every instance now carries `annotator_a="model-proposed"` and
+`annotator_b="human-verified-2026-09-25"`. Both are kept: the first records that
+a model drafted the case, which is exactly why this set can never enter a
+Cohen's kappa -- the two passes share a starting point, so their agreement would
+measure the proposal rather than the task.
+
+`MODEL_ANNOTATORS` was missing the hyphenated spelling `"model-proposed"`, which
+is the exact string this repo writes. The guard would have let the project's own
+model-proposed labels straight through. Fixed, and a test now pins the refusal
+against that literal string.
+
+`test_probe_instances_are_marked_unverified` failed, as designed -- its docstring
+said that if it ever failed with a real annotator name, the set had been verified
+and the assertion should be changed deliberately. Replaced with a test that
+checks both fields are present, plus the new kappa-refusal test.
+
+**Open limitation**
+`OPPOSED` now has **one** instance (`wp1_fin_opp_053`). Thin coverage of the
+relation hardest to tell from refinement, which is the confusion cell the paper
+reports. Worth authoring a replacement before the probe runs; it can be drafted
+and verified the same way these were.
+
+**Next up**
+- Remaining human tasks are unchanged: second annotator for the kappa pilot,
+  supervisor sign-off on the Tier 1/Tier 2 split, SG-DT sections 3-4, and the
+  closed-venue literature sweep.
+
+---
+
 ### 2026-09-24 (later still) - Member B built: B1, B2, B3 and the preservation metrics. Four scoring bugs found on the way.
 
 The pipeline now runs end to end. Building B exercised the shared scoring code
