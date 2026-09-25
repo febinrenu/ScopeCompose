@@ -11,6 +11,73 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-09-25 (later still) - SG-DT verified against the source. WP0's biggest risk closed, and an overclaim corrected.
+
+Task 4 done. SG-DT sections 3-4 read against the actual paper, not an abstract.
+
+**The bridging claim survives** -- their task is defined as *given a provision X,
+output a Span-Grounded Deontic Tree*, with nodes grounded to spans of that
+current text scope, and section 4 describes NormBench as benchmarking
+*intra-provision defeasible scope parsing*. Competing separately retrieved
+documents are never the input unit. This was the single largest risk in WP0 and
+it is closed.
+
+**But this memo had overclaimed, and the human read caught it.** The model pass
+concluded *"the pipeline never has two documents, because the retrieval in its
+Auditability Trap is retrieval of spans inside the provision."* That is wrong:
+the paper discusses RAG and retrieval directly in its motivation, noting
+retrieval can determine whether a decisive exception is visible at all, and its
+downstream statutory-reasoning experiment supplies a statute snippet as
+evidence. Writing "SG-DT does not involve retrieval" would have handed a
+reviewer a free correction.
+
+The surviving distinction is about **what the benchmark task takes as its input
+unit**, not about whether retrieval is mentioned anywhere. The memo now carries
+the exact sentence to use and the two not to.
+
+This is a clean worked example of the limit I flagged when writing the memo: a
+model reviewing a model's citations shares its failure modes. The structural
+defects it found were real; the framing it produced was too strong, and only a
+human reading the source would have caught that.
+
+**37% confirmed, with a wording constraint**
+Verified against the dataset-statistics table: Level 1 simple 834 (36%), Level 2
+nested 610 (27%), Level 3+ recursive 846 (37%). The paper states directly that
+a significant portion is recursive at Level 3+, 37%. Citable.
+
+The constraint is phrasing. Their table classifies items by level; it does not
+say 37% *require* deep resolution to answer.
+- WRONG: "37% of their benchmark needs deep exception nesting"
+- RIGHT: "37% of NormBench items are classified as Level 3+ (recursive),
+  corresponding to deep/counter-exception structures"
+
+**New finding: the Structure-Grounding Gap**
+Their results frame a dissociation between finding the relevant span and
+attaching it to the correct logical parent -- models have the first ability
+without the second. That is this project's thesis observed *inside* a single
+provision, by an independent group. It is the strongest external support
+available for the argument that locating evidence and composing it correctly
+come apart, and it should be cited as support rather than treated as
+competition.
+
+**Decisions**
+- *Positioning reframed from "they do not retrieve" to "their structural target
+  is an already-supplied provision".* Defensible against the paper's own text;
+  the earlier version was not.
+- *Cite Chen et al. for Silent Scope Omission in section 4, in the paper's own
+  voice.* Reads as scholarship when volunteered, as concealment when found.
+
+**Risk register updated**
+Largest remaining WP0 risk is now the closed-venue sweep (KR, TPLP, AAAI, AIJ,
+JAR). If classical KR already formalises the four-way relation, the contribution
+narrows from defining it to operationalising it for retrieval.
+
+**Next up**
+- Second annotator for the kappa pilot; closed-venue sweep.
+- Open: `OPPOSED` has one probe instance after 054 was dropped.
+
+---
+
 ### 2026-09-25 (later) - Corpus composition settled. Contract v1.2.0.
 
 Task 3 closed. The WP1 gating question now has a decision attached, and the

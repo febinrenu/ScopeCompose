@@ -1,34 +1,65 @@
 # WP0 — Prior-art review and positioning memo
 
-**Status: first pass complete, model-conducted. Verdict below is provisional.**
-**Date of sweep: 2026-09-24.**
+**Status: SG-DT verified against the source, 2026-09-25. Closed-venue sweep still open.**
+**Date of model sweep: 2026-09-24. Human verification of SG-DT: 2026-09-25.**
 
 ---
 
 ## Verdict
 
-> **The bridging claim survives, narrowed.**
+> **The bridging claim survives — but the distinction is narrower than the
+> first draft of this memo stated, and must be worded precisely.**
 
-This project appears to be the first to target the **resolution operator** in
-conflict-aware RAG — the step that decides whether two separately retrieved,
-credibility-ranked passages are selected between or composed — for the
-*conditional* case specifically.
+This project targets the **resolution operator** in conflict-aware RAG: the step
+deciding whether two separately retrieved, credibility-ranked passages are
+selected between or composed, for the *conditional* case.
 
-The narrowing is on novelty of the *problem*, not the *operator*. Chen et al.
-(SG-DT, below) independently named the same failure — a system applying a
-general rule while silently dropping a nested exception — and got there first.
-The paper must say so plainly in §4, in its own voice, rather than leaving a
-reviewer to discover it.
+Two things narrow it, and both belong in §4 in the paper's own voice:
 
-**Confidence: moderate, not high.** See "What would overturn this" at the end.
-The decisive fact — that SG-DT assumes its provision is already identified and
-never models competition between separately retrieved sources — is drawn from
-the abstract and a partial PDF read, and one automated read of that PDF
-returned demonstrably wrong answers about the paper's own terminology. A human
-needs to confirm it against the methods section. It is one section of one paper,
-and everything downstream rests on it.
+1. **Chen et al. named the failure first.** Silent Scope Omission — a system
+   applying a general rule while silently dropping a nested exception — is
+   their term, arrived at independently.
+2. **They are not retrieval-innocent.** Verified against the source: the paper
+   *does* discuss RAG and retrieval in its motivation, explicitly noting that
+   retrieval can determine whether a decisive exception is visible at all. Its
+   downstream statutory-reasoning experiment supplies a statute snippet as
+   evidence alongside a case fact pattern.
+
+### The sentence to write, and the one not to
+
+> ❌ **"SG-DT does not involve retrieval"** / "prior work does not consider
+> retrieval" / "the pipeline never has two documents."
+>
+> A reviewer points at their RAG discussion and the distinction collapses. The
+> first draft of this memo made exactly this overclaim.
+
+> ✅ **"Span-Grounded Deontic Trees address silent scope omission within an
+> identified provision, by explicitly representing defeaters and their
+> attachment to source spans. Our setting introduces an additional
+> retrieval-level challenge: the governing rule and its scope-narrowing
+> exception may be surfaced from separately retrieved documents. The system
+> must therefore first recognise that the passages constitute a conditional
+> relation, and then resolve their scope relation before composing an answer."**
+
+The precise distinction, stated once:
+
+| | SG-DT | this project |
+|---|---|---|
+| structural target | an **already-supplied** provision or executable unit | K separately retrieved passages |
+| retrieval's role | discussed as a surrounding issue; may determine what is visible | **part of the phenomenon being benchmarked** |
+| benchmark task | intra-provision defeasible scope parsing | cross-document scope resolution |
+
+Their own §4 describes NormBench as benchmarking *intra-provision defeasible
+scope parsing*, and their task definition is explicit: *given a provision X,
+systems output a Span-Grounded Deontic Tree*, with nodes grounded to spans of
+that current text scope (a full provision, or an executable unit when
+segmented). That is the load-bearing fact, and it is verified.
+
+**Confidence: high on SG-DT, unchanged elsewhere.** The closed-venue sweep
+(§4) remains the open risk.
 
 ---
+
 
 ## How this pass was conducted, and what it is not
 
@@ -42,11 +73,14 @@ memo asserted. That found four discrepancies, recorded below.
   proceedings are not reachable by web search in the way arXiv is. The
   checklist below remains open, and it is the part most likely to contain a
   classical-KR anticipation of the four-way scope relation.
-- **Full texts were mostly not read.** Conclusions rest on abstracts,
-  anthology pages and partial PDF reads. For SG-DT — the one paper where the
-  answer decides the framing — that is not good enough on its own.
+- **Full texts were mostly not read.** Conclusions rest on abstracts and
+  anthology pages. The exception is SG-DT, the one paper where the answer
+  decides the framing: it was read against the source on 2026-09-25, and that
+  read corrected an overclaim this memo had made (see the Verdict).
 - **A model reviewed a model's citations.** Shared failure modes; a claim we
-  both misread in the same direction survives unchallenged.
+  both misread in the same direction survives unchallenged. The SG-DT
+  correction is a worked example — the model pass concluded "the pipeline never
+  has two documents", which the paper's own RAG discussion contradicts.
 
 ---
 
@@ -77,16 +111,36 @@ That is a *context–memory* conflict, not an inter-source conflict. The memo's
 "orthogonal to which operator is used" is right, but for a stronger reason than
 stated: it is a different conflict type.
 
-**b. The "37%" figure is unverified.** The memo asserts 37% of NormBench needs
-Level-3-or-deeper resolution. Not present in the abstract, and not confirmed in
-the partial PDF read. **Do not cite this number until someone reads the paper.**
+**b. The "37%" figure is VERIFIED — with a wording constraint.** Confirmed
+against the dataset-statistics table on 2026-09-25:
 
-**c. SG-DT's second pathology is missing.** The memo names "Recursion Decay"
-(verified verbatim). The abstract names a second: the **"Auditability Trap,
-where models retrieve relevant spans but fail to assemble correct control
-flow."** That is directly relevant — it is evidence that *locating* the right
-text and *composing* it correctly are dissociated, which is this project's thesis
-observed inside a single provision.
+| complexity | count | share |
+|---|---:|---:|
+| Level 1 — simple | 834 | 36% |
+| Level 2 — nested | 610 | 27% |
+| **Level 3+ — recursive** | **846** | **37%** |
+
+The paper states directly that *a significant portion of the dataset is
+recursive (Level 3+, 37%)*. Citable.
+
+The constraint is on phrasing. Their table classifies items by level; it does
+not assert that 37% *require* deep resolution to answer.
+
+- ❌ "37% of their benchmark needs deep exception nesting"
+- ✅ "37% of NormBench items are classified as Level 3+ (recursive),
+  corresponding to deep/counter-exception structures"
+
+**c. Two further named findings, both usable.** The memo had only "Recursion
+Decay". The abstract adds the **Auditability Trap** — *"models retrieve relevant
+spans but fail to assemble correct control flow"* — and the results section
+frames the same dissociation as the **Structure-Grounding Gap**: finding the
+relevant span and attaching it to the correct logical parent are separate
+abilities, and models have the first without the second.
+
+That is this project's thesis observed *inside* a single provision, by an
+independent group, and it is the strongest external support available for the
+argument that locating evidence and composing it correctly come apart. Cite it
+as support rather than treating it as competition.
 
 **d. ConflictRAG's credibility mechanism.** The memo says "Entropy-TOPSIS". The
 abstract describes an "entropy-based source credibility assessment" and a
@@ -100,19 +154,27 @@ work section describes the mechanism.
 > Does SG-DT anywhere define a resolution operator over *separately retrieved*
 > competing sources?
 
-**Evidence says no.** SG-DT takes an already-identified provision as input and
-parses scope *within* it. The "retrieval" in its Auditability Trap is retrieval
-of **spans inside the provision**, not retrieval of competing documents. There
-is no selection-versus-composition decision over two independently retrieved
-passages, because the pipeline never has two.
+**No — verified against the source, 2026-09-25.** Their task is defined as
+*given a provision X, output a Span-Grounded Deontic Tree*, with nodes grounded
+to spans of that current text scope; §4 calls NormBench a benchmark for
+*intra-provision defeasible scope parsing*. Competing separately retrieved
+documents are never the input unit.
 
-**Therefore the distinction in the proposal holds, and it is sharper than
-originally written.** The two failures compose rather than overlap:
+**But the first version of this section overclaimed and has been corrected.**
+It read: *"the pipeline never has two, because the retrieval in its Auditability
+Trap is retrieval of spans inside the provision."* The paper discusses RAG and
+retrieval directly in its motivation, and its downstream statutory-reasoning
+experiment supplies a statute snippet as evidence. Writing "SG-DT does not
+involve retrieval" would hand a reviewer an easy correction.
+
+The surviving distinction is about **what the benchmark task takes as its
+input unit**, not about whether retrieval is mentioned:
 
 | | SG-DT | this project |
 |---|---|---|
-| input | one identified provision | K passages from retrieval, separately ranked |
-| failure | exception present in text, dropped during parsing | exception present in corpus, **discarded before parsing** |
+| structural input | an already-supplied provision or executable unit | K passages from retrieval, separately ranked |
+| retrieval | discussed as a surrounding concern | part of the phenomenon benchmarked |
+| failure | exception present in the text, dropped during parsing | exception present in the corpus, **discarded before parsing** |
 | fix | structured intermediate representation | composition operator replacing selection |
 
 A perfect SG-DT parser still exhibits this project's failure, because the
@@ -120,9 +182,9 @@ credibility ranker discards the exception passage before the parser sees both
 together. That sentence is the positioning argument, and it is worth putting in
 the paper close to verbatim.
 
-**What a human must confirm:** read SG-DT §3 (method) and §4 (experimental
-setup) and check that the input is a single provision. If SG-DT evaluates over a
-retrieved *set*, the bridging claim collapses to the fallback.
+**Confirmed 2026-09-25.** SG-DT §3–§4 read against the source. Input is a
+single provision or executable unit; the bridging claim stands, with the wording
+tightened as above.
 
 ---
 
@@ -208,12 +270,19 @@ truth-maintenance systems.
    scholarship when volunteered; reads as concealment when found by a reviewer.
 2. **Add a related-work paragraph on conflict-driven summarization** (CARE-RAG),
    distinguishing synthesis-into-one from composition-preserving-branches.
-3. **Drop the unverified 37% figure** until confirmed.
-4. **Fix the TCR description** — it is context–memory, not inter-source.
-5. **Verify ConflictRAG's mechanism** before describing it as Entropy-TOPSIS.
-6. **Use the Auditability Trap** as independent support: locating the right text
-   and composing it correctly are dissociated, shown inside a single provision.
-7. **Claim the benchmark gap explicitly** — CONFLICTS and Ragability both taxonomise
+3. **Cite the 37% figure using their terminology** — "Level 3+ (recursive)",
+   not "needs deep nesting". Verified; see §1b.
+4. **Never write that SG-DT does not involve retrieval.** It does, in the
+   motivation. The distinction is about the benchmark's input unit. The exact
+   sentence to use is in the Verdict.
+5. **Fix the TCR description** — it is context–memory, not inter-source.
+6. **Verify ConflictRAG's mechanism** before describing it as Entropy-TOPSIS.
+7. **Use the Structure-Grounding Gap as support, not competition.** An
+   independent group found that locating the relevant span and attaching it to
+   the right logical parent are separate abilities. That is this project's
+   thesis, observed inside a single provision, and it is the strongest external
+   evidence available for it.
+8. **Claim the benchmark gap explicitly** — CONFLICTS and Ragability both taxonomise
    conflicts without separating "both true under different scopes" from
    "contradiction". That is the hole this corpus fills.
 
@@ -223,11 +292,12 @@ truth-maintenance systems.
 
 Stated up front so the fallback is not a retreat:
 
-- **SG-DT turns out to evaluate over a retrieved set** → bridging claim gone;
-  fall back to extraction method + formal scope-relation definition + validated
-  metric suite.
+- ~~**SG-DT turns out to evaluate over a retrieved set**~~ — **checked and
+  ruled out** on 2026-09-25. Its structural input is a single provision or
+  executable unit. This was the largest single risk and it is closed.
 - **A KR/TPLP paper already formalises the four-way relation** → the relation is
-  not the contribution; the operationalisation and the benchmark are.
+  not the contribution; the operationalisation and the benchmark are. **Now the
+  largest remaining risk**, and it sits behind the closed venues in §4.
 - **ArbGraph already composes rather than arbitrates** (the name suggests not,
   but the name is not the paper) → the operator claim narrows to the conditional
   case specifically.
@@ -239,13 +309,15 @@ all three are cheap to check now and expensive to discover in week 14.
 
 ## 7. Outstanding actions, ranked
 
-1. Read SG-DT §3–§4. Confirm single-provision input. **Everything rests on this.**
-2. Read ArbGraph (arXiv:2604.18362) — potential foil or baseline.
-3. Sweep the closed venues in §4.
-4. Confirm the NormBench 37% figure, or drop it.
+1. ~~Read SG-DT §3–§4~~ — **done 2026-09-25.** Single-provision input
+   confirmed; overclaim corrected.
+2. ~~Confirm the NormBench 37% figure~~ — **done.** Verified, with a wording
+   constraint (§1b).
+3. **Sweep the closed venues in §4.** Now the largest remaining risk.
+4. Read ArbGraph (arXiv:2604.18362) — potential foil or baseline.
 5. Confirm ConflictRAG's credibility mechanism.
 6. Read CARE-RAG (arXiv:2507.01281) closely enough to write the distinguishing
    paragraph.
 
-Items 1–2 are two papers and would take an afternoon. Item 3 is the real work
-and the one with the most residual risk.
+Item 3 is the real work and carries the residual risk. Items 4–6 are two papers
+and one abstract check, an afternoon between them.
