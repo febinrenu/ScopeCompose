@@ -502,6 +502,18 @@ def main(argv: list[str] | None = None) -> int:
         print()
         print(sensitivity(docs))
 
+    # Decided 2026-09-25, after the pilot compared the two discovery paths on
+    # the banking corpus: this lexical miner surfaced 1 candidate where the LLM
+    # proposer surfaced 4, of which 3 held up on inspection. For WP2 the
+    # proposer is the primary mechanism and this module is the cheap
+    # cross-check, not the other way round.
+    print()
+    print("-" * 70)
+    print("NOTE: for WP2 candidate generation, run benchmark.mining.llm_proposer.")
+    print("On the banking corpus this lexical miner found 1 candidate against the")
+    print("proposer's 4 (3 valid). Keep recall high here and let humans filter --")
+    print("precision is not the objective at the discovery stage.")
+
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(

@@ -46,6 +46,7 @@ from contract.models import (
     MultiExceptionFlags,
     Passage,
     ScopeRelation,
+    Separation,
     SourceType,
 )
 
@@ -685,9 +686,12 @@ def generate(
             inst = inst.model_copy(
                 update={
                     "construction": Construction.SPLIT,
+                    "separation": Separation.SYNTHETIC_SPLIT,
                     "passages": [p.model_copy(update={"document_id": shared}) for p in inst.passages],
                 }
             )
+        else:
+            inst = inst.model_copy(update={"separation": Separation.CROSS_DOCUMENT})
         out.append(inst)
 
     return out

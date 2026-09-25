@@ -21,7 +21,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-CONTRACT_VERSION = "1.1.0"
+CONTRACT_VERSION = "1.2.0"
 """Semantic version of this schema. Stamped onto every record so drift is detectable."""
 
 
@@ -89,6 +89,40 @@ class Construction(str, Enum):
 
     NATURAL = "natural"
     SPLIT = "split"
+
+
+class Separation(str, Enum):
+    """How the two passages came to be in separate documents.
+
+    Finer-grained than :class:`Construction`, and additive to it rather than
+    replacing it: ``construction`` stays a two-way tier tag so nothing that
+    routes or validates on it changes, while this carries the third category
+    the WP1 pilot found.
+
+    CROSS_DOCUMENT
+        Tier 1. Genuinely separate publications.
+    SYNTHETIC_SPLIT
+        Tier 2 proper. One document's rule and exception deliberately split
+        across two synthetic documents by the benchmark author.
+    SAME_GUIDE
+        **The category the pilot discovered.** Two different URLs belonging to
+        one underlying guide -- 10 of 17 gov.uk pairings were this. The
+        separation is real at retrieval time: a retriever genuinely returns two
+        passages it cannot reconcile. But the author never split anything, and
+        the two texts were written as one document.
+
+        Neither Tier 1 nor Tier 2, and reported as its own row. Counting it as
+        Tier 1 would overstate the naturally-occurring multi-document claim;
+        counting it as Tier 2 would understate it by implying the separation
+        was manufactured.
+
+    ``None`` means unrecorded, which is what every instance predating this
+    field carries. Reporting falls back to ``construction`` in that case.
+    """
+
+    CROSS_DOCUMENT = "cross_document"
+    SYNTHETIC_SPLIT = "synthetic_split"
+    SAME_GUIDE = "same_guide"
 
 
 class SourceType(str, Enum):
@@ -299,6 +333,15 @@ class QueryRecord(BaseModel):
     query: str = Field(..., min_length=1)
     domain: Domain
     construction: Construction
+    separation: Separation | None = Field(
+        default=None,
+        description=(
+            "Finer-grained provenance of the document separation. Additive to "
+            "'construction': same_guide instances are stored as Tier 2 but "
+            "reported as their own row, because they are neither naturally "
+            "cross-document nor author-split."
+        ),
+    )
     passages: list[Passage] = Field(..., min_length=1)
     conflict_pairs: list[ConflictPair] = Field(default_factory=list)
     multi_exception_flags: MultiExceptionFlags = Field(default_factory=MultiExceptionFlags)

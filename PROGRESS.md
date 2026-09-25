@@ -11,6 +11,80 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-09-25 (later) - Corpus composition settled. Contract v1.2.0.
+
+Task 3 closed. The WP1 gating question now has a decision attached, and the
+decision is encoded rather than left in prose.
+
+**The target: 300 instances**
+
+| row | target | role |
+|---|---|---|
+| natural cross-document | 60 (20%) | evidence for the natural multi-document setting |
+| synthetic split | 180 (60%) | main controlled benchmark |
+| same-guide retrieval split | 60 (20%) | real retrieval separation within one document |
+
+The 150-instance Tier-1 requirement is **dropped**. At ~0.08 plausible pairs
+per curated pairing it would need ~1,900 pairings for no proportional
+scientific return. Tier 1 is now evidence for the natural setting, not the main
+corpus.
+
+**Done**
+- `benchmark/corpus_plan.py` - the target as executable code, with progress
+  reporting: `python -m benchmark.corpus_plan --data <corpus.jsonl>`.
+- `contract.models.Separation` - new optional enum
+  (`cross_document | synthetic_split | same_guide`) on both `QueryRecord` and
+  `GoldInstance`.
+- `metrics.classification.split_for_reporting()` - the three-way split the
+  paper reports. `split_by_construction()` keeps the old two-way behaviour.
+- Probe set and mock generator both now label their separation.
+- 13 tests added (460 -> 473). Gate still PASS at 1.0000.
+
+**Decisions**
+
+*Same-guide needed a field, not just an intention.* The agreed plan was "store
+as Tier 2, report separately" to avoid schema risk. Storing it was free;
+**reporting it separately was not** -- `split_by_construction` partitions on
+`construction`, so a same-guide instance stored as `split` would have been
+silently folded into Tier 2 by every table, and the distinction would have
+existed only in prose. The additive optional `separation` field is the
+mechanism. `Construction` stays a two-way tag, so nothing that routes or
+validates on it changes.
+
+*Contract v1.1.0 -> v1.2.0.* Additive, optional, backwards compatible -- every
+existing instance carries `separation=None` and still validates. Schema
+regenerated; mock updated in the same commit per the freeze rule.
+
+*Unlabelled instances fall back to synthetic split, not Tier 1.* An unlabelled
+instance promoted to Tier 1 would inflate the claim that matters most, so the
+fallback goes the conservative way and the count of unlabelled instances is
+reported rather than hidden.
+
+*Tier 2 is stratified, not counted.* `TIER2_STRATA` sets floors across all four
+relations, both explicitness values, seven condition devices, and distractors.
+A test demonstrates the failure mode directly: 180 instances that are all
+refinements meet the count target and still leave the plan incomplete, because
+the refinement/opposed boundary the paper reports would be untested.
+
+*The pilot yield cannot become a prevalence rate.* 38 **curated** pairings
+across two domains supports a design decision, not a population claim.
+`prevalence_estimate()` exists only to raise, with the two sentences -- the one
+that is supportable and the one that is not -- written into the error. Cheaper
+than remembering.
+
+*LLM proposer is the primary discovery mechanism for WP2.* On the banking
+corpus the lexical miner found 1 candidate against the proposer's 4, of which 3
+held up. `tier1_pilot.py` now prints this at the end of every run, so the
+decision is visible where it applies rather than only in a document.
+
+**Next up**
+- Remaining human tasks: second annotator (kappa pilot), SG-DT sections 3-4,
+  closed-venue literature sweep.
+- Open from the probe verification: `OPPOSED` has one instance, thin coverage
+  of the relation hardest to tell from refinement.
+
+---
+
 ### 2026-09-25 - WP1 probe set human-verified. Gating item closed.
 
 All 54 cases reviewed case by case by a human. **50 accepted as proposed, 3

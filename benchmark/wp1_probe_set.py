@@ -74,6 +74,7 @@ from contract.models import (
     MultiExceptionFlags,
     Passage,
     ScopeRelation,
+    Separation,
     SourceType,
 )
 
@@ -246,6 +247,8 @@ class Case:
             # 'split' on purpose: these are hand-built probe cases, not mined
             # instances, and must never be counted toward the Tier-1 total.
             construction=Construction.SPLIT,
+            # Hand-authored, so the separation is manufactured by definition.
+            separation=Separation.SYNTHETIC_SPLIT,
             split="dev",
             passages=passages,
             gold_conflict_type=self.conflict_type,

@@ -321,3 +321,82 @@ the inflated number the project's honesty guardrail exists to prevent.
    per curated pairing, reaching 150 needs on the order of 375 hand-picked
    document pairs. Tight, and far more realistic than gov.uk's ~1,200 — but it
    should be planned, not assumed.
+
+
+---
+
+## Decision — corpus composition, agreed 2026-09-25
+
+**Target: 300 verified instances.** The gating question this pilot asked is
+closed.
+
+| row | target | role |
+|---|---|---|
+| natural cross-document | 60 (20%) | evidence for the naturally occurring multi-document setting |
+| synthetic split | 180 (60%) | main benchmark for controlled rule/exception reasoning |
+| same-guide retrieval split | 60 (20%) | real retrieval separation within one underlying document |
+
+Encoded in `benchmark/corpus_plan.py`, which reports progress against it:
+`python -m benchmark.corpus_plan --data <corpus.jsonl>`.
+
+### The 150-instance Tier-1 requirement is dropped
+
+At ~0.08 plausible pairs per curated pairing, 150 Tier-1 instances would need
+on the order of 1,900 pairings. That effort buys no proportional scientific
+return.
+
+**Tier 1 is no longer the main corpus.** The framing is:
+
+> Tier 1 tests natural cross-document rule/exception resolution. Tier 2
+> provides a controlled benchmark for the underlying conditional-scope
+> reasoning capability.
+
+That is a stronger position than claiming the whole benchmark occurs naturally,
+and this pilot is the evidence for it.
+
+### Why 60 Tier 1 and not 20
+
+At 20, a reviewer can fairly say the multi-document claim rests on a sample too
+small to support it. 60 allows independent reporting and a real error analysis.
+
+It does **not** support a prevalence estimate, and that distinction is enforced
+in code: `benchmark.corpus_plan.prevalence_estimate()` exists only to raise.
+
+### Same-guide gets its own row
+
+Stored as `construction=split` so nothing that routes or validates changes, and
+tagged `separation=same_guide` so reporting can lift it out. The tag is what
+makes "report separately" real — without it the three-way distinction collapses
+into Tier 2 in every table. `metrics.classification.split_for_reporting()` does
+the split; `split_by_construction()` keeps the old two-way behaviour.
+
+Contract v1.1.0 → v1.2.0: additive optional field, backwards compatible,
+`Construction` untouched.
+
+### Tier 2 is stratified, not merely counted
+
+`TIER2_STRATA` sets floors across all four scope relations, both explicitness
+values, and the condition devices (numeric threshold, temporal origination,
+product/account, eligibility, nested, negative, third-party), plus distractors.
+Generating to 180 without those cells would leave the refinement/opposed
+boundary — which the paper reports as its own confusion cell — untested.
+
+### Wording constraint for the paper
+
+The pilot sampled 38 **curated** pairings across two domains. That supports a
+design decision, not a population claim.
+
+- ✅ "naturally occurring cross-document conditional pairs were scarce in the
+  sampled sources, motivating a deliberately stratified Tier-1/Tier-2 corpus"
+- ❌ "only 8% of policy document pairs naturally contain cross-document
+  exceptions"
+
+### Discovery mechanism for WP2
+
+**Use the LLM proposer, not the lexical miner.** On the banking corpus the
+lexical miner surfaced 1 candidate against the proposer's 4, of which 3 held up
+on inspection. Pipeline: LLM proposer → human verification → gold annotation.
+
+Keep recall high at the discovery stage; precision is not the objective there,
+and a human filter follows. `tier1_pilot.py` now prints this at the end of
+every run so the decision is visible where it applies.

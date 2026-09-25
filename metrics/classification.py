@@ -16,7 +16,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from contract.models import ConflictPair, ConflictType, QueryRecord, ScopeRelation
+from contract.models import (
+    ConflictPair,
+    ConflictType,
+    Construction,
+    QueryRecord,
+    ScopeRelation,
+    Separation,
+)
 from metrics.stats import Interval, bootstrap, mcnemar, wilson
 
 
@@ -412,6 +419,46 @@ def split_by_construction(
     for r in records:
         out.setdefault(r.construction.value, []).append(r)
     return out
+
+
+#: Display names for the three-way reporting split, in the order the paper
+#: reports them.
+REPORTING_ROWS = ("natural cross-document", "synthetic split",
+                  "same-guide retrieval split")
+
+
+def split_for_reporting(
+    records: list[QueryRecord],
+) -> dict[str, list[QueryRecord]]:
+    """Partition into the THREE rows the paper reports, not the two tiers.
+
+    ``construction`` is a two-way tier tag and stays that way, because routing
+    and validation depend on it. But the WP1 pilot found a third category that
+    neither value describes: two URLs belonging to one underlying gov.uk guide,
+    which was 10 of 17 gov.uk pairings. The separation is real at retrieval
+    time and entirely unmanufactured, so it is neither Tier 1 nor Tier 2.
+
+    Those instances are stored as ``construction=split`` so nothing downstream
+    changes, and carry ``separation=same_guide`` so this function can lift them
+    back out. Without that field they would be silently folded into Tier 2 --
+    "store as Tier 2, report separately" only works if something can do the
+    separating, and this is it.
+
+    Instances predating the field have ``separation=None`` and fall back to
+    their tier, which is the conservative reading: an unlabelled split instance
+    is reported as an ordinary synthetic split rather than promoted.
+    """
+    out: dict[str, list[QueryRecord]] = {k: [] for k in REPORTING_ROWS}
+    for r in records:
+        sep = getattr(r, "separation", None)
+        if sep is Separation.SAME_GUIDE:
+            key = "same-guide retrieval split"
+        elif sep is Separation.CROSS_DOCUMENT or r.construction is Construction.NATURAL:
+            key = "natural cross-document"
+        else:
+            key = "synthetic split"
+        out[key].append(r)
+    return {k: v for k, v in out.items() if v}
 
 
 # --------------------------------------------------------------------------- #

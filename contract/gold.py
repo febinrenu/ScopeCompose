@@ -37,6 +37,7 @@ from contract.models import (
     Passage,
     QueryRecord,
     ScopeRelation,
+    Separation,
 )
 
 
@@ -208,6 +209,15 @@ class GoldInstance(BaseModel):
     query: str = Field(..., min_length=1)
     domain: Domain
     construction: Construction
+    separation: Separation | None = Field(
+        default=None,
+        description=(
+            "Finer-grained provenance of the document separation. Additive to "
+            "'construction': same_guide instances are stored as Tier 2 but "
+            "reported as their own row, because they are neither naturally "
+            "cross-document nor author-split."
+        ),
+    )
     split: str = Field(default="train", description="train | dev | test -- fixed at release.")
 
     passages: list[Passage] = Field(..., min_length=1)
@@ -368,6 +378,7 @@ class GoldInstance(BaseModel):
             query=self.query,
             domain=self.domain,
             construction=self.construction,
+            separation=self.separation,
             passages=list(self.passages),
             conflict_pairs=pairs,
             multi_exception_flags=self.gold_multi_exception_flags,
