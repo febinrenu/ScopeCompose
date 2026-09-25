@@ -288,6 +288,7 @@ development iteration free instead of metered. Both are due end of Week 1.
 | `experiments/run_cost_latency.py` | cost and latency per query by stage, and what stage-2 escalation costs | DONE, **needs live run** |
 | `experiments/error_analysis.py` | do the confused instances share a cause? | DONE, **needs real data** |
 | `benchmark/annotation/` | the labelling tool: blind passes, kappa per axis, adjudication | DONE |
+| `docs/kappa_pilot_1.md` | pilot 1: type kappa 0.326 (fails), scope 0.775 (provisional). Manual revised, re-run pending | **pilot 2 pending** |
 | `benchmark/corpus_plan.py` | the 300-instance WP2 target + stratification, with progress reporting | DONE |
 | `extraction/` **B1** | Contrastive Scope Probing + the grounding gate | DONE, **needs live run** |
 | `composition/` **B2** | composition operator, nested/crossed flagging | DONE |

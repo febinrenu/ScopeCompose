@@ -11,6 +11,98 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-09-25 (evening) - Kappa pilot 1 failed on the type axis, and diagnosed cleanly
+
+| axis | kappa | n | 95% CI | verdict |
+|---|---:|---:|---|---|
+| five-class conflict type | **0.326** | 54 | [0.168, 0.484] | **fails 0.61** |
+| four-way scope relation | **0.775** | 23 | [0.395, 1.000] | passes, provisionally |
+
+Bulk annotation is **not** cleared. Manual revised; the pilot must be re-run on
+a fresh batch. Full write-up in `docs/kappa_pilot_1.md`.
+
+The axis expected to be harder -- scope relation -- is the one that held. The
+five-class type failed, concentrated enough to name the cause. Finding this on
+54 instances cost an afternoon; on 300 it would have cost the corpus.
+
+**Finding 1: the manual's own ordering produced the largest cell**
+
+`conditional -> no_conflict`, 7 of 23 disagreements. Three of those seven carry
+an explicit `only if` or `unless` -- the easiest cases in the set, which rules
+out "the hard boundary is subtle" as the explanation.
+
+Section 3 said "work through these in order" and listed `no_conflict` first,
+defined as "about different subjects, **or they agree**", with "do not force a
+conflict label". For "interest is paid at 1.5%" against "interest is payable
+only if two direct debits are active", both statements are true, they do agree
+in the ordinary sense, and the reader has just been told not to force a label.
+They stop at the first entry and never reach `conditional`. The discriminating
+test existed only for factual-vs-conditional, further down the page.
+
+**The project's central conceptual move was assumed rather than stated**: a
+passage that qualifies another is a conflict *even though nothing contradicts*.
+That sentence was nowhere in the manual. Section 3 now opens with the
+discriminating question -- *does the second passage change the answer for anyone
+covered by the first?* -- before the list, with both directions worked through.
+
+**Finding 2: `temporal` fires on any time expression**
+
+Six disagreements involve it. Dates and durations appear throughout conditional
+instances as properties of the *case*, not versions of the *rule*: "loans taken
+out on or after 1 April 2024", "closed within 14 days", "two years outside the
+country". The old entry said *look for dates, "effective", "as of"* -- a keyword
+instruction, and keywords are what misfires here.
+
+Both annotators fell into it in opposite directions, so it is the manual rather
+than one reader. Rewritten around a question -- *is the earlier statement still
+in force for anybody?* -- with the rule of thumb that a superseded rule has a
+date attached to the rule, a conditional rule a date attached to the case.
+
+**Finding 3: two labels look like a keypress**
+
+Two numeric-disagreement cases (fee 1,500 vs 1,846; threshold 26,200 vs 38,700)
+were labelled `opinion`, which means neither passage is checkable -- impossible
+when both quote figures that disagree. On the menu `3` is temporal and `4` is
+opinion. Fixed in the tool rather than the manual: the CLI now detects numeric
+disagreement and, if `opinion` is chosen, says so and offers factual / temporal
+/ opinion-anyway. Reuses `numbers_conflict` from the metric so the guard and the
+scorer cannot drift.
+
+**Two things about the pilot itself**
+
+*Pace.* Starker than the medians (5.5s vs 20.3s) suggest: febin judged **41 of
+54 in under ten seconds and 18 in under five**, against johann's 3 of 54 under
+ten. Fast is not careless, and the manual defects stand independently -- but 18
+instances in under five seconds is hard to reconcile with reading a query, two
+passages and applying a two-step test. Treat it as a contributor of comparable
+size to the manual defects, not a footnote.
+
+*The batch was not fresh for one annotator.* johann had verified all 54 of these
+during the probe-set review days earlier. Kappa between them remains valid --
+neither saw the other's labels -- but he was re-labelling material he had
+personally adjudicated while febin came cold. Two consequences: the
+agreement-with-gold figures (85.2% vs 55.6%) are **not comparable**, since
+johann signed off that gold and agreeing with it is near-circular; and the
+exposure asymmetry could itself depress kappa. **The re-run must use a batch
+neither has seen** -- the first ~30 WP2 instances as they are built.
+
+**Also fixed: a gap this pilot exposed in the tool**
+
+The scope axis reported 0.775, "substantial", and cleared to proceed -- on 23
+instances with an interval running down to 0.395. `is_acceptable` looked only at
+the point estimate. It now emits a caution when the estimate clears the bar and
+the interval does not, because "not shown to be unreliable" is not the same
+claim as "shown to be reliable".
+
+**Next up**
+- Both annotators re-read section 3; re-run on ~30 instances new to both.
+- If the type axis still fails, the remaining disagreement is conceptual rather
+  than editorial, and the next move is the third-reviewer route rather than
+  another manual edit.
+- Scope axis needs re-measuring on more instances whichever way it lands.
+
+---
+
 ### 2026-09-25 (end of day) - WP0 closed, replacement opposed case, second annotator secured
 
 Tasks 2, 7 and the task-1 follow-up all done. **All four gating checks are now

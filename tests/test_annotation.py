@@ -269,3 +269,61 @@ def test_progress_estimates_remaining_time_from_observed_pace(tmp_path):
     out = store.progress("jg", total=100)
     assert "4 labelled of 100" in out
     assert "remaining" in out
+
+
+def test_a_wide_interval_is_flagged_even_when_the_point_estimate_passes():
+    """Pilot 1 returned 0.775 on 23 instances with an interval from 0.395 --
+    "substantial", and cleared to proceed, on a range that includes "fair".
+
+    A point estimate above the bar with an interval reaching well below it is
+    not the same evidence as one above the bar on a large batch, and the
+    Landis & Koch label hides the difference.
+    """
+    a = {f"i{i}": ("conditional" if i % 3 else "factual") for i in range(12)}
+    b = dict(a)
+    b["i1"] = "factual"
+
+    r = cohen_kappa(a, b, axis="t", annotator_a="jg", annotator_b="rm")
+
+    # Asserted unconditionally: a test that only checks inside an `if` passes
+    # silently when the condition stops holding, which is the same class of
+    # false comfort this caution exists to prevent.
+    assert r.is_acceptable, "point estimate clears the bar"
+    assert r.interval.low < 0.61, "interval does not"
+    assert "CAUTION" in r.render()
+
+
+def test_a_narrow_interval_above_the_bar_is_not_flagged():
+    """The counterpart. A caution on every passing result would be noise, and
+    noise is ignored."""
+    a = {f"i{i}": ("conditional" if i % 3 else "factual") for i in range(200)}
+    r = cohen_kappa(a, dict(a), axis="t", annotator_a="jg", annotator_b="rm")
+
+    assert r.is_acceptable
+    assert r.interval.low >= 0.61
+    assert "CAUTION" not in r.render()
+
+
+def test_a_numeric_disagreement_blocks_the_opinion_label():
+    """`opinion` means neither passage is checkable. Two passages quoting
+    figures that disagree are checkable by definition, so the label is
+    impossible rather than unlikely -- and `3` and `4` are adjacent keys."""
+    from benchmark.annotation.cli import _numeric_disagreement
+    from contract.models import Domain, Passage, QueryRecord, SourceType
+
+    def _rec(t0, t1):
+        return QueryRecord(
+            query_id="q", query="how much?", domain=Domain.FINANCIAL_TERMS,
+            construction="split",
+            passages=[
+                Passage(id="p0", text=t0, source_type=SourceType.OFFICIAL_POLICY,
+                        date="2024-01", document_id="d0"),
+                Passage(id="p1", text=t1, source_type=SourceType.PRODUCT_TERMS,
+                        date="2024-02", document_id="d1"),
+            ])
+
+    assert _numeric_disagreement(_rec("The application fee is 1,500.",
+                                      "The application fee is 1,846."))
+    assert not _numeric_disagreement(
+        _rec("Withdrawals are charged at 2.50 per transaction.",
+             "Your account includes unlimited fee-free withdrawals."))

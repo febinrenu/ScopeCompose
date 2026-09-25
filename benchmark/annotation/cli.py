@@ -105,6 +105,19 @@ def _wrap(text: str, width: int) -> list[str]:
     return lines or [""]
 
 
+def _numeric_disagreement(record: QueryRecord) -> bool:
+    """Whether any two passages quote figures that disagree.
+
+    Reuses the metric's own numeric check rather than a second regex, so the
+    guard and the scorer cannot drift on what counts as a figure.
+    """
+    from metrics.branch_match import numbers_conflict
+
+    texts = [p.text for p in record.passages]
+    return any(numbers_conflict(texts[i], texts[j])
+               for i in range(len(texts)) for j in range(i + 1, len(texts)))
+
+
 def _ask(prompt: str, valid: set[str]) -> str:
     while True:
         try:
@@ -147,6 +160,22 @@ def cmd_annotate(args: argparse.Namespace) -> int:
             break
         if key == "s":
             continue
+
+        if key in TYPE_KEYS and TYPE_KEYS[key] is ConflictType.OPINION:
+            # `opinion` means neither passage is checkable. Two passages quoting
+            # figures that disagree are checkable by definition, so the label is
+            # impossible rather than merely unlikely. Two pilot labels landed
+            # here, and `3` (temporal) sits next to `4` (opinion) on the menu --
+            # which makes a slip as likely an explanation as a judgement.
+            if _numeric_disagreement(record):
+                print("\n  These passages quote figures that disagree, so they ARE")
+                print("  checkable and the label cannot be `opinion`. Most likely")
+                print("  `factual`, or `temporal` if one has superseded the other.")
+                choice = _ask("  [f]actual  [t]emporal  [o]pinion anyway  [s]kip> ",
+                              {"f", "t", "o", "s"})
+                if choice == "s":
+                    continue
+                key = {"f": "2", "t": "3", "o": "4"}[choice]
 
         escalated = key == "e"
         if escalated:

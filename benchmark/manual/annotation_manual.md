@@ -54,19 +54,86 @@ week 14.
 
 ## 3. The five-class conflict type
 
-Work through these in order.
+### Ask this first, before you look at the list
 
-**`no_conflict`** — The passages are about different subjects, or they agree.
-Most retrieved pairs are this. Do not force a conflict label onto a pair that is
-merely adjacent in topic.
+> **Does the second passage change the answer for anyone covered by the first?**
 
-**`temporal`** — They disagree *because they describe different points in time*.
-One has been superseded. Look for dates, "effective", "as of", "no longer".
-A temporal conflict has a right answer: the current one.
+If **yes**, the pair is a conflict of some kind. Go to the list below and work
+out which kind. **It does not matter that both passages are true**, and it does
+not matter that they never contradict each other — a passage that narrows,
+qualifies or carves out part of another *changes the answer* for the cases it
+covers, and that is what this benchmark exists to capture.
+
+If **no** — the passages simply do not interact — it is `no_conflict`.
+
+This question is first because the most common labelling error is to reach
+`no_conflict` too early. In the κ pilot of 2026-09-25 it accounted for 7 of 23
+disagreements, the largest single cell, and **three of those seven contained an
+explicit "unless" or "only if"**. Both annotators were reading carefully; the
+list below was ordered in a way that invited the error.
+
+Worked through:
+
+> p0: "Credit interest is paid at 1.5% AER on balances up to 5,000."
+> p1: "Interest is payable **only if** at least two direct debits are active in
+> the calendar month."
+>
+> Do these contradict? No — both are true.
+> Does p1 change the answer for anyone covered by p0? **Yes.** An account with
+> one direct debit earns nothing, and p0 alone would tell that customer they
+> earn 1.5%.
+> → a conflict, and (both true, different scopes) → **`conditional`**.
+
+> p0: "Cash advances are available up to the cash limit shown on your statement."
+> p1: "Contactless payments are limited to 100 per transaction."
+>
+> Does p1 change the answer for anyone covered by p0? **No.** Cash advances and
+> contactless payments are different things; neither qualifies the other.
+> → **`no_conflict`**.
+
+---
+
+Now the five labels. Work through them **after** answering the question above.
+
+**`no_conflict`** — The passages do not interact. Different subjects, or the
+same subject with nothing at stake between them.
+
+> ⚠️ "They agree" is **not** sufficient for `no_conflict`. A general rule and its
+> exception agree in the sense that both are true. What makes them a conflict is
+> that the second changes the outcome for part of what the first covers. If you
+> are about to choose `no_conflict` for a pair where one passage qualifies the
+> other, choose `conditional` instead.
+
+**`temporal`** — They disagree **because one has replaced the other**. The rule
+itself changed, and the older version is no longer in force.
+
+> ⚠️ **A date is not enough.** Time expressions appear constantly in conditional
+> instances as a *property of the case* rather than a *version of the rule*.
+> This was the second-largest source of disagreement in the pilot.
+>
+> Ask: **is the earlier statement still in force for anybody?**
+>
+> - "With effect from 1 January 2022, overdrafts are 35.0% EAR" vs "With effect
+>   from 1 March 2025, overdrafts are 39.9% EAR" → the 2022 rate is dead.
+>   Nobody pays it now. → **`temporal`**.
+> - "Loans taken out **on or after 1 April 2024** may be repaid at any time" →
+>   loans taken out before that date are *still governed by the old terms*. Both
+>   rules are live; the date selects which case you are in. → **`conditional`**.
+> - "Closed **within 14 days**", "outside the country for **two years**",
+>   "under 70 **at the start of the trip**" → durations and thresholds, not
+>   versions. → **`conditional`**.
+>
+> Rule of thumb: a superseded rule has a *publication* date attached to the
+> rule. A conditional rule has a date attached to *the case*.
 
 **`opinion`** — They express differing judgements rather than differing facts.
-"Most advisers consider X the simplest option" vs. "practitioners regard X as
+"Most advisers consider X the simplest option" vs "practitioners regard X as
 restrictive." Neither is checkable.
+
+> ⚠️ **If either passage contains a figure the two disagree on, it is not
+> `opinion`.** "The fee is 1,500" against "the fee is 1,846" is checkable, so it
+> is `factual` — whatever else is going on in the sentence. Two pilot labels
+> went astray here, and `3` (temporal) and `4` (opinion) are adjacent keys.
 
 **`factual`** — Both passages make the same kind of claim about the same
 situation, and they disagree. **One of them is wrong.** A 3% fee and a 5% fee

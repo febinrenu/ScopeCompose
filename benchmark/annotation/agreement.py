@@ -42,6 +42,9 @@ MODEL_ANNOTATORS = frozenset({
     "llm", "auto", "silver", "proposed", "gpt", "ai",
 })
 
+#: Conventional floor for a label a paper reports: Landis & Koch "substantial".
+ACCEPTABLE_KAPPA = 0.61
+
 #: Landis & Koch bands. Included because a bare kappa invites the reader to
 #: supply their own threshold, and the bands are what the field actually uses.
 _BANDS = [
@@ -92,7 +95,7 @@ class KappaResult:
         A degenerate batch is never acceptable, however unanimous: it has not
         tested the distinction, so it cannot clear a bar about the distinction.
         """
-        return not self.degenerate and self.kappa >= 0.61
+        return not self.degenerate and self.kappa >= ACCEPTABLE_KAPPA
 
     def disagreements(self) -> list[tuple[tuple[str, str], int]]:
         """Off-diagonal cells, largest first. This is the actionable output.
@@ -130,10 +133,25 @@ class KappaResult:
             ]
             return "\n".join(lines)
 
+        # A point estimate above the bar with an interval reaching well below it
+        # is not the same evidence as a point estimate above the bar on a large
+        # batch, and the conventional "substantial" label hides the difference.
+        # The pilot of 2026-09-25 returned 0.775 on 23 instances with an interval
+        # from 0.395 -- "clear to proceed" on a range that includes "fair".
+        if (self.is_acceptable and self.interval
+                and self.interval.low < ACCEPTABLE_KAPPA):
+            lines += [
+                "",
+                f"  CAUTION: the point estimate clears {ACCEPTABLE_KAPPA:.2f} but the interval",
+                f"  reaches down to {self.interval.low:.3f}. On {self.n} instances this axis has not",
+                "  been shown to be reliable, only shown not to be unreliable. Widen the",
+                "  pilot on this axis, or treat the result as provisional.",
+            ]
+
         if not self.is_acceptable:
             lines += [
                 "",
-                "  BELOW 0.61. Do not start bulk annotation on this axis yet.",
+                f"  BELOW {ACCEPTABLE_KAPPA:.2f}. Do not start bulk annotation on this axis yet.",
                 "  The disagreements below are telling you the manual is ambiguous;",
                 "  fix the manual and re-run the pilot rather than labelling 300",
                 "  more instances against the same ambiguity.",
