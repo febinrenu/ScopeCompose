@@ -303,9 +303,9 @@ corpus before anything they print is quotable.
 
 | Item | Owner | What | Status |
 |---|---|---|---|
-| `docs/wp0_positioning_memo.md` | joint | **WP0, gating.** All 9 citations verified; SG-DT read against the source 2026-09-25 and the bridging claim confirmed (wording tightened). Closed-venue sweep still open. Three confirmed anchors to work outward from: SG-DT / NormBench (Chen et al., arXiv:2606.08932, KDD 2026), ConditionalQA (Sun et al., ACL 2022, arXiv:2110.06884), Defeasible NLI (Rudinger et al., EMNLP 2020). Plus direct searches of KR, IJCAI, TPLP, AAAI, AIJ, JAR and the ACL Anthology, which general web search does not reach. | Template ready, review pending |
+| `docs/wp0_positioning_memo.md` | joint | **WP0, gating.** Citations verified; SG-DT read against the source; closed-venue sweep done. Claim narrowed to the operationalisation + benchmark, not the taxonomy. Three confirmed anchors to work outward from: SG-DT / NormBench (Chen et al., arXiv:2606.08932, KDD 2026), ConditionalQA (Sun et al., ACL 2022, arXiv:2110.06884), Defeasible NLI (Rudinger et al., EMNLP 2020). Plus direct searches of KR, IJCAI, TPLP, AAAI, AIJ, JAR and the ACL Anthology, which general web search does not reach. | Template ready, review pending |
 | `benchmark/mining/tier1_pilot.py` | A | **WP1, gating.** ~20-document Tier-1 mining trial to measure real yield of genuinely multi-source pairs before committing to the 250-instance target. | Harness DONE, run pending |
-| `benchmark/wp1_probe_set.py` | B | **WP1, gating.** 53-case Contrastive Scope Probing feasibility probe. Human-verified 2026-09-25; see `docs/wp1_probe_verification.md`. | **DONE — gate closed** |
+| `benchmark/wp1_probe_set.py` | B | **WP1, gating.** 54-case Contrastive Scope Probing feasibility probe. Human-verified 2026-09-25; see `docs/wp1_probe_verification.md`. | **DONE — gate closed**, `055` needs verification |
 | `benchmark/manual/annotation_manual.md` | joint | Includes the explicit refinement-vs-opposed decision procedure and worked examples. | Draft ready, co-author pending |
 
 Both gating items must close by **end of Week 4** — not Week 14. Either can reshape the paper, and

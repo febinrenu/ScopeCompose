@@ -1,7 +1,9 @@
 # WP0 — Prior-art review and positioning memo
 
-**Status: SG-DT verified against the source, 2026-09-25. Closed-venue sweep still open.**
-**Date of model sweep: 2026-09-24. Human verification of SG-DT: 2026-09-25.**
+**Status: COMPLETE as a first deliverable, 2026-09-25.** SG-DT verified against
+the source; closed-venue sweep done and it narrowed the claim. Residual gaps
+named in §4.
+**Model sweep 2026-09-24. Human verification and venue sweep 2026-09-25.**
 
 ---
 
@@ -55,8 +57,16 @@ systems output a Span-Grounded Deontic Tree*, with nodes grounded to spans of
 that current text scope (a full provision, or an executable unit when
 segmented). That is the load-bearing fact, and it is verified.
 
-**Confidence: high on SG-DT, unchanged elsewhere.** The closed-venue sweep
-(§4) remains the open risk.
+**A third narrowing, from the venue sweep (§4).** The four-way relation is not
+a new formalism. Specificity-based override has formalised `refinement` since
+Poole and Bochman; rule-analysis literature already uses `disjoint` and
+`redundant` as rule relations. What survives is the **operationalisation for
+separately retrieved documents, and the benchmark** — plus `opposed`, which is
+a genuine gap in specificity rather than an application of it.
+
+**Confidence: high.** Both things that could have forced the fallback were
+checked. Neither did; both narrowed the claim, and the narrowed claim is
+defensible against the literature that narrowed it.
 
 ---
 
@@ -236,55 +246,136 @@ defeasible-logic lineage rather than the RAG line.
 
 ---
 
-## 4. Venues still to sweep — NOT discharged
+## 4. Closed-venue sweep — done 2026-09-25, and it narrowed the claim
 
-Web search does not reach these. Someone with library access must do it.
+**Result: prior art found. The novelty is narrower than the proposal assumed,
+and the paper is better for knowing it now.**
 
-- [ ] **KR** (Principles of Knowledge Representation and Reasoning)
-- [ ] **IJCAI / IJCAI-ECAI 2026** — the KR track has argumentation and
-      logic-programming sessions; accepted-papers list is public and worth a
-      title scan
-- [ ] **TPLP**
-- [ ] **AAAI**
-- [ ] **Artificial Intelligence Journal**
-- [ ] **Journal of Automated Reasoning**
-- [ ] **ACL Anthology** — beyond what general search surfaces
+### What was found
 
-**Highest risk sits here.** The four-way scope relation (refinement / disjoint /
-redundant / opposed) is a *knowledge-representation* contribution, and classical
-KR has reasoned about specificity-based override since Reiter (1980). If the
-four-way distinction exists under another name in the defeasible-logic
-literature, the contribution narrows from "we define it" to "we operationalise
-it for retrieval". That is survivable and should be planned for.
+The underlying logic is emphatically not new. Reasoning about rules with
+exceptions has been formalised for decades:
 
-Classical lineage to check while there: default logic (Reiter 1980), defeasible
-logic (Pollock; Prakken & Sartor), argumentation frameworks (Dung 1995),
-truth-maintenance systems.
+| area | anchor | bearing on this project |
+|---|---|---|
+| default logic | Reiter (1980) | exceptions to default assumptions |
+| specificity | Poole; Bochman | **the `refinement` relation, essentially** |
+| defeasible logic | Pollock; Prakken & Sartor | override and priority between rules |
+| argumentation | Dung (1995) and after | conflict resolution between arguments |
+| rule analysis | rule-base verification literature | uses **disjoint**, **redundant** and **conflicting** as rule relations |
+| KB refinement | refinement-operator literature | uses **refinement** for condition specialisation |
+| AI & Law | *lex specialis* | a more specific rule overrides a more general one |
+
+Bochman states the specificity principle in terms close enough to be quoted
+against a novelty claim: *more specific default rules override less specific
+rules in conflict*, with the canonical pattern `A → C` against `A ∧ B → ¬C`.
+That is `refinement`, named and formalised decades ago.
+
+Verified in the KR proceedings directly:
+
+- **A Rule-Based Approach to Specifying Preferences over Conflicting Facts and
+  Querying Inconsistent Knowledge Bases** — Bienvenu, Bourgaux, Inoue, Jean.
+  KR 2025 main track.
+- **Reasoning in Defeasible Description Logics with System W and Lexicographic
+  Inference** — Casini, Haldimann, Meyer. KR 2025 main track.
+- **Deontic Reasoning Based on Inconsistency Measures** — Arieli, van Berkel,
+  Raddaoui, Strasser. KR 2024. Normative conflict, nonmonotonic and
+  paraconsistent entailment.
+
+IJCAI-ECAI 2026's KRR track carries neighbouring work (non-monotonic reasoning,
+ASP, argumentation, description logics) but a title-and-abstract scan found no
+direct match for the four-way classification.
+
+### What survives
+
+No prior work was found that says: *given two retrieved passages, classify
+their relationship as refinement / disjoint / redundant / opposed.* The
+vocabulary is old; the **operational combination, applied to separately
+retrieved documents, as an annotated benchmark task** is where the contribution
+now sits.
+
+One part is stronger than the rest and worth leading with. Ordinary specificity
+answers the nested case:
+
+```
+    B ⊂ A                      → specificity decides
+```
+
+It does **not** answer:
+
+```
+    A ∩ B ≠ ∅,  A ⊄ B,  B ⊄ A,  outcomes conflict on the overlap
+```
+
+That is `opposed`, and it is a structural gap in specificity-based override
+rather than an application of it. `wp1_fin_opp_053` and `wp1_imm_opp_055` are
+built precisely on that shape — and 055 deliberately removes the credibility
+and recency crutches, so a system has nothing but scope to reason with.
+
+`redundant` is the other operationally useful one: `B ⊂ A` **and**
+`outcome(B) = outcome(A)` means the narrower passage is a restatement, not an
+exception. A system that branches on every narrower passage fabricates
+exceptions, and `wp1_fin_red_049` exists to catch exactly that.
+
+### The framing this forces
+
+> **Prior work has extensively formalised defeasible reasoning, exceptions,
+> specificity-based priority, and conflicts among rules. Our contribution is not
+> a new defeasible logic; rather, we operationalise scope relations between
+> separately retrieved rule-bearing documents, and introduce a benchmark that
+> distinguishes nested exception/refinement, redundant specialisation, disjoint
+> applicability, and non-nested overlapping opposition.**
+
+**Do not write:**
+
+- ❌ "No previous work has studied rule-exception relationships."
+- ❌ "We are the first to define refinement, disjointness, redundancy and opposition."
+- ❌ "Existing defeasible logic cannot distinguish these relations."
+- ❌ "Specificity has not considered scope overlap."
+
+**Write instead:**
+
+- ✅ "Existing formalisms provide mechanisms for defeasibility, specificity and conflict resolution."
+- ✅ "We operationalise applicability-set relations for retrieved textual rules."
+- ✅ "We study these relations as an information-retrieval and language-understanding problem."
+- ✅ "Our benchmark evaluates whether systems preserve the applicability conditions and outcomes of cross-document rules."
+
+### Residual
+
+The sweep covered the publicly indexed portions of KR 2024–2025, IJCAI-ECAI
+2026 KRR, and the classical default/defeasible/specificity literature. TPLP,
+AIJ and JAR were not searched exhaustively, and a specificity paper that
+happens to enumerate the same four cases could still exist. The framing above
+survives that discovery, which is the point of adopting it now: it claims the
+operationalisation and the benchmark, not the taxonomy.
 
 ---
 
 ## 5. Consequences for the paper
 
-1. **§4 must credit Chen et al. for Silent Scope Omission explicitly**, in the
-   project's own voice, and then draw the retrieval-stage distinction. Reads as
-   scholarship when volunteered; reads as concealment when found by a reviewer.
-2. **Add a related-work paragraph on conflict-driven summarization** (CARE-RAG),
-   distinguishing synthesis-into-one from composition-preserving-branches.
-3. **Cite the 37% figure using their terminology** — "Level 3+ (recursive)",
-   not "needs deep nesting". Verified; see §1b.
-4. **Never write that SG-DT does not involve retrieval.** It does, in the
-   motivation. The distinction is about the benchmark's input unit. The exact
-   sentence to use is in the Verdict.
-5. **Fix the TCR description** — it is context–memory, not inter-source.
-6. **Verify ConflictRAG's mechanism** before describing it as Entropy-TOPSIS.
-7. **Use the Structure-Grounding Gap as support, not competition.** An
+1. **Credit Chen et al. for Silent Scope Omission explicitly**, in the project's
+   own voice, then draw the retrieval-stage distinction. Reads as scholarship
+   when volunteered; reads as concealment when a reviewer finds it.
+2. **Never write that SG-DT does not involve retrieval.** It does, in the
+   motivation. The distinction is about the benchmark's input unit, and the
+   exact sentence to use is in the Verdict.
+3. **Never claim the four relations as a new formalism.** §4 lists the prior art
+   and the sentence to use instead. Lead on the operationalisation and the
+   benchmark, and on `opposed` as the case specificity does not cover.
+4. **Cite the 37% figure using their terminology** — "classified as Level 3+
+   (recursive)", not "needs deep nesting". Verified; see §1b.
+5. **Use the Structure-Grounding Gap as support, not competition.** An
    independent group found that locating the relevant span and attaching it to
    the right logical parent are separate abilities. That is this project's
-   thesis, observed inside a single provision, and it is the strongest external
+   thesis observed inside a single provision, and the strongest external
    evidence available for it.
-8. **Claim the benchmark gap explicitly** — CONFLICTS and Ragability both taxonomise
-   conflicts without separating "both true under different scopes" from
-   "contradiction". That is the hole this corpus fills.
+6. **Add a related-work paragraph on conflict-driven summarization** (CARE-RAG),
+   distinguishing synthesis-into-one from composition-preserving-branches.
+7. **Fix the TCR description** — it is context–memory, not inter-source.
+8. **Verify ConflictRAG's mechanism** before describing it as Entropy-TOPSIS.
+9. **Claim the benchmark gap explicitly** — CONFLICTS and Ragability both
+   taxonomise conflicts without separating "both true under different scopes"
+   from "contradiction". That is the hole this corpus fills.
 
 ---
 
@@ -295,9 +386,16 @@ Stated up front so the fallback is not a retreat:
 - ~~**SG-DT turns out to evaluate over a retrieved set**~~ — **checked and
   ruled out** on 2026-09-25. Its structural input is a single provision or
   executable unit. This was the largest single risk and it is closed.
-- **A KR/TPLP paper already formalises the four-way relation** → the relation is
-  not the contribution; the operationalisation and the benchmark are. **Now the
-  largest remaining risk**, and it sits behind the closed venues in §4.
+- ~~**A KR/TPLP paper already formalises the four-way relation**~~ — **checked
+  2026-09-25, and substantially confirmed.** Specificity already covers
+  `refinement`; rule-analysis literature already uses `disjoint` and
+  `redundant`. The response was not to defend the taxonomy but to stop claiming
+  it: the contribution is the operationalisation and the benchmark. That framing
+  is stable even if a paper enumerating all four cases turns up later.
+- **Largest remaining risk is now empirical, not positional** — the decisive
+  experiment currently shows the pipeline behind the baseline at -12.5%
+  [-37.5%, +12.5%] on 24 branches, with almost no power. A properly sized corpus
+  could confirm that.
 - **ArbGraph already composes rather than arbitrates** (the name suggests not,
   but the name is not the paper) → the operator claim narrows to the conditional
   case specifically.
@@ -309,15 +407,18 @@ all three are cheap to check now and expensive to discover in week 14.
 
 ## 7. Outstanding actions, ranked
 
-1. ~~Read SG-DT §3–§4~~ — **done 2026-09-25.** Single-provision input
-   confirmed; overclaim corrected.
-2. ~~Confirm the NormBench 37% figure~~ — **done.** Verified, with a wording
-   constraint (§1b).
-3. **Sweep the closed venues in §4.** Now the largest remaining risk.
-4. Read ArbGraph (arXiv:2604.18362) — potential foil or baseline.
-5. Confirm ConflictRAG's credibility mechanism.
-6. Read CARE-RAG (arXiv:2507.01281) closely enough to write the distinguishing
-   paragraph.
+Both gating checks are done. What remains is tidy-up, not risk.
 
-Item 3 is the real work and carries the residual risk. Items 4–6 are two papers
-and one abstract check, an afternoon between them.
+1. Read ArbGraph (arXiv:2604.18362) — "arbitration" is selection vocabulary, so
+   it is a likely foil or baseline. The only unread paper that could still
+   change a claim.
+2. Confirm ConflictRAG's credibility mechanism before describing it as
+   Entropy-TOPSIS (§1d).
+3. Read CARE-RAG (arXiv:2507.01281) closely enough to write the distinguishing
+   paragraph (§3).
+4. Optional: exhaustive TPLP / AIJ / JAR search. §4 explains why the framing
+   survives without it.
+
+**Done:** SG-DT §3–§4 read against the source; NormBench 37% verified; KR
+2024–2025 and IJCAI-ECAI 2026 KRR swept; all nine original citations plus three
+KR citations verified against their sources.

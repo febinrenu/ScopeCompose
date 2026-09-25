@@ -1441,6 +1441,45 @@ EDGE_RELATIONS: list[Case] = [
             "the overlap. Routes to selection, not composition. The hardest relation to "
             "tell from refinement.",
     ),
+    Case(
+        id="wp1_imm_opp_055", domain=IMM,
+        query="Can I apply for indefinite leave to remain?",
+        rule=Src("Applicants who have completed five years of continuous lawful "
+                 "residence may apply for indefinite leave to remain.",
+                 SourceType.GOVERNMENT_GUIDANCE, "2024-06", "gov_settlement_residence"),
+        other=Src("Youth Mobility Scheme participants are not eligible to apply for "
+                  "indefinite leave to remain.",
+                  SourceType.GOVERNMENT_GUIDANCE, "2024-06", "gov_yms_conditions"),
+        conflict_type=ConflictType.CONDITIONAL, relation=ScopeRelation.OPPOSED,
+        default_outcome="the applicant may apply for indefinite leave to remain",
+        rule_condition="the applicant has completed five years of continuous lawful residence",
+        rule_applicability="applicants with five years of continuous lawful residence",
+        rule_attrs=[num("continuous_residence_years", 5)],
+        condition="the applicant is on the Youth Mobility Scheme",
+        exception_outcome="the applicant may not apply for indefinite leave to remain",
+        applicability="Youth Mobility Scheme participants",
+        attrs=[cat("route", "youth_mobility")],
+        scoped_answer="The sources disagree for a Youth Mobility Scheme participant who "
+                      "has five years of continuous lawful residence. Both are current "
+                      "government guidance, so the disagreement cannot be resolved by "
+                      "source credibility.",
+        selection_answer="Applicants who have completed five years of continuous lawful "
+                         "residence may apply for indefinite leave to remain.",
+        why="OPPOSED. Written to replace wp1_imm_opp_054, which was dropped because its "
+            "two passages spoke to DIFFERENT predicates and so never actually "
+            "conflicted. Here both speak to exactly one predicate -- eligibility to "
+            "apply for indefinite leave to remain -- and assert opposite answers. "
+            "The scopes cross without nesting: a route other than Youth Mobility can "
+            "reach five years, and a Youth Mobility participant can have fewer, while "
+            "someone who arrived on another route and later moved to Youth Mobility sits "
+            "in both. Neither set contains the other, so specificity gives no answer -- "
+            "which is the point. Ordinary specificity resolves B subset of A; it does "
+            "not resolve overlapping-without-containment, and that gap is what this "
+            "relation exists to expose. "
+            "Both passages are government guidance carrying the same date, so neither "
+            "credibility nor recency can break the tie. A system that reaches for either "
+            "is answering a question the data does not pose.",
+    ),
     # wp1_imm_opp_054 was DROPPED on review (2026-09-25).
     #
     # It read as opposed but the two passages never contradicted each other:
@@ -1542,6 +1581,10 @@ HIGH_RISK: dict[str, str] = {
                        "here fabricates a branch.",
     "wp1_imm_red_050": "REDUNDANT vs REFINEMENT. Same shape as 049.",
     "wp1_fin_opp_053": "OPPOSED vs REFINEMENT. Check neither scope contains the other.",
+    "wp1_imm_opp_055": "OPPOSED vs REFINEMENT. Replacement for the dropped 054. Check "
+                       "that both passages speak to the SAME predicate (eligibility to "
+                       "apply for ILR) -- that is what 054 failed -- and that the scopes "
+                       "cross without either containing the other.",
     "wp1_fin_imp_009": "IMPLICIT vs EXPLICIT. Reworded once already to remove 'exempt "
                        "from'. Confirm the current wording carries no cue for you.",
     "wp1_fin_imp_005": "IMPLICIT vs EXPLICIT. 'Where the statement balance is settled' "

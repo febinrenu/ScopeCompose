@@ -11,6 +11,84 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-09-25 (end of day) - WP0 closed, replacement opposed case, second annotator secured
+
+Tasks 2, 7 and the task-1 follow-up all done. **All four gating checks are now
+closed**, and none of them killed the project -- two narrowed it.
+
+**WP0 closed-venue sweep: prior art found, claim narrowed**
+
+The four-way relation is **not** a new formalism, and the paper must stop
+implying it is.
+
+- *specificity-based override* (Poole; Bochman) already formalises what this
+  project calls `refinement`. Bochman states the principle in near-quotable
+  terms: more specific default rules override less specific ones in conflict,
+  pattern `A -> C` against `A and B -> not C`.
+- *rule-analysis literature* already uses **disjoint** and **redundant** as rule
+  relations; *KB refinement* already uses **refinement** for condition
+  specialisation.
+- default logic (Reiter 1980), defeasible logic, argumentation (Dung 1995) and
+  AI & Law *lex specialis* all sit adjacent.
+
+Verified directly in the proceedings, full author lists recovered:
+- *A Rule-Based Approach to Specifying Preferences over Conflicting Facts and
+  Querying Inconsistent Knowledge Bases* -- Bienvenu, Bourgaux, Inoue, Jean. KR 2025.
+- *Reasoning in Defeasible Description Logics with System W and Lexicographic
+  Inference* -- Casini, Haldimann, Meyer. KR 2025.
+- *Deontic Reasoning Based on Inconsistency Measures* -- Arieli, van Berkel,
+  Raddaoui, Strasser. KR 2024.
+
+**What survives.** No prior work found that says: *given two retrieved passages,
+classify their relation as refinement / disjoint / redundant / opposed.* The
+vocabulary is old; the operationalisation for separately retrieved documents,
+and the annotated benchmark, are not.
+
+The strongest single part is `opposed`. Specificity answers `B subset of A`. It
+does **not** answer `A ∩ B != {}` with `A ⊄ B` and `B ⊄ A` and conflicting
+outcomes -- that is a structural gap in specificity-based override, not an
+application of it.
+
+**Decisions**
+- *Stop claiming the taxonomy; claim the operationalisation.* The memo now
+  carries the exact framing sentence plus four phrasings to avoid and four to
+  use. That framing survives even if a paper enumerating all four cases turns up
+  later, which is the reason for adopting it now rather than defending the
+  taxonomy.
+- *Residual named rather than hidden.* TPLP, AIJ and JAR were not searched
+  exhaustively. Recorded in the memo with the reason it no longer matters much.
+
+**Replacement opposed case: `wp1_imm_opp_055`**
+
+Dropping 054 had left `opposed` with one instance -- thin coverage of the
+relation hardest to tell from refinement. The replacement:
+
+- p0: five years continuous lawful residence -> may apply for ILR
+- p1: Youth Mobility Scheme participants -> may not apply for ILR
+
+Fixes what killed 054: **both passages speak to exactly one predicate**,
+eligibility to apply for ILR, and assert opposite answers. The scopes cross
+without nesting -- another route can reach five years, a YMS participant can
+have fewer, and someone who switched routes sits in both.
+
+Both passages are government guidance carrying the **same date**, so neither
+credibility nor recency can break the tie. A system reaching for either is
+answering a question the data does not pose. Verified: `compare` returns
+`overlapping`, outcomes do not match, no default branch, B2 routes to selection.
+
+Set is back to 54 instances, `opposed` back to 2. Needs human verification like
+any other case -- added to `HIGH_RISK` with the predicate check spelled out.
+
+**Task 2 done** -- second annotator secured, so the kappa pilot is unblocked.
+
+**Next up**
+- The kappa pilot (task 5), then bulk annotation (task 6). Nothing else blocks.
+- Verify `wp1_imm_opp_055`.
+- Tidy-up only in WP0: read ArbGraph, confirm ConflictRAG's mechanism, read
+  CARE-RAG for the distinguishing paragraph.
+
+---
+
 ### 2026-09-25 (later still) - SG-DT verified against the source. WP0's biggest risk closed, and an overclaim corrected.
 
 Task 4 done. SG-DT sections 3-4 read against the actual paper, not an abstract.
