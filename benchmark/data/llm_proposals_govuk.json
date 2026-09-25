@@ -1,0 +1,78 @@
+{
+  "lexical_tier1": 4,
+  "llm_cross_document": 5,
+  "pairings_attempted": 15,
+  "pairings_failed": 0,
+  "proposals": [
+    {
+      "provider": "gov_uk_skilled_worker",
+      "rule": "You must pay the healthcare surcharge for each year of your stay",
+      "exception": "If you’re a doctor or nurse, or you work in health or adult social care, check if you’re eligible to apply for the Health and Care Worker visa instead. It’s cheaper to apply for and you do not need to pay the annual immigration health surcharge.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception applies to doctors, nurses, or health/social care workers who can use the Health and Care Worker visa and avoid the surcharge.",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "skilled-worker-visa#overview",
+      "exception_doc_id": "skilled-worker-visa#how-much-it-costs",
+      "rule_content_id": "f9015c31-61c2-4504-8eb0-242cd75aee19",
+      "exception_content_id": "f9015c31-61c2-4504-8eb0-242cd75aee19"
+    },
+    {
+      "provider": "gov_uk_graduate",
+      "rule": "You cannot extend your Graduate visa.",
+      "exception": "You may be able to extend your visa if you’re eligible, for example to continue your studies in the UK.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "B applies to Student visa extensions, not to Graduate visa, providing a narrower case where extension is possible.",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "graduate-visa#overview",
+      "exception_doc_id": "student-visa#overview",
+      "rule_content_id": "1a06c4ea-fdb1-4a7b-baf5-3477714c974c",
+      "exception_content_id": "c0a2a4d9-8d28-449f-8ccb-4c2b7f6e9c0f"
+    },
+    {
+      "provider": "gov_uk_youth_mobility",
+      "rule": "You can apply for a Youth Mobility Scheme visa if you: have £2,530 in savings",
+      "exception": "You must have at least £2,530 in your bank account to show you can support yourself in the UK. You will need to have had the money available for at least 28 days in a row.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception narrows the savings requirement to a minimum balance that must have been held for 28 consecutive days.",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "youth-mobility#overview",
+      "exception_doc_id": "youth-mobility#eligibility",
+      "rule_content_id": "105e4758-c500-4da5-b1a1-58b9e64a6c30",
+      "exception_content_id": "105e4758-c500-4da5-b1a1-58b9e64a6c30"
+    },
+    {
+      "provider": "gov_uk_family_evidence",
+      "rule": "You’ll need to provide proof of your finances, if you’re not applying on the basis of your private life",
+      "exception": "You do not need to meet a minimum income requirement if your partner gets one of the following benefits: Disability Living Allowance, Scottish Adult Disability Living Allowance, Severe Disablement Allowance, Industrial Injuries Disablement Benefit, Attendance Allowance, Pension Age Disability Payment, Carer’s Allowance, Carer Support Payment, Personal Independence Payment, Armed Forces Independence Payment or Guaranteed Income Payment under the Armed Forces Compensation Scheme, Constant Attendance Allowance, Mobility Supplement or War Disablement Pension under the War Pensions Scheme, Police Injury Pension, Child Disability Payment, Adult Disability Payment",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception applies only when the partner receives specified disability or carer benefits, thereby waiving the general financial proof requirement",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "uk-family-visa#provide-information",
+      "exception_doc_id": "uk-family-visa#proof-income-partner",
+      "rule_content_id": "305acc88-488e-44ec-8e5a-1a5de7819ba9",
+      "exception_content_id": "305acc88-488e-44ec-8e5a-1a5de7819ba9"
+    },
+    {
+      "provider": "gov_uk_innovator_settlement",
+      "rule": "You may be able to apply for settlement once you’ve been in the UK for 3 years.",
+      "exception": "You must have a new endorsement that shows you’ve met the requirements for growing your business",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The settlement eligibility is narrowed to those who have a new endorsement after 3 years of residence",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "innovator-founder-visa#overview",
+      "exception_doc_id": "indefinite-leave-to-remain-innovator-founder-visa#overview",
+      "rule_content_id": "943f60a1-5bfd-4197-8086-72b795b6f3ac",
+      "exception_content_id": "2de5eb93-245a-4a77-a102-d8692bdf478d"
+    }
+  ]
+}

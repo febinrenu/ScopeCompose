@@ -129,10 +129,21 @@ class ProposedPair:
     rule: str
     exception: str
     rule_doc: str
+    """"A" or "B" as the model labelled it."""
     exception_doc: str
     why: str
     confidence: float
     cross_document: bool
+
+    # The actual documents behind "A" and "B". Recorded because without them
+    # the pairing is unrecoverable: a downstream consumer has to guess which
+    # document a snippet came from by word overlap, and a long document shares
+    # words with everything. Resolving "A" here costs nothing and removes the
+    # guess entirely.
+    rule_doc_id: str = ""
+    exception_doc_id: str = ""
+    rule_content_id: str | None = None
+    exception_content_id: str | None = None
 
 
 def propose(doc_a: SourceDoc, doc_b: SourceDoc, *, client=None) -> list[ProposedPair]:
@@ -167,6 +178,8 @@ def propose(doc_a: SourceDoc, doc_b: SourceDoc, *, client=None) -> list[Proposed
             conf = float(item.get("confidence", 0.5))
         except (TypeError, ValueError):
             conf = 0.5
+        src = {"A": doc_a, "B": doc_b}
+        d_rule, d_exc = src.get(rd, doc_a), src.get(ed, doc_b)
         out.append(ProposedPair(
             provider=doc_a.provider, rule=rule, exception=exc,
             rule_doc=rd, exception_doc=ed, why=str(item.get("why", ""))[:180],
@@ -174,6 +187,9 @@ def propose(doc_a: SourceDoc, doc_b: SourceDoc, *, client=None) -> list[Proposed
             # The prompt demands a cross-document pair; verify rather than
             # trust, since this is the one property the comparison rests on.
             cross_document=(rd != ed),
+            rule_doc_id=d_rule.doc_id, exception_doc_id=d_exc.doc_id,
+            rule_content_id=getattr(d_rule, "content_id", None),
+            exception_content_id=getattr(d_exc, "content_id", None),
         ))
     return out
 
