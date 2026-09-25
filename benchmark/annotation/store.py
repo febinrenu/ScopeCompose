@@ -198,6 +198,17 @@ class AnnotationStore:
                 raise AnnotationError(f"unknown axis {axis!r}")
         return out
 
+    def deferred(self, annotator: str) -> set[str]:
+        """Instances this annotator marked undecidable.
+
+        A deferred case is not a disagreement. Both annotators saying "this
+        needs a third opinion" is the protocol in §1 working, and scoring it as
+        a mismatch would punish them for following it. Kappa is computed over
+        the cases both were willing to decide, with the deferral rate reported
+        beside it.
+        """
+        return {r.instance_id for r in self.load(annotator) if r.escalated}
+
     def progress(self, annotator: str, total: int | None = None) -> str:
         recs = self.load(annotator)
         done = len(recs)

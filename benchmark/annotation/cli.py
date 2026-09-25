@@ -52,7 +52,13 @@ TYPE_PROMPT = """
     yes -> conditional        no -> factual / temporal / opinion
 
   1 no_conflict   2 factual   3 temporal   4 opinion   5 conditional
-  s skip   e escalate to third reviewer   q save and quit"""
+
+  u  NOT SURE -- genuinely undecidable, send to the third reviewer
+     Use it freely. Across 91 labels each, neither annotator has ever
+     marked one, and real policy text is not that clean. A guess on an
+     undecidable case enters the corpus wearing a real label and cannot
+     be found again; an honest `u` costs nothing.
+  s skip   q save and quit"""
 
 RELATION_PROMPT = """
   Step 1: do the applicability sets overlap, and is one nested in the other?
@@ -165,7 +171,7 @@ def cmd_annotate(args: argparse.Namespace) -> int:
         started = time.perf_counter()
 
         print(TYPE_PROMPT)
-        key = _ask("\n  conflict type> ", set(TYPE_KEYS) | {"s", "e", "q"})
+        key = _ask("\n  conflict type> ", set(TYPE_KEYS) | {"s", "u", "e", "q"})
         if key == "q":
             break
         if key == "s":
@@ -187,11 +193,14 @@ def cmd_annotate(args: argparse.Namespace) -> int:
                     continue
                 key = {"f": "2", "t": "3", "o": "4"}[choice]
 
-        escalated = key == "e"
+        escalated = key in ("u", "e")
         if escalated:
             ctype = ConflictType.CONDITIONAL
             relation = None
-            note = input("  why is it ambiguous? ").strip() or None
+            # Optional, not required. Demanding a typed justification is
+            # friction on the one action the manual most wants taken, and the
+            # observed escalation rate across two pilots was zero.
+            note = input("  why, in a few words (enter to skip)? ").strip() or None
         else:
             ctype = TYPE_KEYS[key]
             relation = None
@@ -201,7 +210,7 @@ def cmd_annotate(args: argparse.Namespace) -> int:
                 rkey = _ask("\n  scope relation> ", set(RELATION_KEYS) | {"e"})
                 if rkey == "e":
                     escalated = True
-                    note = input("  why is it ambiguous? ").strip() or None
+                    note = input("  why, in a few words (enter to skip)? ").strip() or None
                 else:
                     relation = RELATION_KEYS[rkey]
 
@@ -340,6 +349,14 @@ def cmd_agreement(args: argparse.Namespace) -> int:
                         ("scope_relation", "Four-way scope relation")):
         try:
             la, lb = store.labels(args.a, axis), store.labels(args.b, axis)
+
+            # A case either annotator deferred is not a disagreement -- it is
+            # the §1 protocol working, and scoring it as a mismatch punishes
+            # them for following it. Held out, and the rate reported below.
+            deferred = store.deferred(args.a) | store.deferred(args.b)
+            la = {k: v for k, v in la.items() if k not in deferred}
+            lb = {k: v for k, v in lb.items() if k not in deferred}
+
             if args.prefix:
                 # Passes accumulate across batches, so comparing whole passes
                 # silently pools every pilot ever run. Pilot 2 reported n=73
@@ -359,6 +376,33 @@ def cmd_agreement(args: argparse.Namespace) -> int:
         print(result.render())
         print()
         ok = ok and result.is_acceptable
+
+    # Deferral rate, reported whether or not anything was deferred. A rate of
+    # zero across a whole corpus of real policy text is not a clean corpus --
+    # it means the escape hatch the manual insists on is not being used, and
+    # undecidable cases are entering as guesses that nobody can find again.
+    def_a, def_b = store.deferred(args.a), store.deferred(args.b)
+    if args.prefix:
+        def_a = {k for k in def_a if k.startswith(args.prefix)}
+        def_b = {k for k in def_b if k.startswith(args.prefix)}
+    n_seen = len({r.instance_id for r in store.load(args.a)
+                  if not args.prefix or r.instance_id.startswith(args.prefix)})
+    print("Deferrals (held out of the kappa above)")
+    print("-" * 74)
+    print(f"  {args.a:<12} {len(def_a):>4} of {n_seen}")
+    print(f"  {args.b:<12} {len(def_b):>4} of {n_seen}")
+    print(f"  {'both agreed undecidable':<12} {len(def_a & def_b):>4}")
+    if not (def_a or def_b):
+        print()
+        print("  NOBODY DEFERRED ANYTHING. The manual (1, 4) says to escalate")
+        print("  rather than guess, and real policy text is not clean enough for")
+        print("  that rate to be honest. Every genuinely undecidable case was")
+        print("  instead resolved by a guess -- and two independent guesses on an")
+        print("  undecidable case disagree about half the time, which is a large")
+        print("  part of what the kappa above is measuring.")
+        print()
+        print("  Press `u` freely on the next pass. A deferred case is data.")
+    print()
 
     if not ok:
         print("=" * 78)

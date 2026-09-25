@@ -266,3 +266,99 @@ filter rejected 1 of 19 for trying.
 Run with `--prefix wp3_`. **Pilot 2's labels stay on disk** — they are evidence
 of what unqueried instances produce, and deleting them would erase the record
 of the mistake.
+
+
+---
+
+# Pilot 3 — 2026-09-25. Valid. Still fails, and now we know on what.
+
+| axis | κ | n | 95% CI |
+|---|---:|---:|---|
+| five-class conflict type | **0.276** | 18 | [−0.080, 0.613] |
+| four-way scope relation | 1.000 | 6 | [0.000, 1.000] — too few |
+
+Same mined instances as pilot 2, with generated queries. **The query fix worked**:
+−0.013 → 0.276, and the disagreement went back to being one-directional
+(`conditional → no_conflict` 5, reverse 1). That ratio is the pilot-1 signature
+— two people applying different rules consistently — rather than pilot 2's
+bidirectional 9-and-5, which was random framing.
+
+So the batch is now measuring the task. It is still below 0.61.
+
+## What the disagreements actually are
+
+Not what pilot 1's were. Reading all five:
+
+| case | what it is |
+|---|---|
+| `wp3_0008` | p1 is a **cross-reference** — "you must also meet the additional requirements at V 9.1 to V 9.5". It points elsewhere without stating an outcome. |
+| `wp3_0009` | **different predicates** — visa *validity* against *which visa you need*. |
+| `wp3_0010` | "You can work in most jobs" / "no employment as a professional sportsperson". **Clearly conditional.** |
+| `wp3_0015` | p1 is a mangled rate table. Barely readable. |
+| `wp3_0017` | both about cancelling the same product, different aspects. Defensible either way. |
+
+One is clearly conditional, one is unreadable, and three are **genuinely
+undecidable from the text given**. That is a different situation from pilot 1,
+where the disagreements were on constructed sentences with a right answer and
+the manual's ordering was steering readers away from it.
+
+**A hypothesis that did not survive.** Short passages looked like the obvious
+culprit — "You can work in most jobs" is 25 characters. But the agreed cases
+have a *shorter* median than the disagreed ones (72 vs 90 characters), and the
+probe set's median is 70, essentially identical. Length is not the discriminator
+and the idea is recorded here only so nobody spends an afternoon rediscovering
+that it is not.
+
+## The finding: nobody has ever deferred
+
+**Zero escalations. Across three pilots and 91 labels each, from both
+annotators.**
+
+§1 says disagreements the procedure cannot settle go to a third reviewer. §4
+says *"if you still cannot decide, route it to the third reviewer. Do not
+guess."* The escape hatch has never once been used, on a corpus of real policy
+text that plainly contains undecidable pairs.
+
+So every genuinely undecidable case was resolved by a guess instead — and two
+independent guesses on an undecidable case agree about as often as chance. On a
+batch where three of five disagreements look undecidable, that accounts for a
+large share of the shortfall.
+
+It is a tooling failure as much as a discipline one. Escalation was bound to `e`
+— presented last, named "escalate to third reviewer", and gated behind a
+mandatory typed justification. Every part of that says *this is the unusual,
+effortful path*.
+
+## Pace, again, unchanged
+
+| | median | under 10s |
+|---|---:|---:|
+| febin | 4.7s | **17 / 18** |
+| johann | 16.7s | 0 / 18 |
+
+Flagged after pilot 1 and unchanged. Four point seven seconds is not enough to
+read a query, two passages, and apply a two-step test — and it is certainly not
+enough to notice that a case is undecidable, which may be the whole reason the
+deferral rate is zero.
+
+## Changes
+
+| change | where |
+|---|---|
+| `u` — **NOT SURE**, one keypress, listed before `s`/`q` with an explanation | `annotation/cli.py` |
+| the typed reason is now optional | `annotation/cli.py` |
+| deferred cases held OUT of κ — deferring is the protocol working, not a disagreement | `annotation/cli.py` |
+| deferral rate reported every run, with a warning when it is zero | `annotation/cli.py` |
+| `store.deferred()` | `annotation/store.py` |
+
+## Pilot 4
+
+Re-run on the **same** `pilot3_batch.jsonl`, deleting the wp3 labels first so
+both passes are fresh. The batch is fine; what changes is how it is labelled.
+
+The one instruction that matters: **press `u` whenever the text does not settle
+it.** A deferral rate near zero on real policy text is not carefulness, it is a
+guess rate near one hundred percent. Expect something like 15–25% on this
+material, and if pilot 4 comes back with a real deferral rate and κ still below
+0.61 on what remains, then the boundary is genuinely hard and the answer is the
+third reviewer rather than another manual edit.
