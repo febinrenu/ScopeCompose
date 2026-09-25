@@ -1,4 +1,6 @@
-# κ pilot 1 — 2026-09-25
+# κ pilots
+
+## Pilot 1 — 2026-09-25
 
 **Annotators:** johann, febin. **Batch:** the 54 WP1 probe instances.
 
@@ -185,3 +187,82 @@ conclusion its interval does not support.
 
 The scope axis should be re-measured on more instances regardless — 23 is too
 few to conclude from, whichever way it lands.
+
+
+---
+
+# Pilot 2 — 2026-09-25. Void: my error, not a result.
+
+| axis | κ | n | verdict |
+|---|---:|---:|---|
+| five-class conflict type | **−0.013** | 19 | **void** |
+| four-way scope relation | 1.000 | 3 | too few to mean anything |
+
+**The batch had no queries.** The `query` field of all 19 instances read
+`[to be written by the annotator]`, and I never built a way for an annotator to
+write one. Both annotators judged 19 passage pairs with **no question attached**.
+
+Every rule in the manual is relative to a question. §3 asks whether the second
+passage *changes the answer for anyone covered by the first* — the answer to
+what? §4 judges scopes *inside the query frame*. With no query there is no
+frame, so each annotator supplied their own, and they supplied different ones.
+
+Take `wp2_0004`:
+
+> p0: "You may be able to apply for settlement once you've been in the UK for
+> 3 years."
+> p1: "You must have a new endorsement that shows you've met the requirements
+> for growing your business"
+
+Under *"can I apply for settlement after 3 years?"* p1 adds a requirement →
+conditional. Under *"what do I need for settlement?"* they are complementary →
+no conflict. Both readings are correct. Nothing in the instance chose between
+them.
+
+**The evidence that this is framing and not disagreement** is in the direction
+of the cells. Pilot 1 was one-directional — 7 `conditional → no_conflict`, none
+the other way, which is two readers applying different rules consistently.
+Pilot 2 ran **both ways**: 9 one direction, 5 the other. That is not a reading
+difference; that is two people framing each instance independently.
+
+So pilot 2 says nothing about the manual revisions, and nothing about whether
+the task is harder on real text than on the probe set. Both remain untested.
+
+## A second error, which hid the first
+
+The reported figure was **n = 73**, not 19 — 54 pilot-1 instances plus 19
+pilot-2 ones, pooled. `agreement` compared whole annotator passes, and passes
+accumulate across batches.
+
+The pooled number was 0.245, close enough to pilot 1's 0.326 to read as "no
+improvement". The per-batch reality was −0.013, and pilot 1's 54 instances were
+dragging it upward. A failing batch was hidden behind a passing one.
+
+## What changed
+
+| fix | where |
+|---|---|
+| queries generated for every instance, barred from hinting at the relationship | `mining/build_batch.py` |
+| an instance with no query is **refused**, not labelled | `annotation/cli.py` |
+| `agreement --prefix wp3_` scopes to one batch | `annotation/cli.py` |
+| without `--prefix`, the header says "ALL batches pooled" | `annotation/cli.py` |
+
+Query generation is a model call, and that is a considered choice rather than a
+convenience. A question is not a label: it fixes what is being asked without
+saying what the answer is, and what κ needs is that **both annotators share one
+frame**. The prompt is barred from words that leak a relationship, and the
+filter rejected 1 of 19 for trying.
+
+## Pilot 3 — ready, not yet run
+
+`benchmark/data/pilot3_batch.jsonl`. Same 19 mined instances, now with queries:
+
+> `wp3_0000` — "Do I need to pay the healthcare surcharge?"
+> `wp3_0001` — "Can I extend my graduate visa?"
+> `wp3_0003` — "Do I need to prove income for visa application?"
+
+18 labellable; one refused by the leak filter and skipped by the tool.
+
+Run with `--prefix wp3_`. **Pilot 2's labels stay on disk** — they are evidence
+of what unqueried instances produce, and deleting them would erase the record
+of the mistake.

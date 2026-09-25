@@ -57,6 +57,65 @@ _SOURCE_BY_KIND = {
 
 _WS = re.compile(r"\s+")
 
+_QUERY_SYSTEM = """You write the user question that two policy passages both answer.
+
+Given two passages, write the single question a person would have asked to
+retrieve both of them.
+
+Rules:
+- ONE question, phrased as a person would type it. Under 12 words.
+- It must be answerable from EITHER passage alone, at least partly.
+- Do NOT hint that the passages relate, differ, conflict, or qualify each
+  other. Do not use "but", "however", "except", "unless", "always", "ever".
+- Do not name which passage applies to whom.
+- Ask about the topic, never about the relationship.
+
+Return JSON: {"query": "..."}"""
+
+
+def write_query(rule: str, exception: str, *, client=None) -> str | None:
+    """A neutral question both passages answer.
+
+    **Why a query is required and not cosmetic.** Every decision in the manual
+    is relative to one: §3 asks whether the second passage changes the answer
+    *for anyone covered by the first*, and §4 judges scopes *inside the query
+    frame*. Without a question there is no frame, so two annotators frame
+    differently and their agreement measures the framing rather than the task.
+    Kappa pilot 2 ran on a batch whose query field was an unfilled placeholder
+    and returned -0.013 -- worse than chance, with the disagreement running in
+    both directions, which is the signature of random framing.
+
+    **Why a model may write it.** A question is not a label. It fixes what is
+    being asked without saying what the answer is, and what kappa needs is that
+    both annotators share one frame. The prompt is explicitly barred from
+    hinting at any relationship between the passages, and the annotator can
+    rewrite it at labelling time.
+    """
+    from api_budget.client import Tier, get_client
+
+    client = client or get_client()
+    result = client.complete(
+        messages=[{"role": "user", "content":
+                   f"Passage 1: {rule}\n\nPassage 2: {exception}\n\n"
+                   "Write the question."}],
+        system=_QUERY_SYSTEM,
+        tier=Tier.BULK,
+        step="build_batch_query",
+        response_format={"type": "json_object"},
+        temperature=0.0,
+    )
+    try:
+        q = str((result.json() or {}).get("query", "")).strip()
+    except Exception:
+        return None
+    # A question that leaks the relationship reframes the task for the reader,
+    # so it is rejected rather than trimmed.
+    banned = ("but ", "however", "except", "unless", "conflict", "differ",
+              "contradict", "override", "qualify")
+    if not q or len(q) > 140 or any(b in q.lower() for b in banned):
+        return None
+    return q if q.endswith("?") else q + "?"
+
 
 @dataclass(frozen=True)
 class SourceDoc:
@@ -131,6 +190,7 @@ def build(
     *,
     limit: int | None = None,
     prefix: str = "wp2",
+    queries: bool = True,
 ) -> tuple[list[QueryRecord], list[dict]]:
     """Return ``(records, provenance)``. Records carry no labels of any kind."""
     by_provider: dict[str, list[SourceDoc]] = {}
@@ -183,11 +243,14 @@ def build(
             and d_rule.content_id == d_exc.content_id
         )
 
+        # A batch without queries is unlabellable, not merely inconvenient --
+        # see write_query. The placeholder below survives only when generation
+        # is switched off or the model returns something that leaks the
+        # relationship, and it is counted and reported when it does.
+        q = write_query(rule, exc) if queries else None
         records.append(QueryRecord(
             query_id=iid,
-            # A placeholder the annotator replaces. Inventing a specific
-            # question here would frame the pair before anyone has read it.
-            query="[to be written by the annotator]",
+            query=q or "[NO QUERY - do not label this instance]",
             domain=_domain(provider),
             construction=(Construction.NATURAL if (not same_document and not same_guide)
                           else Construction.SPLIT),
@@ -225,7 +288,8 @@ def build(
             "same_document": same_document,
             "located_by": located_by,
             "located": d_rule is not None and d_exc is not None,
-            "needs_review": same_document or located_by != "recorded",
+            "needs_review": same_document or located_by != "recorded" or q is None,
+            "query_generated": q is not None,
         })
 
         if limit and len(records) >= limit:
@@ -242,6 +306,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--prefix", default="wp2")
+    ap.add_argument("--no-queries", action="store_true",
+                    help="skip query generation; the batch will NOT be labellable")
     args = ap.parse_args(argv)
 
     raw = json.loads(args.proposals.read_text(encoding="utf-8"))
@@ -249,7 +315,7 @@ def main(argv: list[str] | None = None) -> int:
     docs = load_docs(args.docs)
 
     records, provenance = build(proposals, docs, limit=args.limit,
-                                prefix=args.prefix)
+                                prefix=args.prefix, queries=not args.no_queries)
     if not records:
         print("no usable proposals -- nothing written")
         return 1
@@ -271,6 +337,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"wrote {n} unlabelled records -> {args.out}")
     print(f"      provenance (kept separate)  -> {side}")
     print()
+    no_q = sum(1 for p in provenance if not p["query_generated"])
+    if no_q:
+        print(f"  WITHOUT A QUERY                   {no_q}/{n}")
+        print("      ^ unlabellable. Every rule in the manual is relative to a")
+        print("        question -- without one there is no frame, and two")
+        print("        annotators will frame differently. Do not label these.")
+        print()
     print(f"  cross-document (Tier 1 candidate) {cross}/{n}")
     print(f"  same guide, two URLs              {same_guide}/{n}")
     print(f"  SAME DOCUMENT                     {same_doc}/{n}")

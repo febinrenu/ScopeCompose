@@ -327,3 +327,43 @@ def test_a_numeric_disagreement_blocks_the_opinion_label():
     assert not _numeric_disagreement(
         _rec("Withdrawals are charged at 2.50 per transaction.",
              "Your account includes unlimited fee-free withdrawals."))
+
+
+def test_a_query_that_leaks_the_relationship_is_rejected():
+    """A generated query fixes what is being asked; it must not hint at the
+    answer. "Does the fee apply, except for premium holders?" tells the reader
+    the relationship before they have read either passage."""
+    from benchmark.mining import build_batch as bb
+
+    class Leaky:
+        def __init__(self, q): self.q = q
+        def complete(self, **kw):
+            class R:
+                text = ""
+                def json(inner): return {"query": self.q}
+            return R()
+
+    assert bb.write_query("a", "b", client=Leaky("Do I pay, except for members?")) is None
+    assert bb.write_query("a", "b", client=Leaky("Is there a conflict here?")) is None
+    assert bb.write_query("a", "b", client=Leaky("Do I pay a fee")) == "Do I pay a fee?"
+
+
+def test_scoping_agreement_to_a_batch_changes_the_answer():
+    """Passes accumulate across batches, so comparing whole passes pools every
+    pilot ever run. Pilot 2 reported n=73 -- 54 old plus 19 new -- and the
+    pooled figure hid a per-batch kappa of -0.013 behind pilot 1's 0.326.
+    """
+    old = {f"wp1_{i}": ("conditional" if i % 2 else "factual") for i in range(20)}
+    new = {f"wp2_{i}": "conditional" for i in range(10)}
+
+    a = {**old, **new}
+    b = {**old, **{k: "no_conflict" for k in new}}
+
+    pooled = cohen_kappa(a, b, axis="t", annotator_a="jg", annotator_b="rm")
+    scoped = cohen_kappa({k: v for k, v in a.items() if k.startswith("wp2_")},
+                         {k: v for k, v in b.items() if k.startswith("wp2_")},
+                         axis="t", annotator_a="jg", annotator_b="rm")
+
+    assert pooled.n == 30 and scoped.n == 10
+    assert pooled.kappa > scoped.kappa, "pooling hides the failing batch"
+    assert scoped.degenerate or scoped.kappa <= 0.0

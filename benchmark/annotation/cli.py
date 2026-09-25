@@ -151,6 +151,16 @@ def cmd_annotate(args: argparse.Namespace) -> int:
     print("the kappa is only meaningful if the two passes are independent.\n")
 
     for i, record in enumerate(todo, start=1):
+        # Every rule in the manual is relative to a question. Without one there
+        # is no frame, two annotators frame differently, and the kappa measures
+        # the framing. Pilot 2 ran on a batch of unfilled placeholders and
+        # returned -0.013. Skipped rather than labelled.
+        if record.query.startswith("[NO QUERY") or record.query.startswith("[to be"):
+            print(f"\n[{i}/{len(todo)}] {record.query_id}: SKIPPED -- no query.")
+            print("  The manual judges everything relative to a question, so this")
+            print("  instance cannot be labelled. Rebuild the batch with queries.")
+            continue
+
         _show(record, i, len(todo))
         started = time.perf_counter()
 
@@ -329,9 +339,17 @@ def cmd_agreement(args: argparse.Namespace) -> int:
     for axis, label in (("conflict_type", "Five-class conflict type"),
                         ("scope_relation", "Four-way scope relation")):
         try:
+            la, lb = store.labels(args.a, axis), store.labels(args.b, axis)
+            if args.prefix:
+                # Passes accumulate across batches, so comparing whole passes
+                # silently pools every pilot ever run. Pilot 2 reported n=73
+                # -- 54 old instances plus 19 new -- and the pooled figure hid
+                # a per-batch kappa of -0.013 behind pilot 1's 0.326.
+                la = {k: v for k, v in la.items() if k.startswith(args.prefix)}
+                lb = {k: v for k, v in lb.items() if k.startswith(args.prefix)}
             result = cohen_kappa(
-                store.labels(args.a, axis), store.labels(args.b, axis),
-                axis=label, annotator_a=args.a, annotator_b=args.b, seed=args.seed,
+                la, lb, axis=label, annotator_a=args.a, annotator_b=args.b,
+                seed=args.seed,
             )
         except AgreementError as exc:
             print(f"{label}\n" + "-" * 74)
@@ -408,6 +426,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--a", required=True, help="first annotator id")
     p.add_argument("--b", required=True, help="second annotator id")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--prefix", default=None,
+                   help="score only instance ids starting with this, e.g. wp2_ . "
+                        "Without it, every batch both annotators have ever "
+                        "labelled is pooled into one figure.")
     p.add_argument("--seal", action="store_true",
                    help="seal both passes after comparing")
     p.set_defaults(func=cmd_agreement)
