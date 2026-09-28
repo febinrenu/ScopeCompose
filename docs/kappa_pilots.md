@@ -362,3 +362,84 @@ guess rate near one hundred percent. Expect something like 15–25% on this
 material, and if pilot 4 comes back with a real deferral rate and κ still below
 0.61 on what remains, then the boundary is genuinely hard and the answer is the
 third reviewer rather than another manual edit.
+
+
+---
+
+# Pilot 4 — 2026-09-28. Clears 0.61 on paper. Not a pass.
+
+| axis | κ | n | 95% CI |
+|---|---:|---:|---|
+| five-class conflict type | **0.622** | 17 | **[0.000, 1.000]** |
+| four-way scope relation | **undefined** | 13 | degenerate |
+
+Observed agreement 0.882 — 15 of 17 instances agreed, with the two
+disagreements both `no_conflict` vs `conditional`. A real improvement on pilot
+3's 0.276, and the deferral change worked: febin used `u` once, the first
+deferral in four pilots.
+
+**It should not be treated as clearing the bar**, for three reasons.
+
+## 1. It is one judgement from failing
+
+Expected-by-chance agreement is **0.689**, because 15 of 17 instances carry the
+same label. At that concentration κ is unstable:
+
+> **Every one of the 15 possible single-label flips drops κ below 0.61**,
+> landing between **0.440 and 0.505**.
+
+0.622 is not a margin. It is a coin balanced on its edge, and a 17-instance
+batch does not have the resolution to tell 0.622 from 0.45. The interval says
+so directly: **[0.000, 1.000]**.
+
+## 2. The scope axis tested nothing
+
+All 13 of johann's conditional instances, and all 15 of febin's, were labelled
+`refinement`. Every one. κ is 0/0 and the tool reports it as undefined rather
+than as the 1.000 that unanimity would otherwise produce.
+
+**The four-way scope relation is the project's central contribution and it has
+never been measured.** Pilot 1 got 23 instances on it, pilot 3 got 6, pilot 4
+got 13 that were all the same value. Four pilots in, there is no evidence at
+all about the axis that matters most.
+
+## 3. The batch cannot produce the labels the bar assumes
+
+Both problems have one cause. Every instance came from the LLM proposer, which
+by construction surfaces *candidate rule and exception pairs*. Feed a batch of
+those to two annotators and of course almost everything comes back
+`conditional` — the batch contains nothing else.
+
+Manual §5 already requires distractors, for a reason that turns out to be the
+same reason: without instances that have no conditional structure, the
+factual/conditional boundary is never exercised, and Spurious-Condition Rate
+will later have no denominator.
+
+## What changed
+
+`build_batch --distractors N` adds pairs the proposer **did not** surface —
+sentences from the same provider that it left alone. Most will be
+`no_conflict`; some will be genuinely factual or temporal.
+
+They are deliberately **not** labelled as distractors in the batch. Calling a
+random pair a known negative in advance would be labelling by construction, and
+occasionally such a pair really is a rule and its exception. The provenance
+sidecar records how each instance was sourced, so the datasheet can report the
+composition without the annotator seeing it.
+
+The builder now also warns when a batch has no distractors at all.
+
+## Pilot 5
+
+`benchmark/data/pilot5_batch.jsonl` — **35 instances, 34 labellable**: 19
+proposer candidates and 16 unsurfaced pairs. Roughly double pilot 4, with a
+label distribution that can actually vary.
+
+Run it the same way, with `--prefix wp5_`.
+
+**What would make it a genuine pass:** κ ≥ 0.61 on the type axis with an
+interval whose lower bound is also above 0.61, *and* a scope-relation κ
+computed on instances that are not all `refinement`. If the scope axis comes
+back degenerate again, the batch still is not exercising the distinction and
+the next move is to seek out disjoint, redundant and opposed candidates
+deliberately rather than hoping the miner surfaces them.

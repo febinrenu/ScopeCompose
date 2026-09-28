@@ -367,3 +367,48 @@ def test_scoping_agreement_to_a_batch_changes_the_answer():
     assert pooled.n == 30 and scoped.n == 10
     assert pooled.kappa > scoped.kappa, "pooling hides the failing batch"
     assert scoped.degenerate or scoped.kappa <= 0.0
+
+
+def test_a_skewed_batch_makes_kappa_fragile():
+    """Why pilot 4's 0.622 was not a pass.
+
+    17 instances, 15 of them the same label, gives p_e = 0.689 -- and at that
+    concentration kappa swings hard on one judgement. Every one of the fifteen
+    possible single-label flips dropped it from 0.622 to below 0.55.
+
+    A batch built only from proposer output is skewed by construction: the
+    proposer surfaces candidate rule/exception pairs, so almost everything in
+    it looks conditional. The fix is spread in the batch, not more labelling.
+    """
+    ids = [f"i{i}" for i in range(17)]
+    a = {i: "conditional" for i in ids}
+    b = dict(a)
+    b["i0"] = b["i1"] = "no_conflict"
+    a["i0"] = a["i1"] = "no_conflict"
+    b["i2"] = "no_conflict"          # one disagreement
+
+    base = cohen_kappa(a, b, axis="t", annotator_a="jg", annotator_b="rm")
+    assert base.expected_agreement > 0.6, "skewed batch inflates chance agreement"
+
+    worse = []
+    for i in ids:
+        if a[i] == b[i]:
+            flipped = dict(b)
+            flipped[i] = "factual"
+            worse.append(cohen_kappa(a, flipped, axis="t",
+                                     annotator_a="jg", annotator_b="rm").kappa)
+    assert max(worse) < base.kappa, "one flip should move it materially"
+
+
+def test_deferred_cases_are_not_counted_as_disagreements(tmp_path):
+    """Both annotators saying "this needs a third opinion" is the §1 protocol
+    working. Scoring it as a mismatch would punish them for following it."""
+    store = AnnotationStore(tmp_path)
+    store.append(LabelRecord(instance_id="i1", annotator="jg",
+                             conflict_type="conditional",
+                             scope_relation="refinement"))
+    store.append(LabelRecord(instance_id="i2", annotator="jg",
+                             conflict_type="conditional", escalated=True))
+
+    assert store.deferred("jg") == {"i2"}
+    assert store.deferred("rm") == set()

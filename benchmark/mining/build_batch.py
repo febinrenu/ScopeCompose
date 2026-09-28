@@ -298,6 +298,102 @@ def build(
     return records, provenance
 
 
+def add_distractors(
+    docs: list[SourceDoc],
+    used: set[tuple[str, str]],
+    *,
+    n: int,
+    seed: int = 0,
+    prefix: str = "wp2",
+    start: int = 0,
+    queries: bool = True,
+) -> tuple[list[QueryRecord], list[dict]]:
+    """Passage pairs the proposer did NOT surface, for the negative class.
+
+    **Why a batch needs these.** The proposer only emits candidate rule and
+    exception pairs, so a batch built from its output is, by construction,
+    almost entirely ``conditional``. Pilot 4 measured 13-15 of 17 instances in
+    one class, which put expected-by-chance agreement at 0.689 and made kappa
+    unstable: every single one of the fifteen possible one-label flips dropped
+    it from 0.622 to below 0.55.
+
+    That is the kappa paradox, and it is not fixed by labelling more of the
+    same. It is fixed by a batch with a spread of labels in it.
+
+    Manual §5 already requires distractors for a second reason -- without
+    instances that have no conditional structure, Spurious-Condition Rate has
+    no denominator and the factual/conditional boundary the paper reports as
+    its headline confusion cell is never exercised.
+
+    These are drawn by pairing sentences from the same provider that the
+    proposer left alone. Most will be ``no_conflict``; some will be genuinely
+    factual or temporal. They are **not** labelled here -- what they contribute
+    is spread, and the annotator decides what each one is.
+    """
+    import random
+
+    from benchmark.mining.tier1_pilot import sentences
+
+    rng = random.Random(seed)
+    by_provider: dict[str, list[tuple[SourceDoc, str]]] = {}
+    for d in docs:
+        for s in sentences(d.text)[:40]:
+            by_provider.setdefault(d.provider, []).append((d, s))
+
+    pools = [v for v in by_provider.values() if len(v) >= 2]
+    rng.shuffle(pools)
+
+    records: list[QueryRecord] = []
+    provenance: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    attempts = 0
+
+    while len(records) < n and pools and attempts < n * 60:
+        attempts += 1
+        pool = pools[attempts % len(pools)]
+        (d0, s0), (d1, s1) = rng.sample(pool, 2)
+        if d0.doc_id == d1.doc_id:
+            continue
+        key = (s0.lower()[:80], s1.lower()[:80])
+        if key in seen or key in used or (key[1], key[0]) in used:
+            continue
+        seen.add(key)
+
+        q = write_query(s0, s1) if queries else None
+        iid = f"{prefix}_{start + len(records):04d}"
+        same_guide = (d0.content_id is not None and d0.content_id == d1.content_id)
+
+        records.append(QueryRecord(
+            query_id=iid,
+            query=q or "[NO QUERY - do not label this instance]",
+            domain=_domain(d0.provider),
+            construction=(Construction.SPLIT if same_guide else Construction.NATURAL),
+            separation=(Separation.SAME_GUIDE if same_guide
+                        else Separation.CROSS_DOCUMENT),
+            passages=[
+                Passage(id="p0", text=s0, source_type=_source_type(d0.kind),
+                        date=None, document_id=d0.doc_id, source_url=d0.url),
+                Passage(id="p1", text=s1, source_type=_source_type(d1.kind),
+                        date=None, document_id=d1.doc_id, source_url=d1.url),
+            ],
+            conflict_pairs=[],
+        ))
+        provenance.append({
+            "instance_id": iid, "provider": d0.provider,
+            "proposer_why": None, "proposer_confidence": None,
+            "rule_doc": d0.doc_id, "exception_doc": d1.doc_id,
+            "same_guide": same_guide, "same_document": False,
+            "located_by": "recorded", "located": True,
+            "needs_review": q is None, "query_generated": q is not None,
+            # Flagged so the datasheet can report how the batch was composed.
+            # These are NOT known negatives -- occasionally a random pair from
+            # one provider really is a rule and its exception, and calling them
+            # distractors in advance would be labelling by construction.
+            "distractor_candidate": True,
+        })
+    return records, provenance
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -306,6 +402,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--prefix", default="wp2")
+    ap.add_argument("--distractors", type=int, default=0,
+                    help="add N pairs the proposer did NOT surface. Without "
+                         "these the batch is almost all conditional and kappa "
+                         "is unstable -- see add_distractors.")
+    ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--no-queries", action="store_true",
                     help="skip query generation; the batch will NOT be labellable")
     args = ap.parse_args(argv)
@@ -316,6 +417,14 @@ def main(argv: list[str] | None = None) -> int:
 
     records, provenance = build(proposals, docs, limit=args.limit,
                                 prefix=args.prefix, queries=not args.no_queries)
+    if args.distractors:
+        used = {(_clean(p.get("rule", "")).lower()[:80],
+                 _clean(p.get("exception", "")).lower()[:80]) for p in proposals}
+        d_rec, d_prov = add_distractors(
+            docs, used, n=args.distractors, seed=args.seed, prefix=args.prefix,
+            start=len(records), queries=not args.no_queries)
+        records += d_rec
+        provenance += d_prov
     if not records:
         print("no usable proposals -- nothing written")
         return 1
@@ -343,6 +452,16 @@ def main(argv: list[str] | None = None) -> int:
         print("      ^ unlabellable. Every rule in the manual is relative to a")
         print("        question -- without one there is no frame, and two")
         print("        annotators will frame differently. Do not label these.")
+        print()
+    n_dis = sum(1 for p in provenance if p.get("distractor_candidate"))
+    if n_dis:
+        print(f"  proposer candidates               {n - n_dis}/{n}")
+        print(f"  unsurfaced pairs (spread)         {n_dis}/{n}")
+        print()
+    else:
+        print("  NO DISTRACTORS. Every instance came from the proposer, so the")
+        print("  batch is almost all conditional -- expected-by-chance agreement")
+        print("  climbs and kappa becomes unstable. Add --distractors N.")
         print()
     print(f"  cross-document (Tier 1 candidate) {cross}/{n}")
     print(f"  same guide, two URLs              {same_guide}/{n}")
