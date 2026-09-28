@@ -34,7 +34,7 @@ from pathlib import Path
 
 from benchmark.annotation.agreement import AgreementError, cohen_kappa
 from benchmark.annotation.store import AnnotationError, AnnotationStore, LabelRecord
-from contract.gold import GoldInstance
+from contract.gold import Annotation, GoldInstance
 from contract.models import ConflictType, QueryRecord, ScopeRelation
 
 TYPE_KEYS = {
@@ -487,6 +487,126 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+
+def cmd_build_gold(args: argparse.Namespace) -> int:
+    """Assemble gold instances from two reconciled passes.
+
+    Three outcomes per instance, and the second and third are the point:
+
+    **Both agree** -> a gold instance, carrying both annotator ids.
+
+    **They disagree** -> NOT gold. Written to a reconciliation file for the
+    discussion §1 requires. Picking one annotator's label here, or taking the
+    majority of two, would silently resolve exactly the cases the protocol says
+    two people must talk about -- and those are the instances most likely to be
+    near a category boundary the paper reports on.
+
+    **Either deferred** -> NOT gold. Written to a third-reviewer file. A
+    deferral is a request for expertise, and overriding it with the other
+    annotator's guess would make pressing `u` worse than useless.
+
+    Member A's labels only. Branch structure, the gold scoped answer and the
+    selection answer are Member B's axis (manual §2) and stay empty here; the
+    schema permits that, and a second pass fills them.
+    """
+    from contract.gold import Annotation, GoldInstance
+    from contract.models import ConflictType, ScopeRelation
+
+    store = AnnotationStore(args.dir)
+    batch = {r.query_id: r for r in _load_batch(args.batch)}
+
+    a = {r.instance_id: r for r in store.load(args.a)}
+    b = {r.instance_id: r for r in store.load(args.b)}
+    ids = [i for i in batch if i in a and i in b]
+    if args.prefix:
+        ids = [i for i in ids if i.startswith(args.prefix)]
+
+    gold: list[GoldInstance] = []
+    disputed: list[dict] = []
+    deferred: list[dict] = []
+
+    for iid in sorted(ids):
+        ra, rb = a[iid], b[iid]
+        rec = batch[iid]
+
+        if ra.escalated or rb.escalated:
+            deferred.append({
+                "instance_id": iid, "query": rec.query,
+                "deferred_by": [w for w, r in ((args.a, ra), (args.b, rb))
+                                if r.escalated],
+                "notes": [r.notes for r in (ra, rb) if r.notes],
+                "labels": {args.a: ra.conflict_type, args.b: rb.conflict_type},
+            })
+            continue
+
+        if (ra.conflict_type != rb.conflict_type
+                or ra.scope_relation != rb.scope_relation):
+            disputed.append({
+                "instance_id": iid, "query": rec.query,
+                "passages": [p.text for p in rec.passages],
+                args.a: {"type": ra.conflict_type, "relation": ra.scope_relation},
+                args.b: {"type": rb.conflict_type, "relation": rb.scope_relation},
+            })
+            continue
+
+        ctype = ConflictType(ra.conflict_type)
+        gold.append(GoldInstance(
+            instance_id=iid,
+            query=rec.query,
+            domain=rec.domain,
+            construction=rec.construction,
+            separation=rec.separation,
+            split=args.split,
+            passages=list(rec.passages),
+            gold_conflict_type=ctype,
+            gold_scope_relation=(ScopeRelation(ra.scope_relation)
+                                 if ra.scope_relation else None),
+            # A distractor is an instance with no conditional structure. Derived
+            # from the agreed label rather than asked separately, so the two can
+            # never contradict each other.
+            is_distractor=(ctype is not ConflictType.CONDITIONAL),
+            # Member B's axis (manual §2), filled by a second pass.
+            gold_branches=[],
+            annotation=Annotation(annotator_a=args.a, annotator_b=args.b,
+                                  disagreed=False),
+        ))
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    with args.out.open("w", encoding="utf-8") as fh:
+        for g in gold:
+            fh.write(json.dumps(g.model_dump(mode="json"), ensure_ascii=False) + "\n")
+
+    n = len(ids)
+    print(f"\nGold assembly  ({n} instances labelled by both)")
+    print("=" * 74)
+    print(f"  agreed -> gold       {len(gold):>4}   {args.out}")
+    print(f"  disputed             {len(disputed):>4}")
+    print(f"  deferred             {len(deferred):>4}")
+
+    if disputed:
+        p = args.out.with_suffix(".disputed.json")
+        p.write_text(json.dumps(disputed, indent=2, ensure_ascii=False),
+                     encoding="utf-8")
+        print(f"\n  {len(disputed)} instances need the §1 discussion -> {p}")
+        print("  They are NOT in the gold file. Resolving them by taking one")
+        print("  annotator's label would quietly settle the cases nearest the")
+        print("  category boundaries the paper reports on.")
+    if deferred:
+        p = args.out.with_suffix(".deferred.json")
+        p.write_text(json.dumps(deferred, indent=2, ensure_ascii=False),
+                     encoding="utf-8")
+        print(f"\n  {len(deferred)} instances need the third reviewer -> {p}")
+
+    if gold:
+        print()
+        print("  Member A's axis only. Branch structure, the gold scoped answer")
+        print("  and the selection answer are Member B's (manual §2) and are")
+        print("  empty -- a second pass fills them before the metrics can run.")
+        print()
+        print("  Check the corpus against the plan:")
+        print(f"    python -m benchmark.corpus_plan --data {args.out}")
+    return 0
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="benchmark.annotation.cli", description=__doc__,
@@ -519,6 +639,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--seal", action="store_true",
                    help="seal both passes after comparing")
     p.set_defaults(func=cmd_agreement)
+
+    p = sub.add_parser("build-gold", help="assemble gold from two reconciled passes")
+    p.add_argument("--a", required=True)
+    p.add_argument("--b", required=True)
+    p.add_argument("--batch", type=Path, required=True)
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--prefix", default=None)
+    p.add_argument("--split", default="train", help="train | dev | test")
+    p.set_defaults(func=cmd_build_gold)
 
     p = sub.add_parser("status", help="who has labelled what")
     p.add_argument("--batch", type=Path, default=None)

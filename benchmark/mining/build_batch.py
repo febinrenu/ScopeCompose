@@ -191,6 +191,7 @@ def build(
     limit: int | None = None,
     prefix: str = "wp2",
     queries: bool = True,
+    exclude: set[tuple[str, str]] | None = None,
 ) -> tuple[list[QueryRecord], list[dict]]:
     """Return ``(records, provenance)``. Records carry no labels of any kind."""
     by_provider: dict[str, list[SourceDoc]] = {}
@@ -199,7 +200,11 @@ def build(
 
     records: list[QueryRecord] = []
     provenance: list[dict] = []
-    seen: set[tuple[str, str]] = set()
+    # Pairs already used by an earlier batch. Without this, rebuilding from the
+    # same proposal file silently re-issues the same candidates under new ids:
+    # pilots 5 and 6 shared all 19 of them, which turned what looked like two
+    # independent batches into one batch labelled twice.
+    seen: set[tuple[str, str]] = set(exclude or ())
 
     for p in proposals:
         rule, exc = _clean(p.get("rule", "")), _clean(p.get("exception", ""))
@@ -432,6 +437,10 @@ def main(argv: list[str] | None = None) -> int:
                          "these the batch is almost all conditional and kappa "
                          "is unstable -- see add_distractors.")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--exclude", type=Path, action="append", default=[],
+                    help="an earlier batch whose pairs must not be reused. "
+                         "Repeatable. Without it, rebuilding from the same "
+                         "proposals re-issues the same candidates.")
     ap.add_argument("--no-queries", action="store_true",
                     help="skip query generation; the batch will NOT be labellable")
     args = ap.parse_args(argv)
@@ -440,8 +449,20 @@ def main(argv: list[str] | None = None) -> int:
     proposals = raw.get("proposals", raw) if isinstance(raw, dict) else raw
     docs = load_docs(args.docs)
 
+    exclude: set[tuple[str, str]] = set()
+    for path in args.exclude:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                ps = json.loads(line).get("passages", [])
+                if len(ps) >= 2:
+                    exclude.add((_clean(ps[0]["text"]).lower()[:80],
+                                 _clean(ps[1]["text"]).lower()[:80]))
+    if exclude:
+        print(f"excluding {len(exclude)} pairs used by earlier batches")
+
     records, provenance = build(proposals, docs, limit=args.limit,
-                                prefix=args.prefix, queries=not args.no_queries)
+                                prefix=args.prefix, queries=not args.no_queries,
+                                exclude=exclude)
     if args.distractors:
         used = {(_clean(p.get("rule", "")).lower()[:80],
                  _clean(p.get("exception", "")).lower()[:80]) for p in proposals}

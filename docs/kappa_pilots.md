@@ -591,9 +591,26 @@ Fresh batch, neither annotator had seen it. Both passes plausible: johann
 | **proposer candidates** | **18** | **18/18** | 11 conditional, 5 no_conflict, 2 temporal | **1.000** (p_e 0.463) |
 | hard distractors | 17 | 17/17 | all no_conflict | degenerate |
 
-Combined with pilot 5's independent 18/18 on a *different* candidate set:
-**36 of 36 informative instances agreed, across two batches, with four
-plausible passes.** The conflict-type axis is settled.
+**CORRECTION (same day).** The sentence that stood here claimed "36 of 36
+informative instances across two batches". That is wrong. Pilots 5 and 6 were
+built from the same proposal file, and **all 19 proposer candidates are
+identical between them** — only the distractors differed.
+
+So this is **18 distinct informative instances, labelled twice**, not 36
+distinct ones. Pilot 6 is a test-retest of the same items by the same two
+people three hours later, not independent replication.
+
+What that leaves, stated accurately:
+
+- **18 distinct informative instances, 18/18 agreement, p_e ≈ 0.46**, and the
+  same 18/18 on re-test. Consistent, and a smaller body of evidence than
+  claimed.
+- The genuinely fresh material in pilot 6 was its 18 distractors, which came
+  back unanimously `no_conflict`.
+
+The candidate pool is now **exhausted** — rebuilding with `--exclude` against
+both batches yields nothing. More informative instances require more source
+documents.
 
 ## The distractors still came back unanimous, and that is a finding
 
@@ -651,3 +668,19 @@ the runs that went well — a zero deferral rate alongside 36/36 agreement is
 consistent, not suspicious. It now fires only when there are disagreements
 *and* nobody deferred, which is the situation where undecidability is a
 plausible explanation for them.
+
+
+---
+
+## Two tooling fixes from the duplication
+
+**`build_batch --exclude <batch>`** (repeatable). Rebuilding from the same
+proposal file silently re-issued the same candidates under new ids, which is
+what made two batches look independent. Pairs from an excluded batch are now
+skipped, and the count is printed.
+
+**The `[1.000, 1.000]` interval is an artifact and now says so.** A bootstrap
+over a sample containing no disagreement resamples to perfect agreement every
+time, so the interval collapses regardless of n. Printed beside κ = 1.000 it
+reads as precision that 18 instances cannot support. The renderer now states
+this and says not to quote the interval.

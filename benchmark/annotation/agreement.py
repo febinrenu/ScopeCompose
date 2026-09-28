@@ -122,6 +122,19 @@ class KappaResult:
         if self.interval and not self.degenerate:
             lines.append(f"  95% CI               [{self.interval.low:.3f}, "
                          f"{self.interval.high:.3f}]")
+            # A bootstrap over a sample with no disagreement in it resamples to
+            # perfect agreement every time, so the interval collapses to
+            # [1, 1]. That is the method being unable to express uncertainty,
+            # not evidence that there is none -- and printed beside kappa = 1.0
+            # it reads as precision the sample size cannot support.
+            if self.observed_agreement >= 1.0:
+                lines += [
+                    "",
+                    f"  The interval is [1.000, 1.000] because every resample of a",
+                    f"  sample with no disagreements is also perfect. On n = {self.n} that",
+                    "  is an artifact of the bootstrap, not a precise estimate. Report",
+                    "  the sample size beside the figure and do not quote this interval.",
+                ]
 
         if self.degenerate:
             lines += [
