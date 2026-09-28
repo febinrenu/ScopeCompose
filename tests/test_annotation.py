@@ -412,3 +412,48 @@ def test_deferred_cases_are_not_counted_as_disagreements(tmp_path):
 
     assert store.deferred("jg") == {"i2"}
     assert store.deferred("rm") == set()
+
+
+def test_a_pass_faster_than_reading_is_flagged_implausible():
+    """Pilot 5 returned kappa = 1.000 on 34 instances of real policy text.
+
+    One pass had a median of 2.1 seconds and a minimum of 0.7, finished the
+    whole batch in 80 seconds, and matched the other on all 34 labels. Nobody
+    reads a query and two passages in 0.7 seconds.
+
+    The identity guard checks WHO a pass claims to be from. This checks whether
+    it behaves like a human judgement, which is the question that actually
+    failed -- and a perfect kappa is the signature of a non-independent pass,
+    not a well-run one.
+    """
+    from benchmark.annotation.agreement import pass_plausibility
+
+    class R:
+        def __init__(self, i, secs):
+            self.instance_id, self.annotator = i, "fast"
+            self.seconds_spent, self.timestamp = secs, ""
+
+    fast = pass_plausibility([R(f"i{i}", 2.1) for i in range(34)])
+    assert fast.implausible
+    assert "IMPLAUSIBLE" in fast.render()
+
+    class S(R):
+        def __init__(self, i, secs):
+            super().__init__(i, secs)
+            self.annotator = "careful"
+
+    careful = pass_plausibility([S(f"i{i}", 15.6) for i in range(34)])
+    assert not careful.implausible
+    assert "IMPLAUSIBLE" not in careful.render()
+
+
+def test_a_short_pass_is_not_flagged_on_too_little_evidence():
+    """Three quick answers is not grounds for an accusation."""
+    from benchmark.annotation.agreement import pass_plausibility
+
+    class R:
+        def __init__(self, i):
+            self.instance_id, self.annotator = i, "x"
+            self.seconds_spent, self.timestamp = 1.0, ""
+
+    assert not pass_plausibility([R(f"i{i}") for i in range(3)]).implausible

@@ -377,6 +377,39 @@ def cmd_agreement(args: argparse.Namespace) -> int:
         print()
         ok = ok and result.is_acceptable
 
+    # Whether each pass could have been produced by reading the batch. This
+    # runs BEFORE the deferral summary because it can invalidate everything
+    # above it: a kappa computed against a pass nobody actually performed is
+    # not a weak result, it is not a result.
+    from benchmark.annotation.agreement import pass_plausibility
+
+    plaus = []
+    for who in (args.a, args.b):
+        rs = [r for r in store.load(who)
+              if not args.prefix or r.instance_id.startswith(args.prefix)]
+        if rs:
+            plaus.append(pass_plausibility(rs))
+
+    if plaus:
+        print("Pass plausibility")
+        print("-" * 74)
+        for pl in plaus:
+            print(pl.render())
+        bad = [pl for pl in plaus if pl.implausible]
+        if bad:
+            ok = False
+            names = ", ".join(pl.annotator for pl in bad)
+            print()
+            print(f"  THE KAPPA ABOVE IS NOT USABLE. {names} answered faster than")
+            print("  the instances can be read, so that pass is not evidence of an")
+            print("  independent judgement and the agreement figure does not measure")
+            print("  agreement between two observers.")
+            print()
+            print("  A perfect or near-perfect kappa alongside this is the signature")
+            print("  of a copied or unread pass, not of a well-run one. Re-run that")
+            print("  pass; the labels from it should be discarded, not reconciled.")
+        print()
+
     # Deferral rate, reported whether or not anything was deferred. A rate of
     # zero across a whole corpus of real policy text is not a clean corpus --
     # it means the escape hatch the manual insists on is not being used, and

@@ -443,3 +443,78 @@ computed on instances that are not all `refinement`. If the scope axis comes
 back degenerate again, the batch still is not exercising the distinction and
 the next move is to seek out disjoint, redundant and opposed candidates
 deliberately rather than hoping the miner surfaces them.
+
+
+---
+
+# Pilot 5 — 2026-09-28. κ = 1.000, and it must not be used.
+
+| axis | κ | n | p_e |
+|---|---:|---:|---:|
+| five-class conflict type | **1.000** | 34 | 0.474 |
+| four-way scope relation | 1.000 | 12 | 0.847 |
+
+Perfect agreement on all 34 instances of real, messy policy text, immediately
+after four pilots spanning −0.013 to 0.622.
+
+**One pass could not have been performed.**
+
+| | median | min | under 5s | whole batch |
+|---|---:|---:|---:|---:|
+| johann | 15.6s | 11.7s | 0 / 34 | 10.5 min |
+| febin | **2.1s** | **0.7s** | **31 / 34** | **1.3 min** |
+
+Febin's pass ran 05:58:25 → 05:59:45 — eighty seconds for 34 instances, and it
+began 100 seconds after johann's pass ended. A query plus two policy passages
+is several hundred characters. Nobody reads that and applies a two-step
+decision procedure in 0.7 seconds.
+
+The labels match johann's on all 34, including the distribution (12
+conditional, 20 no_conflict, 2 temporal) and a single `disjoint` among twelve
+conditionals. Two independent readers do not converge on that.
+
+**The kappa measures nothing.** It is not a weak result to be reported with a
+caveat; it is not a result. The pass should be discarded and re-run, not
+reconciled with johann's.
+
+## The part that did work
+
+The distractors fixed the skew. Pilot 4 had 15 of 17 instances in one class
+and p_e = 0.689; pilot 5 has **20 no_conflict, 12 conditional, 2 temporal** and
+p_e = 0.474. That is a batch that can produce a varied label distribution, and
+it is the composition the next pilot should use.
+
+The scope axis moved too — 11 refinement and 1 disjoint, against pilot 4's 13
+identical values. Still only 12 instances at p_e = 0.847, so still not
+measured, but no longer degenerate.
+
+## What changed in the tool
+
+The existing guard checked **who** a pass claimed to be from: it refuses a
+kappa between one person and themselves, or against anything model-generated.
+That is an identity check, and identity was never the problem here.
+
+`pass_plausibility` checks whether a pass **behaves like a human judgement** —
+median seconds per instance, the minimum, the share answered faster than a
+person can read, and the wall-clock span of the batch. `agreement` runs it
+before anything else and marks the whole comparison unusable when a pass fails,
+because a kappa computed against a pass nobody performed invalidates everything
+above it.
+
+It is stated in the output that a near-perfect kappa alongside an implausible
+pass is the **signature** of the failure rather than a reassurance.
+
+Thresholds: median under 5s, or more than half the instances under 5s, on a
+pass of at least 5 instances. Five seconds is already generous. The
+minimum-instances floor exists so three quick answers are not grounds for an
+accusation.
+
+## Pilot 6
+
+Same batch, `benchmark/data/pilot5_batch.jsonl`. **Febin's wp5 labels must be
+deleted and the pass redone.** johann's stand — 15.6s median over 10.5 minutes
+is a real pass, and re-running it would only cost the independence it currently
+has.
+
+The batch composition is right now. What is missing is a second pass that
+actually happened.

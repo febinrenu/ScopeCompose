@@ -173,6 +173,81 @@ class KappaResult:
         return "\n".join(lines)
 
 
+#: Below this median, a pass cannot have involved reading the instances. A
+#: query plus two policy passages is several hundred characters; five seconds
+#: is already generous for deciding a two-step procedure on them.
+IMPLAUSIBLE_MEDIAN_S = 5.0
+
+#: A single instance answered faster than this was not read at all.
+IMPLAUSIBLE_MIN_S = 2.0
+
+
+@dataclass(frozen=True)
+class PassPlausibility:
+    """Whether a pass could have been produced by someone reading the batch.
+
+    The identity guard below checks *who* a pass claims to be from. This checks
+    whether the pass behaves like a human judgement, which is a different
+    question and the one that actually failed.
+
+    Pilot 5 returned kappa = 1.000 on 34 instances. One pass had a median of
+    2.1 seconds, a minimum of 0.7, 31 of 34 under five seconds, and completed
+    the whole batch in 80 seconds starting 100 seconds after the other pass
+    ended -- while matching it on all 34 labels including a lone `disjoint`
+    among twelve conditionals. A perfect kappa is the signature of a
+    non-independent pass, not of a well-run one, and nothing in the tool
+    noticed.
+    """
+
+    annotator: str
+    n: int
+    median_s: float
+    min_s: float
+    fast_count: int
+    span_s: float
+
+    @property
+    def implausible(self) -> bool:
+        return (self.n >= 5
+                and (self.median_s < IMPLAUSIBLE_MEDIAN_S
+                     or self.fast_count > self.n * 0.5))
+
+    def render(self) -> str:
+        flag = "  <- IMPLAUSIBLE" if self.implausible else ""
+        return (f"  {self.annotator:<12} median {self.median_s:>6.1f}s   "
+                f"min {self.min_s:>5.1f}s   under {IMPLAUSIBLE_MEDIAN_S:.0f}s: "
+                f"{self.fast_count}/{self.n}   batch in {self.span_s / 60:.1f} min"
+                f"{flag}")
+
+
+def pass_plausibility(records) -> PassPlausibility:
+    """Timing summary for one annotator's pass."""
+    from datetime import datetime
+
+    times = [r.seconds_spent for r in records if r.seconds_spent]
+    stamps = sorted(r.timestamp for r in records if r.timestamp)
+    span = 0.0
+    if len(stamps) >= 2:
+        try:
+            span = (datetime.fromisoformat(stamps[-1])
+                    - datetime.fromisoformat(stamps[0])).total_seconds()
+        except ValueError:
+            span = 0.0
+    if not times:
+        return PassPlausibility(
+            records[0].annotator if records else "?", len(records),
+            0.0, 0.0, 0, span)
+    ordered = sorted(times)
+    return PassPlausibility(
+        annotator=records[0].annotator,
+        n=len(times),
+        median_s=ordered[len(ordered) // 2],
+        min_s=ordered[0],
+        fast_count=sum(1 for t in times if t < IMPLAUSIBLE_MEDIAN_S),
+        span_s=span,
+    )
+
+
 def _check_independence(annotator_a: str, annotator_b: str) -> None:
     a, b = annotator_a.strip().lower(), annotator_b.strip().lower()
 
