@@ -1,0 +1,50 @@
+{
+  "lexical_tier1": 0,
+  "llm_cross_document": 3,
+  "pairings_attempted": 17,
+  "pairings_failed": 0,
+  "proposals": [
+    {
+      "provider": "sg_family_partner",
+      "rule": "You can extend at any time before your current permission to stay in the UK expires.",
+      "exception": "If you become engaged before extending your visa, do not apply to extend your visa as a fiancé, fiancée or proposed civil partner.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception applies only when the applicant is engaged before extending, changing the outcome for that specific situation.",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "uk-family-visa#overview",
+      "exception_doc_id": "uk-family-visa#partner-spouse",
+      "rule_content_id": "305acc88-488e-44ec-8e5a-1a5de7819ba9",
+      "exception_content_id": "305acc88-488e-44ec-8e5a-1a5de7819ba9"
+    },
+    {
+      "provider": "sg_family_parent",
+      "rule": "You can apply to live in the UK to care for your child.",
+      "exception": "If you’re eligible to apply as a partner, you must do that instead of applying as a parent.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The partner eligibility case overrides the parent route, narrowing the applicability of the parent rule to those not eligible as partners.",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "uk-family-visa#overview",
+      "exception_doc_id": "uk-family-visa#parent",
+      "rule_content_id": "305acc88-488e-44ec-8e5a-1a5de7819ba9",
+      "exception_content_id": "305acc88-488e-44ec-8e5a-1a5de7819ba9"
+    },
+    {
+      "provider": "sg_family_padr",
+      "rule": "You can stay in the UK for 2 years and 9 months on this visa.",
+      "exception": "If your family member is British, Irish or settled in the UK your stay is unlimited.",
+      "rule_doc": "A",
+      "exception_doc": "B",
+      "why": "The exception applies when the applicant is joining a British, Irish or settled relative, giving unlimited stay instead of the 2 years 9 months limit.",
+      "confidence": 0.95,
+      "cross_document": true,
+      "rule_doc_id": "uk-family-visa#parent",
+      "exception_doc_id": "uk-family-visa#adult-dependent-relative",
+      "rule_content_id": "305acc88-488e-44ec-8e5a-1a5de7819ba9",
+      "exception_content_id": "305acc88-488e-44ec-8e5a-1a5de7819ba9"
+    }
+  ]
+}

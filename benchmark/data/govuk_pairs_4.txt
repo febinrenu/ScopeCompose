@@ -1,0 +1,107 @@
+# gov.uk Tier-1 candidates, batch 4 — 2026-09-28. CROSS-DOCUMENT shape.
+#
+# Public guide (or one appendix) against a separately published appendix or
+# caseworker guidance. This is the shape that returned 21/21 distinct in batch
+# 3 and 12/15 in batch 2, and it feeds the `natural cross-document` row.
+#
+# The same-guide pairings from this URL set live in govuk_pairs_5.txt, because
+# they feed a different row and mixing them would make neither countable.
+
+# -- Temporary Work: the caseworker guidance is new, so every route pairs -----
+tw_creative_cw       https://www.gov.uk/creative-worker-visa
+tw_creative_cw       https://www.gov.uk/government/publications/guidance-on-application-for-uk-visa-under-tier-5-temporary-worker/temporary-work-caseworker-guidance-accessible
+
+tw_charity_cw        https://www.gov.uk/temporary-worker-charity-worker-visa
+tw_charity_cw        https://www.gov.uk/government/publications/guidance-on-application-for-uk-visa-under-tier-5-temporary-worker/temporary-work-caseworker-guidance-accessible
+
+tw_religious_cw      https://www.gov.uk/religious-worker-visa
+tw_religious_cw      https://www.gov.uk/government/publications/guidance-on-application-for-uk-visa-under-tier-5-temporary-worker/temporary-work-caseworker-guidance-accessible
+
+tw_gae_cw            https://www.gov.uk/government-authorised-exchange
+tw_gae_cw            https://www.gov.uk/government/publications/guidance-on-application-for-uk-visa-under-tier-5-temporary-worker/temporary-work-caseworker-guidance-accessible
+
+tw_intl_cw           https://www.gov.uk/international-agreement-worker-visa
+tw_intl_cw           https://www.gov.uk/government/publications/guidance-on-application-for-uk-visa-under-tier-5-temporary-worker/temporary-work-caseworker-guidance-accessible
+
+tw_seasonal_cw       https://www.gov.uk/seasonal-worker-visa
+tw_seasonal_cw       https://www.gov.uk/government/publications/guidance-on-application-for-uk-visa-under-tier-5-temporary-worker/temporary-work-caseworker-guidance-accessible
+
+# -- UK Ancestry -------------------------------------------------------------
+ancestry_rules       https://www.gov.uk/ancestry-visa
+ancestry_rules       https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-uk-ancestry
+
+ancestry_cw          https://www.gov.uk/ancestry-visa
+ancestry_cw          https://www.gov.uk/government/publications/uk-ancestry-caseworker-guidance/uk-ancestry-accessible
+
+ancestry_rules_cw    https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-uk-ancestry
+ancestry_rules_cw    https://www.gov.uk/government/publications/uk-ancestry-caseworker-guidance/uk-ancestry-accessible
+
+# -- Long residence and continuous residence ---------------------------------
+long_res_guidance    https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-long-residence
+long_res_guidance    https://www.gov.uk/government/publications/long-residence/long-residence-accessible
+
+cont_res_guidance    https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-continuous-residence
+cont_res_guidance    https://www.gov.uk/government/publications/continuous-residence-caseworker-guidance/continuous-residence-guidance-accessible
+
+long_vs_continuous   https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-long-residence
+long_vs_continuous   https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-continuous-residence
+
+# -- Private life and settlement ---------------------------------------------
+private_life_cw      https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-private-life
+private_life_cw      https://www.gov.uk/government/publications/private-life-caseworker-guidance/private-life-caseworker-guidance-accessible--2
+
+settlement_guides    https://www.gov.uk/government/publications/settlement-family-and-private-life-caseworker-guidance
+settlement_guides    https://www.gov.uk/government/publications/settlement-applications-and-permission-to-stay-caseworker-guidance
+
+# -- Family: route sub-pages against the rules that govern them --------------
+fam_partner_rules    https://www.gov.uk/uk-family-visa/partner-spouse
+fam_partner_rules    https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-fm-family-members
+
+fam_child_rules      https://www.gov.uk/uk-family-visa/child
+fam_child_rules      https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-children
+
+fam_parent_rules     https://www.gov.uk/uk-family-visa/parent
+fam_parent_rules     https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-fm-family-members
+
+fam_adr_rules        https://www.gov.uk/uk-family-visa/adult-dependent-relative
+fam_adr_rules        https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-fm-family-members
+
+fam_fm_settlement    https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-fm-family-members
+fam_fm_settlement    https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-family-settlement
+
+fam_children_cw      https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-children
+fam_children_cw      https://www.gov.uk/government/publications/appendix-children-caseworker-guidance/appendix-children-accessible
+
+fam_exceptional      https://www.gov.uk/government/publications/family-life-as-a-partner-or-parent-private-life-and-exceptional-circumstance
+fam_exceptional      https://www.gov.uk/government/publications/settlement-family-and-private-life-caseworker-guidance
+
+fam_relationship     https://www.gov.uk/government/publications/relationship-with-a-partner-caseworker-guidance
+fam_relationship     https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-fm-family-members
+
+fam_finance          https://www.gov.uk/government/publications/adequate-maintenance-and-accommodation-caseworker-guidance
+fam_finance          https://www.gov.uk/government/publications/financial-requirement-caseworker-guidance/financial-requirement-caseworker-guidance-accessible
+
+# -- Representative of an overseas business ----------------------------------
+rep_overseas_rules   https://www.gov.uk/representative-overseas-business
+rep_overseas_rules   https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-representative-overseas-business
+
+# -- Minister of Religion -----------------------------------------------------
+minister_rules       https://www.gov.uk/minister-of-religion-visa
+minister_rules       https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-t2-minister-of-religion
+
+minister_cw          https://www.gov.uk/minister-of-religion-visa
+minister_cw          https://www.gov.uk/government/publications/minister-of-religion-caseworker-guidance
+
+# -- International Sportsperson ------------------------------------------------
+sport_rules          https://www.gov.uk/sportsperson-visa
+sport_rules          https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-international-sportsperson
+
+sport_cw             https://www.gov.uk/sportsperson-visa
+sport_cw             https://www.gov.uk/government/publications/international-sportsperson-caseworker-guidance
+
+# -- HPI and Scale-up: caseworker guidance is new ------------------------------
+hpi_cw               https://www.gov.uk/high-potential-individual-visa
+hpi_cw               https://www.gov.uk/government/publications/high-potential-individual-caseworker-guidance/high-potential-individual-caseworker-guidance-accessible
+
+scaleup_cw           https://www.gov.uk/scale-up-worker-visa
+scaleup_cw           https://www.gov.uk/government/publications/scale-up-worker-caseworker-guidance/scale-up-worker-caseworker-guidance-accessible

@@ -517,3 +517,53 @@ single documents that state a rule and its carve-out together, which is the
 structure WP1 found is the common one. That is where `redundant` and `opposed`
 will finally appear, and it is the only route to a measurable four-way scope
 relation.
+
+
+---
+
+## Batches 4 and 5 — 2026-09-28. Both rows fed, and same-guide is the harder one
+
+The same URL set, split by shape into two pairing files because the two shapes
+feed different reporting rows and mixing them would make neither countable.
+
+| batch | shape | pairings | distinct | same-guide | broken | candidates | per pairing |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 4 | guide vs appendix / caseworker | 30 | **24** | 0 | 6 | **9** | 0.38 |
+| 5 | two sections of one guide | 17 | 0 | **17** | 0 | **3** | **0.18** |
+
+Batch 5 did exactly what it was built to do: 17 of 17 same-guide, nothing
+broken, feeding the row that stands at 7 of a 60 target.
+
+### Same-guide yields about half as much per pairing
+
+0.18 against 0.38 for the cross-document shape, and the lexical miner found
+**zero** Tier-1 candidates in batch 5 against 69 in batch 4.
+
+That is not a defect in the mining. Two sections of one guide are written to be
+read together, so the author states the carve-out where the rule is rather than
+leaving it to be discovered across a boundary. Sections divide a guide by
+*topic* — overview, eligibility, how to apply — and a topic split produces
+complementary content far more often than it produces a rule and its exception.
+
+**Consequence for the plan:** filling the same-guide row to 60 needs roughly
+**290 pairings** at 0.18, against ~90 for the remaining 32 cross-document
+instances. The row that looked cheap is the expensive one.
+
+Worth raising with the supervisor before committing to 60/60/180. Options:
+rebalance the target toward cross-document, accept a smaller same-guide row and
+report it as descriptive rather than comparative, or spend the pairings.
+
+### gov.uk yield across all five batches
+
+| batch | shape | pairings | candidates | per pairing |
+|---|---|---:|---:|---:|
+| 1 | guide sections | 17 | 5 | 0.29 |
+| 2 | guide vs appendix | 12 | 7 | 0.58 |
+| 3 | GBM and others | 21 | 7 | 0.33 |
+| 4 | cross-document | 24 | 9 | 0.38 |
+| 5 | same-guide | 17 | 3 | 0.18 |
+| **all** | | **91** | **31** | **0.34** |
+
+91 pairings is a large enough sample to stop treating the rate as provisional.
+**0.34 candidates per pairing** is the planning figure, and the batch-2 figure
+of 0.58 was noise.

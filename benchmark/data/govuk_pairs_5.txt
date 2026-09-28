@@ -1,0 +1,72 @@
+# gov.uk SAME-GUIDE candidates, batch 5 — 2026-09-28.
+#
+# The shape batches 2 and 3 were deliberately built to AVOID, now sought on
+# purpose. Two sections of one gov.uk guide share a `content_id`, so the
+# fetcher classifies them as same-guide rather than Tier 1, and they populate
+# the `same_guide` reporting row -- which stands at 7 of a 60 target while
+# `natural cross-document` is at 28 of 60.
+#
+# This is not a lesser category. The separation is real at retrieval time: a
+# retriever genuinely returns two passages from different URLs that it cannot
+# reconcile, and nobody manufactured the split. What it is not is evidence that
+# organisations publish rules and exceptions in separate DOCUMENTS, which is
+# why it is reported as its own row rather than folded into Tier 1.
+#
+# Kept in a separate file from the cross-document pairings of the same URL set,
+# because mixing the two would make neither row countable.
+
+# -- UK Ancestry -------------------------------------------------------------
+sg_ancestry_elig     https://www.gov.uk/ancestry-visa
+sg_ancestry_elig     https://www.gov.uk/ancestry-visa/eligibility
+
+sg_ancestry_apply    https://www.gov.uk/ancestry-visa
+sg_ancestry_apply    https://www.gov.uk/ancestry-visa/apply
+
+sg_ancestry_ea       https://www.gov.uk/ancestry-visa/eligibility
+sg_ancestry_ea       https://www.gov.uk/ancestry-visa/apply
+
+# -- UK family visa: one guide, five route sections --------------------------
+sg_family_partner    https://www.gov.uk/uk-family-visa
+sg_family_partner    https://www.gov.uk/uk-family-visa/partner-spouse
+
+sg_family_child      https://www.gov.uk/uk-family-visa
+sg_family_child      https://www.gov.uk/uk-family-visa/child
+
+sg_family_parent     https://www.gov.uk/uk-family-visa
+sg_family_parent     https://www.gov.uk/uk-family-visa/parent
+
+sg_family_adr        https://www.gov.uk/uk-family-visa
+sg_family_adr        https://www.gov.uk/uk-family-visa/adult-dependent-relative
+
+sg_family_pc         https://www.gov.uk/uk-family-visa/partner-spouse
+sg_family_pc         https://www.gov.uk/uk-family-visa/child
+
+sg_family_cp         https://www.gov.uk/uk-family-visa/child
+sg_family_cp         https://www.gov.uk/uk-family-visa/parent
+
+sg_family_padr       https://www.gov.uk/uk-family-visa/parent
+sg_family_padr       https://www.gov.uk/uk-family-visa/adult-dependent-relative
+
+# -- Representative of an overseas business ----------------------------------
+sg_rep_elig          https://www.gov.uk/representative-overseas-business
+sg_rep_elig          https://www.gov.uk/representative-overseas-business/eligibility
+
+sg_rep_docs          https://www.gov.uk/representative-overseas-business
+sg_rep_docs          https://www.gov.uk/representative-overseas-business/documents-you-must-provide
+
+sg_rep_ed            https://www.gov.uk/representative-overseas-business/eligibility
+sg_rep_ed            https://www.gov.uk/representative-overseas-business/documents-you-must-provide
+
+# -- Minister of Religion -----------------------------------------------------
+sg_minister_elig     https://www.gov.uk/minister-of-religion-visa
+sg_minister_elig     https://www.gov.uk/minister-of-religion-visa/eligibility
+
+# -- International Sportsperson ------------------------------------------------
+sg_sport_elig        https://www.gov.uk/sportsperson-visa
+sg_sport_elig        https://www.gov.uk/sportsperson-visa/eligibility
+
+sg_sport_apply       https://www.gov.uk/sportsperson-visa
+sg_sport_apply       https://www.gov.uk/sportsperson-visa/apply-from-outside-the-uk
+
+sg_sport_ea          https://www.gov.uk/sportsperson-visa/eligibility
+sg_sport_ea          https://www.gov.uk/sportsperson-visa/apply-from-outside-the-uk
