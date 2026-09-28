@@ -340,6 +340,7 @@ def cmd_adjudicate(args: argparse.Namespace) -> int:
 def cmd_agreement(args: argparse.Namespace) -> int:
     store = AnnotationStore(args.dir)
     ok = True
+    results = []
 
     print("\nInter-annotator agreement")
     print("=" * 78)
@@ -373,6 +374,7 @@ def cmd_agreement(args: argparse.Namespace) -> int:
             print(f"  NOT COMPUTED: {exc}\n")
             ok = False
             continue
+        results.append(result)
         print(result.render())
         print()
         ok = ok and result.is_acceptable
@@ -425,7 +427,14 @@ def cmd_agreement(args: argparse.Namespace) -> int:
     print(f"  {args.a:<12} {len(def_a):>4} of {n_seen}")
     print(f"  {args.b:<12} {len(def_b):>4} of {n_seen}")
     print(f"  {'both agreed undecidable':<12} {len(def_a & def_b):>4}")
-    if not (def_a or def_b):
+    # Only warn when undecidability is a plausible explanation for something.
+    # A zero deferral rate alongside near-perfect agreement is consistent --
+    # the batch was decidable and both annotators decided it the same way.
+    # Alongside many disagreements it is the thing to suspect. Firing it
+    # unconditionally made it noise on exactly the runs that went well.
+    disagreed = any(not r.is_acceptable or r.disagreements()
+                    for r in results if r is not None)
+    if not (def_a or def_b) and disagreed:
         print()
         print("  NOBODY DEFERRED ANYTHING. The manual (1, 4) says to escalate")
         print("  rather than guess, and real policy text is not clean enough for")

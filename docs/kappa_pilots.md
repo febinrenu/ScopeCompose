@@ -576,3 +576,78 @@ candidate:
 > Talent replaced Tier 1 on 20 February 2020". Temporal, or unrelated?
 
 If pilot 6 returns a high κ on these, that is a number worth publishing.
+
+
+---
+
+# Pilot 6 — 2026-09-28. **PASSED.** Gate closed.
+
+Fresh batch, neither annotator had seen it. Both passes plausible: johann
+19.9s median over 12.2 min, febin 18.9s over 11.3 min, **zero instances under
+5s from either**.
+
+| subset | n | agreement | labels | κ |
+|---|---:|---|---|---:|
+| **proposer candidates** | **18** | **18/18** | 11 conditional, 5 no_conflict, 2 temporal | **1.000** (p_e 0.463) |
+| hard distractors | 17 | 17/17 | all no_conflict | degenerate |
+
+Combined with pilot 5's independent 18/18 on a *different* candidate set:
+**36 of 36 informative instances agreed, across two batches, with four
+plausible passes.** The conflict-type axis is settled.
+
+## The distractors still came back unanimous, and that is a finding
+
+Raising the topical-overlap threshold changed how long a distractor takes to
+decide. It did not change the answer: all 17 were `no_conflict`, exactly as the
+16 random ones were.
+
+That is WP1's conclusion arriving from a second direction. **A topically
+related sentence pair from two documents is almost never a rule and its
+exception.** Genuine conditional structure is rare enough that you cannot
+stumble into it by sampling.
+
+The consequence is practical: distractors drawn this way can supply the
+`no_conflict` denominator that Spurious-Condition Rate needs, and they cannot
+supply `factual`, `temporal`, `redundant` or `opposed` spread. Those have to be
+**constructed** — which is what the 180 synthetic-split instances in the corpus
+plan are for, and why `TIER2_STRATA` sets a floor on each relation.
+
+## The one axis still unmeasured
+
+| pilot | scope-relation instances | labels |
+|---|---:|---|
+| 1 | 23 | — |
+| 3 | 6 | — |
+| 4 | 13 | all refinement |
+| 5 | 12 | 11 refinement, 1 disjoint |
+| **6** | **11** | **9 refinement, 2 disjoint** |
+
+Six pilots, and `redundant` and `opposed` have **never once appeared**. Not
+because annotators disagree about them — because mined data does not contain
+them. p_e is 0.702 here for that reason.
+
+**The four-way relation κ cannot be measured on mined data and should not be
+attempted again on it.** It gets measured on the Tier-2 portion of the corpus,
+where redundant and opposed exist by construction. Until then the axis is
+reported as untested, not as 1.000.
+
+## What to report
+
+> Cohen's κ = 1.000 for the five-class conflict type, n = 36 informative
+> instances across two independently mined batches (p_e = 0.463 and 0.474),
+> with four annotator passes all exceeding 18s median per instance. Batches
+> additionally contained 33 unsurfaced distractor pairs, unanimously labelled
+> no_conflict and excluded from the figure above. The four-way scope relation
+> was not measurable on mined data: `redundant` and `opposed` did not occur in
+> any batch, and agreement on that axis is reported separately on the Tier-2
+> subset.
+
+Do not report 1.000 on 35, and do not report the scope axis as passing.
+
+## Also fixed
+
+The zero-deferral warning fired unconditionally, which made it noise on exactly
+the runs that went well — a zero deferral rate alongside 36/36 agreement is
+consistent, not suspicious. It now fires only when there are disagreements
+*and* nobody deferred, which is the situation where undecidability is a
+plausible explanation for them.
