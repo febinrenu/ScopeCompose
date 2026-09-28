@@ -518,3 +518,61 @@ has.
 
 The batch composition is right now. What is missing is a second pass that
 actually happened.
+
+
+---
+
+# Pilot 5, re-run — 2026-09-28. The manual is working. The headline number is inflated.
+
+Both passes plausible: johann 15.6s median over 10.5 min, febin 21.0s over 14.1
+min, neither with a single instance under 5s. The pace problem is fixed.
+
+κ = 1.000 on 34 instances. **The honest number is smaller than that**, because
+the batch is not uniformly informative:
+
+| subset | n | agreement | labels |
+|---|---:|---|---|
+| proposer candidates | 18 | **18/18, κ = 1.000** | 12 conditional, 4 no_conflict, 2 temporal |
+| unsurfaced distractors | 16 | 16/16 | **all 16 no_conflict** |
+
+The 16 distractors were random sentence pairs from one provider, so they were
+trivially unrelated and both annotators said so. Sixteen free agreements. They
+raised the reported figure from 1.000-on-18-informative-instances to
+1.000-on-34, which reads as a stronger result and is a weaker one.
+
+**What to report in the paper:** κ on the informative subset, with the batch
+composition disclosed. Not the pooled figure.
+
+## Two caveats, neither fatal
+
+1. **febin labelled this batch twice.** The first pass was rejected as
+   implausible, and the re-run is properly paced — but it is not blind to the
+   first, and the first already matched johann's labels. Re-running a pass on a
+   batch the annotator has already seen does not restore independence. That was
+   a flaw in the instruction, not in the execution.
+2. **The scope axis is still thin** — 12 instances at p_e = 0.847, now 11
+   refinement and 1 disjoint. No longer degenerate, still not measured.
+
+## The verdict
+
+On 18 informative instances with a varied label distribution and two plausible
+passes, **the annotators agree and the manual is usable.** That is real
+evidence, and it is what the gate was asking.
+
+**Bulk annotation can start.** Run pilot 6 alongside it for the figure that
+goes in the paper.
+
+## Pilot 6 — harder distractors
+
+`benchmark/data/pilot6_batch.jsonl`, 37 instances, 35 labellable, fresh to both
+annotators. Distractors are now drawn topically close (content-word overlap
+≥ 0.25) rather than at random, so deciding one takes the same work as a real
+candidate:
+
+> `wp6_0019` — both passages say a prestigious-prize holder can skip
+> endorsement. Plausibly **redundant**, which is a real label rather than a free
+> `no_conflict`.
+> `wp6_0021` — "apply without endorsement if you won a prize" against "Global
+> Talent replaced Tier 1 on 20 February 2020". Temporal, or unrelated?
+
+If pilot 6 returns a high κ on these, that is a number worth publishing.

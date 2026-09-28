@@ -343,6 +343,26 @@ def add_distractors(
     pools = [v for v in by_provider.values() if len(v) >= 2]
     rng.shuffle(pools)
 
+    def _topical(s0: str, s1: str) -> bool:
+        """Whether two sentences are about the same thing.
+
+        Random pairs from one provider are trivially unrelated, and pilot 5
+        showed what that costs: all 16 were labelled ``no_conflict`` by both
+        annotators, contributing sixteen free agreements and no information.
+        They inflated the headline kappa from 1.000 on 18 informative instances
+        to 1.000 on 34, which looks like a stronger result and is a weaker one.
+
+        A useful distractor is topically close enough that deciding it takes
+        the same work as a real candidate, and is still not a rule with its
+        exception. Content-word overlap is a crude proxy for that, and crude is
+        enough -- the annotator, not this function, decides what each one is.
+        """
+        w0 = {w for w in re.findall(r"[a-z]{5,}", s0.lower())}
+        w1 = {w for w in re.findall(r"[a-z]{5,}", s1.lower())}
+        if not w0 or not w1:
+            return False
+        return len(w0 & w1) / min(len(w0), len(w1)) >= 0.25
+
     records: list[QueryRecord] = []
     provenance: list[dict] = []
     seen: set[tuple[str, str]] = set()
@@ -353,6 +373,11 @@ def add_distractors(
         pool = pools[attempts % len(pools)]
         (d0, s0), (d1, s1) = rng.sample(pool, 2)
         if d0.doc_id == d1.doc_id:
+            continue
+        # Topically close, or it is a free agreement rather than a test.
+        # Relaxed once the attempt budget is half spent, so a thin corpus
+        # yields something rather than nothing.
+        if attempts < n * 30 and not _topical(s0, s1):
             continue
         key = (s0.lower()[:80], s1.lower()[:80])
         if key in seen or key in used or (key[1], key[0]) in used:
