@@ -463,3 +463,57 @@ cross-document and 3 same-guide.** One proposal was dropped as a duplicate.
 
 One of twelve gov.uk batch-2 pairings failed on a rate limit, so the LLM figure
 covers 11 against the lexical miner's 12.
+
+
+---
+
+## Batch 3 — 2026-09-28. Clean fetch, and a stable yield rate
+
+22 URLs covering Global Business Mobility, Temporary Work, Skilled Worker
+dependants, High Potential Individual and Scale-up.
+
+**21 of 21 pairings distinct. Zero same-guide. Zero broken.** The best fetch of
+the project, and confirmation that the guide-versus-appendix shape is the right
+one to ask for.
+
+### The yield rate has settled
+
+| batch | shape | pairings | candidates | per pairing |
+|---|---|---:|---:|---:|
+| 1 | two sections of one guide | 17 | 5 | 0.29 |
+| 2 | guide vs appendix / caseworker | 12 | 7 | **0.58** |
+| 3 | guide vs appendix / caseworker | 21 | 7 | 0.33 |
+| **all** | | **50** | **19** | **0.38** |
+
+Batch 2's 0.58 now looks like the outlier rather than the new normal. **Plan on
+~0.35 candidates per pairing.**
+
+Global Business Mobility was the reason for optimism here: one appendix and one
+caseworker guidance govern five route pages, so ten pairings come from seven
+documents. The structure is efficient to fetch. It is not more productive per
+pairing than anything else.
+
+### What that means for the 300-instance target
+
+| row | have | target | shortfall | pairings needed at 0.35 |
+|---|---:|---:|---:|---:|
+| natural cross-document | 28 | 60 | 32 | **~90** |
+| same-guide retrieval split | 7 | 60 | 53 | see below |
+| synthetic split | 0 | 180 | 180 | not mined — constructed |
+
+**Natural cross-document** needs roughly 90 more pairings, which is about four
+more batches the size of this one. That is the honest arithmetic and it has not
+changed since WP1: Tier 1 is expensive per instance.
+
+**Same-guide needs the opposite of what batch 2 and 3 were built to avoid.**
+Batch 1 produced 10 same-guide pairings by accident, by pairing two sections of
+one gov.uk guide, and batches 2 and 3 were deliberately shaped to stop that.
+To fill that row, ask for the batch-1 shape on purpose: `#overview` against
+`#money`, `#eligibility` against `#your-partner-and-children`, and so on within
+a single guide. It is cheap, and the row is 53 short.
+
+**Synthetic split is not a mining problem.** 180 instances get constructed from
+single documents that state a rule and its carve-out together, which is the
+structure WP1 found is the common one. That is where `redundant` and `opposed`
+will finally appear, and it is the only route to a measurable four-way scope
+relation.

@@ -1,0 +1,85 @@
+# gov.uk Tier-1 candidates, batch 3 — 2026-09-28.
+#
+# Same shape that worked in batch 2: a public-facing route guide paired with
+# the Immigration Rules appendix or the caseworker guidance for that route.
+# Batch 2 returned 12 of 15 distinct documents and zero same-guide with this
+# structure, against batch 1's 7 of 17.
+#
+# Global Business Mobility is the richest source here: one appendix and one
+# caseworker guidance govern five separate route pages, so each route pairs
+# against both. That is the general-rule-plus-route-specific-carve-out shape
+# the benchmark is about.
+#
+# The six Temporary Work routes were supplied without an appendix, so they are
+# paired against the eligible-occupations list and against each other. Expect
+# `disjoint` rather than `refinement` from cross-route pairs -- which is worth
+# having, since `disjoint` is one of the four relations and mined data has
+# produced only two of them so far.
+
+# -- Global Business Mobility: 5 routes x (appendix, caseworker guidance) ----
+gbm_senior_specialist    https://www.gov.uk/senior-specialist-worker-visa
+gbm_senior_specialist    https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes
+
+gbm_senior_cw            https://www.gov.uk/senior-specialist-worker-visa
+gbm_senior_cw            https://www.gov.uk/government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible
+
+gbm_graduate_trainee     https://www.gov.uk/graduate-trainee-visa
+gbm_graduate_trainee     https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes
+
+gbm_graduate_cw          https://www.gov.uk/graduate-trainee-visa
+gbm_graduate_cw          https://www.gov.uk/government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible
+
+gbm_expansion            https://www.gov.uk/uk-expansion-worker-visa
+gbm_expansion            https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes
+
+gbm_expansion_cw         https://www.gov.uk/uk-expansion-worker-visa
+gbm_expansion_cw         https://www.gov.uk/government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible
+
+gbm_service_supplier     https://www.gov.uk/service-supplier-visa
+gbm_service_supplier     https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes
+
+gbm_service_cw           https://www.gov.uk/service-supplier-visa
+gbm_service_cw           https://www.gov.uk/government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible
+
+gbm_secondment           https://www.gov.uk/secondment-worker-visa
+gbm_secondment           https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes
+
+gbm_secondment_cw        https://www.gov.uk/secondment-worker-visa
+gbm_secondment_cw        https://www.gov.uk/government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible
+
+gbm_occupations          https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes
+gbm_occupations          https://www.gov.uk/government/publications/global-business-mobility-eligible-occupations-and-codes/global-business-mobility-eligible-occupations-and-codes
+
+gbm_rules_vs_cw          https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes
+gbm_rules_vs_cw          https://www.gov.uk/government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible
+
+# -- Temporary Work: no appendix supplied, so paired across routes -----------
+tw_creative_charity      https://www.gov.uk/creative-worker-visa
+tw_creative_charity      https://www.gov.uk/temporary-worker-charity-worker-visa
+
+tw_religious_gae         https://www.gov.uk/religious-worker-visa
+tw_religious_gae         https://www.gov.uk/government-authorised-exchange
+
+tw_intl_seasonal         https://www.gov.uk/international-agreement-worker-visa
+tw_intl_seasonal         https://www.gov.uk/seasonal-worker-visa
+
+tw_creative_seasonal     https://www.gov.uk/creative-worker-visa
+tw_creative_seasonal     https://www.gov.uk/seasonal-worker-visa
+
+# -- Skilled Worker: dependants against the rules and the guidance ----------
+sw_dependants_rules      https://www.gov.uk/skilled-worker-visa/your-partner-and-children
+sw_dependants_rules      https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-skilled-worker
+
+sw_dependants_cw         https://www.gov.uk/skilled-worker-visa/your-partner-and-children
+sw_dependants_cw         https://www.gov.uk/government/publications/skilled-worker-visa-caseworker-guidance
+
+# -- High Potential Individual ----------------------------------------------
+hpi_rules                https://www.gov.uk/high-potential-individual-visa
+hpi_rules                https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-high-potential-individual
+
+# -- Scale-up ----------------------------------------------------------------
+scaleup_rules_3          https://www.gov.uk/scale-up-worker-visa
+scaleup_rules_3          https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-scale-up
+
+scaleup_dependants       https://www.gov.uk/scale-up-worker-visa/your-partner-and-children
+scaleup_dependants       https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-scale-up
