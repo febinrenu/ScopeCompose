@@ -182,3 +182,70 @@ def test_the_pilot_yield_cannot_be_turned_into_a_prevalence_rate():
     """
     with pytest.raises(PrevalenceClaimError, match="not a prevalence estimate"):
         prevalence_estimate()
+
+
+# --------------------------------------------------------------------------- #
+# Tier-2 construction
+# --------------------------------------------------------------------------- #
+
+
+def test_a_split_half_must_state_an_outcome_not_just_a_condition():
+    """The failure this catches produced instances ambiguous for the wrong
+    reason.
+
+    "The applicant is relying on a student loan which meets FIN 8.3" says who
+    the narrower case covers and never says what happens to them. The source
+    sentence had the outcome -- exemption from the 28-day rule -- and the
+    rewrite dropped it. Such an instance is still labellable, and that is the
+    problem: it is ambiguous because the construction was lossy rather than
+    because the policy is, and an annotator cannot tell those apart.
+    """
+    from benchmark.mining.split_constructor import _states_outcome
+
+    assert _states_outcome("You will need to show you have enough money.")
+    assert _states_outcome("The course does not need to meet these requirements.")
+    assert _states_outcome("No fee applies to premium cardholders.")
+    assert not _states_outcome(
+        "The applicant is relying on a student loan which meets FIN 8.3.")
+    assert not _states_outcome(
+        "The applicant is on a course-related work placement.")
+
+
+def test_list_fragments_are_not_offered_as_splittable():
+    """"(a) in breach of immigration laws," is not a rule however it is
+    rewritten, so it never reaches the model."""
+    from benchmark.mining.split_constructor import find_candidates
+
+    docs = [{
+        "doc_id": "d0", "provider": "gov_uk_test", "kind": "guide", "url": "",
+        "text": ("(a) in breach of immigration laws, except where the "
+                 "Exceptions for overstayers section of Part Suitability "
+                 "applies to that period of overstaying by the applicant. "
+                 "Applicants must hold a valid certificate of sponsorship "
+                 "unless they are applying under the settlement route."),
+    }]
+    got = find_candidates(docs)
+    assert all(not c.source.lstrip().startswith("(a)") for c in got)
+    assert any("certificate of sponsorship" in c.source for c in got)
+
+
+def test_constructed_instances_carry_no_label():
+    """Built from a rule and its carve-out, these will mostly be
+    conditional/refinement -- and tagging them so would put the answer in the
+    data. Annotators decide, exactly as for mined instances."""
+    import json
+    from pathlib import Path
+
+    path = Path("benchmark/data/tier2_batch.jsonl")
+    if not path.exists():
+        pytest.skip("tier2 batch not built in this checkout")
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            rec = json.loads(line)
+            assert rec["conflict_pairs"] == []
+            assert rec["construction"] == "split"
+            assert rec["separation"] == "synthetic_split"
+            # One document, split in two. That is what makes it Tier 2 rather
+            # than a claim about separate publication.
+            assert (rec["passages"][0]["document_id"]
+                    == rec["passages"][1]["document_id"])

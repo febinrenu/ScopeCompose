@@ -1,0 +1,362 @@
+[
+  {
+    "instance_id": "t2_0000",
+    "doc_id": "student-visa#money",
+    "provider": "gov_uk_student",
+    "cue": "unless",
+    "source_sentence": "You’ll need to show you have enough money to support yourself - unless you’ve been in the UK with a valid visa for at least 12 months on the date of your application.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0001",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-student",
+    "provider": "gov_uk_student_rules",
+    "cue": "unless",
+    "source_sentence": "If the Confirmation of Acceptance for Studies has been assigned by a probationary sponsor, the course must meet one of the following requirements unless it is a pre-sessional course:",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0002",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-student",
+    "provider": "gov_uk_student_rules",
+    "cue": "except",
+    "source_sentence": "An applicant who has, or previously had, permission on the Student route and is applying for permission to stay as a Student must show academic progress from the previous courses of study unless one of the exceptions in ST 14.4.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0003",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-student",
+    "provider": "gov_uk_student_rules",
+    "cue": "except",
+    "source_sentence": "A work placement must be assessed as an integral part of the course and must not be longer than one third of the total length of the course, except when there is a statutory requirement that it must be so, or where ST 17.3.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0004",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-student",
+    "provider": "gov_uk_student_rules",
+    "cue": "unless",
+    "source_sentence": "If the course is below degree level, the grant of permission must not lead to the applicant being granted more than two years’ permission as a Student to study courses below degree level from the age of 18 unless ST 19.2.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0005",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-student",
+    "provider": "gov_uk_student_rules",
+    "cue": "unless",
+    "source_sentence": "If the course is at degree level, the grant of permission must not lead to the applicant being granted more than five years’ permission as a Student from the age of 18 to study courses at degree level unless the course of study is one of those listed at ST 19.4.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0006",
+    "doc_id": "skilled-worker-visa#how-much-it-costs",
+    "provider": "gov_uk_skilled_worker",
+    "cue": "unless",
+    "source_sentence": "support yourself when you arrive in the UK - you’ll usually need to have at least £1,270 available (unless you’re exempt)",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0007",
+    "doc_id": "uk-family-visa#partner-spouse",
+    "provider": "gov_uk_family_partner",
+    "cue": "do not apply",
+    "source_sentence": "If you’re in the UK as an unmarried partner and you become engaged, do not apply to extend your visa as a fiancé, fiancée or proposed civil partner.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0008",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "except",
+    "source_sentence": "If the reason the sponsor has not yet assigned a CoS is because of delays by UKVI (for example: a delay in processing a sponsor licence application or a request for a CoS), you may exceptionally place the case on hold pending the outcome.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0009",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "unless",
+    "source_sentence": "they must have completed a course to which paragraph ST 27.3 of Appendix student applies – this means they may have changed to a different course, which must be at the same level or above as the course on their Confirmation of Acceptance for Studies (CAS), unless it is the lower level of an integrated master’s or PhD programme",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0010",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "except",
+    "source_sentence": "Any applicant who is in the UK on immigration bail does not hold permission to be in the UK and is not suitable for the Skilled Worker route, except where permitted by the Immigration Rules in respect of periods of overstaying.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0011",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "provided that",
+    "source_sentence": "Otherwise, a worker is allowed to switch into the Skilled Worker route as a prison officer provided that the application is for permission to stay and the CoS is issued before 1 January 2027.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0012",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "except",
+    "source_sentence": "On 22 July 2025, the skill threshold increased to Regulated Qualifications Framework (RQF) level 6, with exceptions for certain shortage occupations and workers already in the route.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0013",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "except",
+    "source_sentence": "The transitional arrangements in (d) apply to people granted permission under the rules in place before 22 July 2025 who have held continuous permission since that point (except that where the Exceptions for Overstayers section of Part Suitability applies, that period of overstaying will be disregarded).",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0014",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "other than",
+    "source_sentence": "Sponsors must still notify UKVI of any of the above changes (other than basic pay increases due to annual increments or temporary salary reductions permitted under the Sponsor guidance).",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0015",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "unless",
+    "source_sentence": "You do not need to check their records for the past 12 months unless you have concerns.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0016",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "except",
+    "source_sentence": "In both circumstances, the end date of permission must be 14 days after the end date stated on the applicant’s CoS (but see the exception for some doctors below).",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0017",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "except",
+    "source_sentence": "For applications for permission to stay, if the end date of the CoS has passed, you may exceptionally grant 14 days permission to stay to allow the applicant to make a further application or leave the UK without becoming an overstayer.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0018",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "except",
+    "source_sentence": "You must reject any application for a visa from an Irish citizen as invalid, except where they are subject to:",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0019",
+    "doc_id": "government/publications/skilled-worker-visa-caseworker-guidance/skilled-worker-caseworker-guidance-accessible",
+    "provider": "govuk_skilled_worker",
+    "cue": "except",
+    "source_sentence": "They must not be paid or receive other money for the voluntary work, except reasonable expenses as described in that section.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0020",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-skilled-worker",
+    "provider": "govuk_skilled_worker_rules",
+    "cue": "unless",
+    "source_sentence": "The sponsor must be listed as A-rated on the Home Office’s register of licensed sponsors, unless the applicant was last granted permission as a Skilled Worker and is applying to continue working for the same sponsor as in their last permission.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0021",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-skilled-worker",
+    "provider": "govuk_skilled_worker_rules",
+    "cue": "unless",
+    "source_sentence": "The applicant must be sponsored for a job in an eligible SOC 2020 occupation code (or, where relevant, an eligible job within a SOC 2020 occupation code) listed in Appendix Immigration Salary List for the nation of the UK where that job is based, unless SW 11.2.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0022",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-skilled-worker",
+    "provider": "govuk_skilled_worker_rules",
+    "cue": "unless",
+    "source_sentence": "A child will be granted permission which ends on the same date as whichever of their parents’ permission ends first, unless both parents have (or are being granted) settlement or British Citizenship, in which case the child will be granted permission for 3 years.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0023",
+    "doc_id": "government/publications/global-talent-appendix-w-workers/global-talent-caseworker-guidance-accessible",
+    "provider": "govuk_global_talent",
+    "cue": "unless",
+    "source_sentence": "If the applicant states they have been awarded a prize listed in Appendix Global Talent: Prestigious Prizes, but that prize was awarded to a group or organisation the migrant is associated with, they will not normally qualify unless the award specifically names the applicant as part of the group or organisation.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0024",
+    "doc_id": "government/publications/global-talent-appendix-w-workers/global-talent-caseworker-guidance-accessible",
+    "provider": "govuk_global_talent",
+    "cue": "except",
+    "source_sentence": "the applicant must have, or have been granted, permission on the Global Talent route (including where permission was granted under the Tier 1 (Exceptional Talent) route)",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0025",
+    "doc_id": "government/publications/innovator-appendix-w-workers/innovator-founder-caseworker-guidance-accessible",
+    "provider": "govuk_innovator_founder",
+    "cue": "except",
+    "source_sentence": "Any applicant who is in the UK on immigration bail does not meet the suitability requirements for the Innovator Founder route, except where permitted by the Immigration Rules in respect of periods of overstaying.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0026",
+    "doc_id": "government/publications/innovator-appendix-w-workers/innovator-founder-caseworker-guidance-accessible",
+    "provider": "govuk_innovator_founder",
+    "cue": "unless",
+    "source_sentence": "they must have sufficient knowledge about life in the UK, in accordance with paragraph INNF 20.1 of the Immigration Rules, unless they are aged 65 or over at the date the application is made",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0027",
+    "doc_id": "government/publications/innovator-appendix-w-workers/innovator-founder-caseworker-guidance-accessible",
+    "provider": "govuk_innovator_founder",
+    "cue": "except",
+    "source_sentence": "they must not be in the UK in breach of immigration laws, except that where the Exceptions for Overstayers section of Part Suitability applies, that period of overstaying will be disregarded",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0028",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-v-visitor",
+    "provider": "govuk_visitor_2",
+    "cue": "unless",
+    "source_sentence": "Transit Visitor: for those who want to transit the UK on route to another country outside the Common Travel Area and who will enter the UK for up to 48 hours by crossing the UK border unless Appendix Visitor: Transit Without Visa Scheme applies.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0029",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-v-visitor",
+    "provider": "govuk_visitor_2",
+    "cue": "unless",
+    "source_sentence": "the child may be refused entry to the UK, unless they meet the requirements of V 5.1.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0030",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-v-visitor",
+    "provider": "govuk_visitor_2",
+    "cue": "unless",
+    "source_sentence": "A visa national must hold entry clearance as a Standard Visitor, Marriage/Civil Partnership Visitor or Transit Visitor, unless they meet the requirements for admission under Appendix Visitor: Transit Without Visa Scheme, in which case they may apply for permission to enter on arrival in the UK.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0031",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-fm-family-members",
+    "provider": "govuk_family_partner_2",
+    "cue": "unless",
+    "source_sentence": "The applicant must provide evidence that there will be adequate accommodation, without recourse to public funds, for the family, including other family members who are not included in the application but who live in the same household, which the family own or occupy exclusively, unless paragraph EX.1.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0032",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-fm-family-members",
+    "provider": "govuk_family_partner_2",
+    "cue": "except",
+    "source_sentence": "The applicant must be in the UK with valid leave to remain as a partner under this Appendix (except that, where the Exceptions for overstayers section of Part Suitability applies, any current period of overstaying will be disregarded).",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0033",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-fm-family-members",
+    "provider": "govuk_family_partner_2",
+    "cue": "except",
+    "source_sentence": "In calculating the periods under paragraph E-ILRP.1.3., any current period of overstaying will be disregarded where the Exceptions for overstayers section of Part Suitability applies.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0034",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-fm-family-members",
+    "provider": "govuk_family_partner_2",
+    "cue": "unless",
+    "source_sentence": "The applicant must provide evidence that they will be able to adequately maintain and accommodate themselves and any dependants in the UK without recourse to public funds, unless paragraph EX.1.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0035",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-fm-family-members",
+    "provider": "govuk_family_partner_2",
+    "cue": "unless",
+    "source_sentence": "The applicant must provide evidence that there will be adequate accommodation in the UK, without recourse to public funds, for the family, including other family members who are not included in the application but who live in the same household, which the family own or occupy exclusively, unless paragraph EX.1.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0036",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-fm-family-members",
+    "provider": "govuk_family_partner_2",
+    "cue": "except",
+    "source_sentence": "The applicant must be in the UK with valid leave to remain as a parent under this Appendix (except that, where the Exceptions for overstayers section of Part Suitability applies, any current period of overstaying will be disregarded).",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0037",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-fm-family-members",
+    "provider": "govuk_family_partner_2",
+    "cue": "except",
+    "source_sentence": "In calculating the periods under paragraph E-ILRPT.1.3., any current period of overstaying will be disregarded where the Exceptions for overstayers section of Part Suitability applies.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0038",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes",
+    "provider": "gbm_senior_specialist",
+    "cue": "unless",
+    "source_sentence": "The applicant must be sponsored for a job in a SOC 2020 occupation code listed in Table 2 or Table 3 of Appendix Skilled Occupations, unless the conditions at SNR 6.7.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0039",
+    "doc_id": "guidance/immigration-rules/immigration-rules-appendix-global-business-mobility-routes",
+    "provider": "gbm_senior_specialist",
+    "cue": "unless",
+    "source_sentence": "The applicant must have a university degree or equivalent level technical qualification unless they are employed by an overseas service provider supplying one of the following services, in which case the qualification requirements in the following table apply:",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0040",
+    "doc_id": "government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible",
+    "provider": "gbm_senior_cw",
+    "cue": "except",
+    "source_sentence": "If the reason the sponsor has not yet assigned a certificate is because of delays by UKVI (for example, a delay in processing a sponsor licence application or a request for certificates of sponsorship), you may exceptionally place the case on hold pending the outcome.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0041",
+    "doc_id": "government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible",
+    "provider": "gbm_senior_cw",
+    "cue": "provided that",
+    "source_sentence": "The required period of employment outside the UK does not need to be immediately prior to their application, and they don’t need to be consecutive, provided that the applicant was continuously working for the sponsor group from the start of the required period to the date of their application.",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0042",
+    "doc_id": "government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible",
+    "provider": "gbm_senior_cw",
+    "cue": "unless",
+    "source_sentence": "applicants must have 3 years’ professional experience in the sector in which they are supplying services, unless they are supplying chef de cuisine services under the CARIFORUM-UK Economic Partnership Agreement or they are a self-employed independent professional, in which case they must have at least 6 years’ relevant experience",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0043",
+    "doc_id": "government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible",
+    "provider": "gbm_senior_cw",
+    "cue": "exempt from",
+    "source_sentence": "Applicants who are providing certain services are exempt from the normal qualification requirements and must instead provide qualifications as shown in the following table:",
+    "constructed": "split_from_single_document"
+  },
+  {
+    "instance_id": "t2_0044",
+    "doc_id": "government/publications/global-business-mobility-routes-caseworker-guidance/global-business-mobility-routes-caseworker-guidance-accessible",
+    "provider": "gbm_senior_cw",
+    "cue": "does not apply",
+    "source_sentence": "their A-rated sponsor certifying they will, if necessary, maintain and accommodate the applicant up to the end of the first month of their employment, to an amount of at least £1,270 (this does not apply to UK Expansion Workers)",
+    "constructed": "split_from_single_document"
+  }
+]
