@@ -684,3 +684,66 @@ over a sample containing no disagreement resamples to perfect agreement every
 time, so the interval collapses regardless of n. Printed beside κ = 1.000 it
 reads as precision that 18 instances cannot support. The renderer now states
 this and says not to quote the interval.
+
+
+---
+
+# Pilot 9 — 2026-09-30. The strongest measurement so far.
+
+| axis | κ | n | p_e |
+|---|---:|---:|---:|
+| five-class conflict type | **1.000** | **39** | **0.540** |
+| four-way scope relation | 1.000 | 14 | **0.541** |
+
+Both passes plausible: johann 20.7s median over 15.4 min, febin 25.3s over 24.6
+min, neither with an instance under 5s. 19 proposer candidates drawn from four
+separate mining runs plus 20 distractors, none reused from any earlier batch.
+
+**This is the first pilot where the chance-agreement baseline is near 0.5 on
+both axes.** Earlier pilots sat at 0.689 and 0.847, where κ swings on a single
+label. At p_e ≈ 0.54 the statistic is stable, and 39 instances is double the
+previous best.
+
+## The scope axis is finally non-degenerate — and still only half tested
+
+**9 refinement, 5 disjoint.** p_e fell from 0.847 to 0.541, so the axis is
+measuring something for the first time in nine pilots.
+
+`redundant` and `opposed` have **still never appeared**. Nine pilots, five
+mining batches, 91 gov.uk pairings. The mined corpus contains refinement and
+disjoint and nothing else.
+
+That is now a settled fact about mined data rather than a small-sample artifact,
+and it has a clean explanation: `redundant` requires a narrower restatement that
+agrees with the general rule, and `opposed` requires two crossing scopes that
+disagree. Organisations do not publish either on purpose — the first is
+redundant to write, and the second is a drafting error.
+
+**They can only come from constructed instances**, which is what the 180
+synthetic-split target exists for, and why `TIER2_STRATA` puts a floor of 20 on
+each.
+
+## A distractor came back `conditional`
+
+One of the 20 unsurfaced pairs was labelled `conditional` by both annotators.
+
+That is the reason distractors are not marked as known negatives when the batch
+is built. A random pair from one provider occasionally *is* a rule and its
+exception, and pre-labelling them would have written a wrong gold label by
+construction — and the annotators would never have seen the instance to correct
+it.
+
+## Corpus status
+
+| row | have | target |
+|---|---:|---:|
+| **natural cross-document** | **59** | **60** |
+| same-guide retrieval split | 15 | 60 |
+| synthetic split | 0 | 180 |
+| **total** | **74** | **300** |
+
+74 instances, all validating, merged into `benchmark/data/corpus.jsonl`.
+
+**The Tier-1 row is one instance from its target.** That is the row WP1 said
+would be hardest, at ~0.34 candidates per pairing — and it is the one that is
+finished.
