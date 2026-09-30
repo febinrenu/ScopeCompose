@@ -11,6 +11,60 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-09-30 - Corpus at 128 of 300; Tier 1 done; kappa settled at p_e 0.54
+
+**Pilot 9 is the strongest measurement of the nine.** kappa = 1.000 on both
+axes over 39 instances, and the number that matters is **p_e = 0.540**, not the
+1.000. Earlier pilots sat at 0.689 and 0.847 where kappa swings on one label;
+at 0.54 it is stable. Both passes plausible (20.7s and 25.3s medians, none
+under five seconds).
+
+**Corpus merged to `benchmark/data/corpus.jsonl` -- 128 instances, 128/128
+valid.**
+
+| row | have | target |
+|---|---:|---:|
+| natural cross-document | **59** | 60 |
+| synthetic split | 54 | 180 |
+| same-guide retrieval split | 15 | 60 |
+
+**Tier 1 is effectively done.** The row WP1 predicted would be hardest, at ~0.34
+candidates per pairing across 91 gov.uk pairings, is one instance from target.
+
+**The probe set is corpus.** Its 54 human-verified instances are tagged
+`construction=split` / `separation=synthetic_split` and were merged in. They
+are the **only source of `redundant` and `opposed` in the project** -- 2 of
+each -- and 42 of them already carry branch structure, which no mined instance
+does.
+
+*Provenance differs and must be disclosed:* probe instances are
+model-proposed plus one human adjudicator (`annotator_a="model-proposed"`,
+`annotator_b="human-verified-2026-09-25"`), while pilot instances are two
+independent annotators. Both fields are recorded per instance so the datasheet
+can report the split rather than pooling them silently.
+
+**Nine pilots, five mining batches, 91 pairings: `redundant` and `opposed` have
+never appeared in mined data.** That is settled rather than small-sample.
+`redundant` needs a narrower restatement that agrees with the general rule;
+`opposed` needs two crossing scopes that disagree. Organisations publish
+neither on purpose -- the first is redundant to write, the second is a drafting
+error. They can only be constructed.
+
+**A distractor came back `conditional`** from both annotators, which is why
+distractors are never marked as known negatives at build time. A random pair
+from one provider occasionally is a rule and its exception, and pre-labelling
+would have written a wrong gold label neither annotator would have seen.
+
+**Blocked on / next**
+- **Supervisor decision:** same-guide is 45 short at 0.18 candidates per
+  pairing -- roughly 250 more pairings for a descriptive row. Worth rebalancing
+  the 60/60/180 target before spending that.
+- **126 more synthetic-split instances**, which is construction rather than
+  mining, and the only route to the `redundant`/`opposed` floors of 20 each.
+  Tooling for it does not exist yet.
+
+---
+
 ### 2026-09-25 (evening) - Kappa pilot 1 failed on the type axis, and diagnosed cleanly
 
 | axis | kappa | n | 95% CI | verdict |
