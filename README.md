@@ -290,6 +290,8 @@ development iteration free instead of metered. Both are due end of Week 1.
 | `benchmark/annotation/` | the labelling tool: blind passes, kappa per axis, adjudication | DONE |
 | `docs/kappa_pilot_1.md` | pilot 1: type kappa 0.326 (fails), scope 0.775 (provisional). Manual revised, re-run pending | **pilot 2 pending** |
 | `benchmark/corpus_plan.py` | the 300-instance WP2 target + stratification, with progress reporting | DONE |
+| `benchmark/splits.py` | train/dev/test by document group; leakage + provenance audit | DONE |
+| `metrics/power.py` | corpus sizing; what the current corpus can and cannot detect | DONE |
 | `extraction/` **B1** | Contrastive Scope Probing + the grounding gate | DONE, **needs live run** |
 | `composition/` **B2** | composition operator, nested/crossed flagging | DONE |
 | `generation/` **B3** | scoped answer with per-branch attribution, faithfulness check | DONE |
