@@ -73,6 +73,11 @@ class PreservationScores:
     #: caller to remember.
     by_construction: dict[str, PreservationScores] = field(default_factory=dict)
 
+    #: How each branch was judged: "structural", "textual", or "llm_judge".
+    #: Carried on the result because the three are different instruments and a
+    #: number is not interpretable without knowing which produced it.
+    judged_by: str = "structural"
+
     @property
     def preservation_rate(self) -> float:
         return self.preserved / self.gold_branches if self.gold_branches else 0.0
@@ -96,6 +101,7 @@ class PreservationScores:
 
     def as_dict(self) -> dict:
         return {
+            "judged_by": self.judged_by,
             "PR": round(self.preservation_rate, 4),
             "SR": round(self.suppression_rate, 4),
             "distortion_rate": round(self.distortion_rate, 4),
@@ -115,7 +121,23 @@ class PreservationScores:
             f"  HCR (hallucinated)  {self.hallucinated_condition_rate:>8.4f}",
             f"  SCR (spurious)      {self.spurious_condition_rate:>8.4f}",
             f"  gold branches       {self.gold_branches:>8,}",
+            f"  judged by           {self.judged_by:>8}",
         ]
+        if self.judged_by == "llm_judge":
+            lines += [
+                "",
+                "  These numbers come from an LLM judge. Proposal 6.1 requires it",
+                "  validated against human labels before anything it produces is",
+                "  reported -- run metrics.preservation.validate_judge and quote the",
+                "  agreement beside these figures, or report the structural scores",
+                "  instead. On open weights that validation is load-bearing.",
+            ]
+        elif self.judged_by == "textual":
+            lines += [
+                "",
+                "  Judged lexically against prose, which is a LOWER BOUND: a branch",
+                "  paraphrased beyond word overlap reads as suppressed.",
+            ]
         if self.by_construction:
             lines += ["", "  by tier (never blend these into one headline number):"]
             for tier, s in sorted(self.by_construction.items()):
@@ -156,21 +178,22 @@ def judge_branches(
     This is the weaker instrument and it is a LOWER BOUND on preservation: a
     branch paraphrased beyond lexical recognition reads as suppressed.
 
-    The LLM judge that proposal 6.1 specifies is a third path and is not
-    implemented here. It must be validated against human labels before anything
-    it produces is reported -- see :func:`validate_judge` -- and on the
-    zero-spend configuration it runs on open weights, which makes that
-    validation load-bearing rather than a formality. Passing ``client`` raises
-    rather than silently falling back, so a judged number cannot be produced by
-    accident.
+    **Judged** (``client`` supplied). The LLM judge proposal 6.1 specifies. It
+    reads the answer and decides, for each gold branch, whether the answer says
+    it, says it wrongly, or does not say it -- which is the only path that sees
+    a paraphrase the lexical ones miss.
+
+    It must be validated against human labels before anything it produces is
+    reported (:func:`validate_judge`, with Cattan et al.'s 0.89 as the bar).
+    On the zero-spend configuration it runs on open weights, so that validation
+    is load-bearing rather than a formality. The judge does not police that
+    itself -- it cannot know what a caller will do with its output -- so
+    :class:`PreservationScores` records that judging was used and
+    :meth:`PreservationScores.render` says so beside every number.
     """
     if client is not None:
-        raise NotImplementedError(
-            "the LLM judge path is not implemented. Use the structural path by "
-            "passing predicted_branches, or the textual path. A judge must be "
-            "validated against human labels before its numbers are reported "
-            "(proposal 6.1), so it is deliberately not reachable by default."
-        )
+        return _judge_with_llm(system_output, gold_branches, client=client,
+                               tier=tier)
 
     if predicted_branches is not None:
         result = align(gold_branches, predicted_branches, nli=nli)
@@ -190,11 +213,77 @@ def judge_branches(
     return out
 
 
+_JUDGE_SYSTEM = """You check whether an answer preserves a specific claim.
+
+You are given an ANSWER and one CLAIM that a correct answer should contain.
+Decide which of these the answer does with the claim:
+
+- preserved: the answer states the claim, in any wording. A paraphrase counts.
+- distorted: the answer addresses the claim but gets it wrong -- a different
+  figure, the opposite outcome, or the right outcome attached to the wrong
+  group.
+- suppressed: the answer does not address the claim at all.
+
+Judge only what the answer says. An answer that is correct about other things
+still suppresses a claim it omits.
+
+Return JSON: {"judgement": "preserved" | "distorted" | "suppressed"}"""
+
+
+def _judge_with_llm(
+    system_output: str,
+    gold_branches: list[Branch],
+    *,
+    client,
+    tier: Tier = Tier.JUDGE,
+) -> list[BranchJudgement]:
+    """One call per gold branch.
+
+    Per branch rather than per answer because asking for several judgements in
+    one reply invites the model to spread them -- to decide two are preserved
+    and one is not because that feels like a balanced answer. Each claim is
+    judged against the answer on its own.
+
+    An unparseable or failed reply becomes SUPPRESSED, not PRESERVED. The
+    conservative direction matters: a judge that returns `preserved` on error
+    inflates the headline metric exactly when something has gone wrong, and
+    nothing downstream would show it.
+    """
+    out: list[BranchJudgement] = []
+    for b in gold_branches:
+        scope = ("all cases" if b.is_default
+                 else (b.applicability.descriptor or b.condition or "certain cases"))
+        claim = f"For {scope}: {b.outcome}"
+        try:
+            result = client.complete(
+                messages=[{"role": "user", "content":
+                           f"ANSWER:\n{system_output}\n\nCLAIM:\n{claim}"}],
+                system=_JUDGE_SYSTEM,
+                tier=tier,
+                step="metric_judge",
+                response_format={"type": "json_object"},
+                temperature=0.0,
+            )
+            raw = result.json() or {}
+            label = str(raw.get("judgement", "")).strip().lower()
+        except Exception:
+            label = ""
+
+        if label.startswith("preserv"):
+            out.append(BranchJudgement.PRESERVED)
+        elif label.startswith("distort"):
+            out.append(BranchJudgement.DISTORTED)
+        else:
+            out.append(BranchJudgement.SUPPRESSED)
+    return out
+
+
 def score_preservation(
     system_outputs: list,
     gold_instances: list[GoldInstance],
     *,
     nli=None,
+    client=None,
 ) -> PreservationScores:
     """Compute PR / SR / HCR / SCR over a run.
 
@@ -220,7 +309,12 @@ def score_preservation(
         bucket = per_tier.setdefault(gold.construction.value, PreservationScores())
         text, predicted = _unpack(out)
         judgements = judge_branches(
-            text, gold.gold_branches, predicted_branches=predicted, nli=nli)
+            text, gold.gold_branches,
+            predicted_branches=(None if client else predicted),
+            nli=nli, client=client)
+        overall.judged_by = bucket.judged_by = (
+            "llm_judge" if client else
+            "structural" if predicted is not None else "textual")
 
         known = {p.id for p in gold.passages}
         hallucinated = _count_hallucinated(predicted, known)

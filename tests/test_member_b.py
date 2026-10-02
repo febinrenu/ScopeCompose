@@ -421,12 +421,38 @@ def test_scr_has_no_denominator_without_distractors():
     assert scores.spurious_condition_rate == 0.0
 
 
-def test_the_llm_judge_path_refuses_rather_than_silently_substituting():
-    """Proposal 6.1 requires the judge validated against human labels before
-    its numbers are reported. An unvalidated judge that quietly works would get
-    used."""
-    with pytest.raises(NotImplementedError, match="validated against human labels"):
-        judge_branches("text", [], client=object())
+def test_a_judged_score_announces_itself():
+    """Updated deliberately: the judge is now implemented.
+
+    The earlier version asserted the path raised, which was right while nothing
+    could validate it. Proposal 6.1 still requires validation against human
+    labels before judged numbers are reported -- but a judge cannot police what
+    a caller does with its output, so the guard moved to provenance. Every
+    result records how it was judged, and the renderer says so beside the
+    numbers rather than leaving a reader to assume they are structural.
+    """
+    from metrics.preservation import PreservationScores
+
+    s = PreservationScores(gold_branches=4, preserved=4, instances=2,
+                           judged_by="llm_judge")
+    out = s.render()
+    assert "llm_judge" in out
+    assert "validated against human labels" in out
+    assert s.as_dict()["judged_by"] == "llm_judge"
+
+
+def test_a_failed_judge_call_suppresses_rather_than_preserves():
+    """The conservative direction. A judge returning `preserved` on error
+    inflates the headline metric exactly when something has gone wrong, and
+    nothing downstream would show it."""
+    class Boom:
+        def complete(self, **kw):
+            raise RuntimeError("api down")
+
+    gold = [_branch("b0", "a 3% fee applies", default=True),
+            _branch("b1", "no fee applies", source="p1")]
+    got = judge_branches("some answer", gold, client=Boom())
+    assert all(j is BranchJudgement.SUPPRESSED for j in got)
 
 
 def test_judge_validation_reports_agreement_and_ranking_correlation():

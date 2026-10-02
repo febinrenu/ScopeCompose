@@ -31,8 +31,23 @@ the central architectural claim is falsified.
 
   | Tier | Definition | Count |
   |---|---|---|
-  | Tier 1 `natural` | rule and exception in separately retrievable documents | TBD |
-  | Tier 2 `split` | single-document pair split across two synthetic documents | TBD |
+  | Tier 1 `natural` | rule and exception in separately retrievable documents | **59** |
+  | Tier 2 `split` | single-document pair split across two synthetic documents | **54** |
+  | Same-guide | two URLs of one underlying guide; real retrieval separation, no authored split | **15** |
+  | **Total** | | **128** |
+
+  Of these, **67** are conditional and **61** are distractors.
+
+  *Generated, not typed:*
+  `python -m benchmark.corpus_plan --data benchmark/data/corpus.jsonl --datasheet`
+  Regenerate after every annotation round. A hand-kept count is the thing most
+  likely to drift from the corpus it describes, silently, between the last edit
+  and submission.
+
+  The third row did not exist when this datasheet was written. The WP1 pilot
+  found a pair can be separately *retrievable* without being separately
+  *published* -- two URLs of one gov.uk guide -- and folding that into either
+  tier misstates the claim in one direction or the other.
 
   Tier 2 is legitimate and isolates the resolution-operator question from the
   mining question, but it is **not** evidence of natural multi-source

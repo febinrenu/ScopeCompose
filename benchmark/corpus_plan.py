@@ -231,6 +231,44 @@ def measure(instances: list[GoldInstance]) -> CorpusProgress:
     return p
 
 
+def datasheet_table(instances: list[GoldInstance]) -> str:
+    """The composition table for ``benchmark/datasheet.md``.
+
+    Generated rather than typed, because the datasheet's own instruction is
+    "fill in, do not blend" -- and a hand-maintained count is the thing most
+    likely to drift from the corpus it describes, silently, between the last
+    edit and submission.
+
+    Three rows, not two. The datasheet was written before the WP1 pilot found
+    that a pair can be separately retrievable without being separately
+    published, and folding same-guide into either tier misstates the claim in
+    one direction or the other.
+    """
+    p = measure(instances)
+    rows = [
+        ("Tier 1 `natural`", "rule and exception in separately retrievable documents",
+         p.by_row.get(ROW_NAMES[Separation.CROSS_DOCUMENT], 0)),
+        ("Tier 2 `split`", "single-document pair split across two synthetic documents",
+         p.by_row.get(ROW_NAMES[Separation.SYNTHETIC_SPLIT], 0)),
+        ("Same-guide", "two URLs of one underlying guide; real retrieval separation, "
+                       "no authored split",
+         p.by_row.get(ROW_NAMES[Separation.SAME_GUIDE], 0)),
+    ]
+    lines = ["  | Tier | Definition | Count |", "  |---|---|---|"]
+    for name, defn, n in rows:
+        lines.append(f"  | {name} | {defn} | **{n}** |")
+    lines.append(f"  | **Total** | | **{p.total}** |")
+
+    conditional = sum(1 for i in instances
+                      if i.gold_conflict_type is ConflictType.CONDITIONAL)
+    lines += [
+        "",
+        f"  Of these, **{conditional}** are conditional and "
+        f"**{p.total - conditional}** are distractors.",
+    ]
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
     import json
@@ -240,6 +278,8 @@ def main(argv: list[str] | None = None) -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", type=Path, default=None,
                     help="JSONL of gold instances; omit to print the plan alone")
+    ap.add_argument("--datasheet", action="store_true",
+                    help="print the composition table for benchmark/datasheet.md")
     args = ap.parse_args(argv)
 
     if args.data is None:
@@ -258,6 +298,9 @@ def main(argv: list[str] | None = None) -> int:
         line = line.strip()
         if line:
             instances.append(GoldInstance.model_validate(json.loads(line)))
+    if args.datasheet:
+        print(datasheet_table(instances))
+        return 0
     print(measure(instances).render())
     return 0
 

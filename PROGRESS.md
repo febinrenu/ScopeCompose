@@ -11,6 +11,84 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-10-02 - Everything buildable is built. 501 tests.
+
+Four gaps closed. The repo now holds every component the proposal specifies;
+what remains is annotation and runs.
+
+**1. `experiments/wp1_probe/` -- Member B's gating experiment.** The directory
+held only a README, so B1 was a method with no evidence it worked.
+
+- `baseline.py` -- direct zero-shot extraction, the ConditionalQA-style
+  comparison. Deliberately not a straw man: same passages, same model, a
+  competent prompt. The probe's claim is that asking *contrastively* recovers
+  what a direct ask misses, and that means nothing against a weakened baseline.
+- `run_probe.py` -- the go/no-go. Recall and HCR print in one block and never
+  separately, because the spec is explicit that a gain bought with fabrication
+  is not a success. `verdict()` either returns GO or names the agreed fallback,
+  so a negative result is a finding rather than a scramble.
+- Explicit and implicit recall are never averaged -- the average is dominated
+  by the easy half, and would let a method that does nothing for unmarked
+  conditions look like it works.
+- A corpus with no unmarked conditions returns "NO UNMARKED CONDITIONS IN THIS
+  DATA" rather than "no useful margin". Blaming the method for a property of
+  the data would be the wrong conclusion.
+
+**2. `detection/llm_nli.py`** -- API-backed entailment satisfying the NLI
+protocol, so the grounding gate can be scored either way. Built to be ablated
+against, not to replace the local scorer: the gate is the pipeline's
+highest-volume consumer and the cross-encoder is free per call. A failed API
+call scores NEUTRAL, never entailment -- the one direction a gate must not fail
+in. A missing index in a batched reply stays a gap rather than shifting later
+results into earlier slots, which would score each hypothesis against the wrong
+premise with nothing downstream to show it.
+
+**3. The LLM judge (proposal 6.1)** is implemented. It was deliberately
+unreachable while nothing could validate it; `validate_judge` and gold
+instances now exist. One call per gold branch rather than several per reply,
+which invites the model to spread its judgements. A failed call returns
+SUPPRESSED, not PRESERVED -- the conservative direction, since a judge that
+inflates the headline metric on error leaves no trace.
+
+The guard moved from blocking to provenance. A judge cannot police what a
+caller does with its output, so `PreservationScores.judged_by` records which of
+the three paths ran, and `render()` states the validation requirement beside
+every judged number.
+
+**4. Tier-2 construction and relation authoring.**
+
+- `split_constructor.py` turns a rule and its carve-out stated together into
+  two standalone passages -- the WP1 finding used in reverse. 256 splittable
+  sentences in the mined corpus. Three guards: every figure must appear in the
+  source, a half still opening with "except" means the cue merely moved rather
+  than the halves separating, and both halves must state an OUTCOME rather than
+  only a condition. That last one came from inspecting the first batch.
+- `relation_author.py` authors `redundant` and `opposed`, which nine pilots and
+  91 pairings never produced. Every candidate is verified against its own
+  definition using the same `compare` and `outcomes_match` the pipeline uses,
+  and a failure is discarded rather than relabelled -- relabelling would fill
+  the refinement bucket, already full, and leave these two empty.
+
+Building the author exposed a modelling error of mine: for `redundant` the
+general branch must be the DEFAULT. Giving both branches a categorical
+attribute makes them two single-valued sets, which `compare` correctly calls
+DISJOINT, and no redundant case could ever have verified.
+
+**Also:** datasheet tier counts are generated rather than typed
+(`corpus_plan --datasheet`), with a third row for same-guide that did not exist
+when the datasheet was written.
+
+**Two tests updated deliberately**, both having caught real changes: the judge
+no longer refuses, and the probe set is no longer unverified.
+
+**Next**
+- Annotation: `tier2_batch.jsonl` (44 remaining); the authored
+  redundant/opposed cases need the probe-set review treatment.
+- `run_probe --live` once enough instances carry branch structure.
+- Supervisor: the same-guide target needs ~250 pairings for 45 instances.
+
+---
+
 ### 2026-09-30 - Corpus at 128 of 300; Tier 1 done; kappa settled at p_e 0.54
 
 **Pilot 9 is the strongest measurement of the nine.** kappa = 1.000 on both

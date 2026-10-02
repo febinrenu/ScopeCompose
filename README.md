@@ -293,7 +293,11 @@ development iteration free instead of metered. Both are due end of Week 1.
 | `extraction/` **B1** | Contrastive Scope Probing + the grounding gate | DONE, **needs live run** |
 | `composition/` **B2** | composition operator, nested/crossed flagging | DONE |
 | `generation/` **B3** | scoped answer with per-branch attribution, faithfulness check | DONE |
-| `metrics/preservation.py` | PR / SR / HCR / SCR | DONE, **judge path deliberately unreachable** |
+| `metrics/preservation.py` | PR / SR / HCR / SCR, three judging paths with provenance | DONE |
+| `experiments/wp1_probe/` | **WP1 go/no-go.** Probe vs direct extraction, plus the gate-scorer ablation | DONE, **needs live run** |
+| `detection/llm_nli.py` | API-backed entailment, drop-in for the local cross-encoder | DONE |
+| `benchmark/mining/split_constructor.py` | Tier-2 construction: split a rule and its carve-out | DONE |
+| `benchmark/mining/relation_author.py` | author `redundant` / `opposed`, structurally verified | DONE, **needs human review** |
 
 Two of these currently produce fixture artifacts rather than results, and say
 so in their own output: the threshold curve saturates on templated data, and
