@@ -112,7 +112,17 @@ function renderHero(){
   if (defAt >= 0){ i0 = defAt; i1 = bs.findIndex((b, k) => k !== defAt); }
   const app = i => bs[i].def ? {def:true} : {def:false, at:bs[i].at};
   const setRel = compare(app(i0), app(i1));
-  const agree = bs[i0].out.trim().toLowerCase() === bs[i1].out.trim().toLowerCase();
+  // Determination 2. The pipeline asks an NLI scorer bidirectionally and
+  // averages; the browser cannot run that model. So where Python's verdict
+  // was recorded at build time (`oa`), use it, and say so. The lexical
+  // fallback is only for records that have no recorded verdict -- it
+  // disagrees with the real one on 3 of 39 instances, which is exactly why
+  // it must not be presented as the same thing.
+  const haveReal = typeof r.oa === "boolean";
+  const agree = haveReal
+    ? r.oa
+    : bs[i0].out.trim().toLowerCase() === bs[i1].out.trim().toLowerCase();
+  const agreeSource = haveReal ? "NLI, from the pipeline" : "lexical approximation";
   const [relation, why] = combine(setRel, agree);
   let [action, areason] = ROUTE[relation] || ["—", ""];
 
@@ -134,13 +144,14 @@ function renderHero(){
 
   $("#heroCalc").innerHTML =
       row("set relation", canonical + (canonical === REL.SUBSET ? "  (exception ⊂ default)" : ""))
-    + row("outcomes", agree ? "agree" : "disagree")
+    + row("outcomes", (agree ? "agree" : "disagree") + "   (" + agreeSource + ")")
     + row("scope relation", relation)
     + row("routes to", action + (multi ? "  (multi-exception flag)" : ""))
     + row("evidence", (bs[i0].at || bs[i1].at) ? "attributes (exact)" : "default branch")
     + row("default branch", bs[defIdx].id)
     + row("branches", bs.length)
-    + row("gold label", r.rel || "—");
+    + row("gold label", (r.rel || "—")
+        + (r.rel && r.rel !== relation ? "   ← the analyser disagrees" : ""));
   $("#heroRationale").textContent = why + ". Routing: " + areason + ".";
 
   // --- branches, and whether the reader falls inside each ---
@@ -497,11 +508,15 @@ if (!REDUCED && "IntersectionObserver" in window){
 
 (function navspy(){
   const links = $$("#nav a");
-  const secs = links.map(a => $(a.getAttribute("href"))).filter(Boolean);
+  // Route links ("#/bench") are not element ids, and passing one to
+  // querySelector throws -- which, at the top level of this script, took
+  // every feature below it down with it. Anchors only.
+  const anchors = links.filter(a => /^#[A-Za-z]/.test(a.getAttribute("href") || ""));
+  const secs = anchors.map(a => $(a.getAttribute("href"))).filter(Boolean);
   const io = new IntersectionObserver(es => {
     es.forEach(e => {
       if (!e.isIntersecting) return;
-      links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id));
+      anchors.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id));
     });
   }, {rootMargin:"-45% 0px -50% 0px"});
   secs.forEach(s => io.observe(s));

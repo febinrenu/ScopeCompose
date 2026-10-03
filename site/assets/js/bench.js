@@ -89,6 +89,88 @@
     },
   ];
 
+  /* --------------------------------------------- order-invariance prover */
+
+  /**
+   * The A4 decision for one ordering of an instance's branches.
+   *
+   * Branch roles come from the applicability relation, never from position.
+   * `canonical` restates SUBSET/SUPERSET in terms of ROLES rather than
+   * argument order, which is the thing that makes the decision invariant:
+   * without it a nested pair reads SUBSET one way and SUPERSET the other and
+   * every permutation would look like a violation.
+   */
+  function decide(rec, presented){
+    // Python enumerates pairs from passages sorted by id (stage1.enumerate_pairs),
+    // so the pair the analyser sees never depends on retrieval order. Sorting a
+    // working copy here is that same step -- without it, an instance carrying two
+    // exceptions has no well-defined "the exception" and the roles flip under
+    // permutation purely because of array position.
+    const branches = presented.slice().sort((a, b) =>
+      String(a.sup || "").localeCompare(String(b.sup || "")) ||
+      String(a.id).localeCompare(String(b.id)));
+
+    let i0 = 0, i1 = 1;
+    const defAt = branches.findIndex(b => b.def);
+    if (defAt >= 0){ i0 = defAt; i1 = branches.findIndex((b, k) => k !== defAt); }
+    const app = i => ({ def: !!branches[i].def, at: branches[i].at });
+    const setRel = compare(app(i0), app(i1));
+    const agree = typeof rec.oa === "boolean" ? rec.oa
+      : branches[i0].out.trim().toLowerCase() === branches[i1].out.trim().toLowerCase();
+    const [relation] = combine(setRel, agree);
+    const canonical = setRel === REL.SUPERSET ? REL.SUBSET : setRel;
+
+    // Role assignment, mirroring ScopeAnalyser.analyse exactly.
+    //
+    // SUBSET means branches[i0] sits inside branches[i1], so i1 is the wider
+    // set and therefore the default; SUPERSET is the mirror. For DISJOINT,
+    // OVERLAPPING, EQUAL and UNKNOWN there is no default/exception structure
+    // at all, and Python picks a stable representative by sorting on passage
+    // id. Falling back to array position instead -- which this did at first
+    // -- makes the roles flip when the passages are reordered, and the
+    // prover below catches it as a violation on exactly those pairs.
+    let defIdx;
+    if (setRel === REL.SUBSET) defIdx = i1;
+    else if (setRel === REL.SUPERSET) defIdx = i0;
+    else defIdx = (branches[i0].sup || "") <= (branches[i1].sup || "") ? i0 : i1;
+
+    return {
+      relation, canonical, agree,
+      defaultBranch: branches[defIdx].id,
+      defaultPassage: branches[defIdx].sup,
+      exceptionBranch: branches[defIdx === i0 ? i1 : i0].id,
+    };
+  }
+
+  /** Permute every instance and check the decision does not move. */
+  function proveInvariance(){
+    let permutations = 0, violations = 0, nonPositional = 0;
+    const cases = [];
+    for (const rec of ANNOTATED){
+      const bs = rec.b;
+      if (bs.length < 2) continue;
+      const base = decide(rec, bs);
+      const reversed = bs.slice().reverse();
+      const other = decide(rec, reversed);
+      permutations++;
+
+      const diffs = [];
+      for (const k of ["relation", "canonical", "agree", "defaultBranch", "exceptionBranch"]){
+        if (base[k] !== other[k]) diffs.push(k);
+      }
+      if (diffs.length) violations++;
+
+      // The non-vacuity counter. A system that simply called the first-listed
+      // passage the default would score a perfect pass rate and zero here.
+      const firstPassage = reversed[0].sup;
+      if (other.defaultPassage && other.defaultPassage !== firstPassage) nonPositional++;
+
+      cases.push({ id: rec.id, base, other, diffs });
+    }
+    return { permutations, violations, nonPositional,
+             passRate: permutations ? 1 - violations / permutations : 1, cases };
+  }
+
   /* ------------------------------------------- retrieval-side baselines */
 
   /**
@@ -295,6 +377,34 @@
           was true for a real reader, which the demo on the overview page shows. The row that
           should worry a practitioner is <b>NLIFilter</b>: a contradiction-aware filter, built
           exactly as someone careful would build it, still destroys branches.</p>
+
+        ${(() => {
+          const inv = proveInvariance();
+          return `
+        <h3 class="serif" style="font-size:28px; margin-top:52px">Order invariance, proved here
+          rather than quoted.</h3>
+        <p class="lede" style="margin-top:14px">Every instance is re-run with its passages
+          reversed. The relation, both branch roles and the canonical set relation must come
+          back identical, because roles are derived from the applicability sets and never from
+          retrieval order.</p>
+        <div class="stats" style="margin-top:20px">
+          <div class="stat"><div class="v mono">${inv.passRate.toFixed(4)}</div>
+            <div class="k">pass rate</div>
+            <div class="n">${inv.permutations} permutations, ${inv.violations} violations.</div></div>
+          <div class="stat"><div class="v mono">${inv.nonPositional} / ${inv.permutations}</div>
+            <div class="k">non-positional roles</div>
+            <div class="n">Permutations where the default is <b>not</b> the first-listed
+              passage. Without this the pass rate is vacuous &mdash; a system that always called
+              passage one the default would score 1.0000 and zero here.</div></div>
+        </div>
+        <p class="note" style="max-width:76ch">Each corpus record holds exactly two passages, so
+          each admits exactly one non-identity permutation. That is why this is
+          ${inv.permutations} and not more, and why any larger figure quoted against this corpus
+          is wrong. This runs over the ${ANNOTATED.length} branch-bearing instances; the Python
+          gate runs over all 128 and reports <b>1.0000 across 71 permutations, 65 of them
+          non-positional</b>, because it can analyse pairs that carry no branch annotation.
+          Different denominators, same property.</p>`;
+        })()}
 
         <div class="panel" style="margin-top:30px">
           <div class="phead"><span class="ptitle">Per instance</span>

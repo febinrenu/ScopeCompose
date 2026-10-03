@@ -1385,7 +1385,7 @@ All six items from the completeness audit. Four of them surfaced real bugs.
 | Check | Result |
 |---|---|
 | Test suite | **246 passed** |
-| Order-invariance gate | **PASS, 1.0000**, 66/72 non-positional |
+| Order-invariance gate | **PASS, 1.0000**, 65/71 non-positional |
 | Typed-attribute rate (live) | **82%** on representative passages |
 | Baseline branch loss | rerank_top1 **55.4%**, nli_filter **15.8%**, standard_rag 0% |
 | Three-variant comparison | lexical_nli 0.988 acc, combined leak 0.010; other two flagged DEGENERATE |
@@ -1596,7 +1596,7 @@ makes re-runs free, so the number above is for a cold run only.
 | Mock determinism (same seed, two runs) | byte-identical SHA-256 |
 | Mock coverage at n=30 | all 5 conflict types, all 4 scope relations, nested + crossed, explicit + implicit |
 | Contract validation of generated records | 60/60 valid |
-| **`scope.order_invariance --sample 60`** | **PASS, 1.0000, 66/72 non-positional roles** |
+| **`scope.order_invariance --sample 128`** | **PASS, 1.0000, 71 permutations, 65/71 non-positional roles** |
 | `detection.variants.compare` | runs, emits the three-variant table |
 | `experiments.run_pipeline --evaluate` | runs A1→A4, emits a valid record and all scorers |
 | `benchmark.mining.tier1_pilot --demo` | runs, produces a yield-based recommendation |

@@ -85,6 +85,32 @@ def _passage(p: dict) -> dict:
     return out
 
 
+def _outcomes_agree(instances: list[dict]) -> dict[str, bool]:
+    """Python's real outcome verdict, per two-branch instance.
+
+    The second of the two determinations behind the four-way relation, and
+    the browser cannot compute it: ``ScopeAnalyser.outcomes_agree`` asks an
+    NLI scorer, bidirectionally, and averages. A lexical equality test is not
+    the same function -- it disagrees on 3 of the 39 two-branch instances --
+    so shipping Python's answer is the difference between the page showing
+    what the pipeline decided and the page showing a guess that usually
+    matches.
+    """
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from scope.relation import ScopeAnalyser
+
+    analyser = ScopeAnalyser(heuristic_nli=True)
+    out = {}
+    for row in instances:
+        branches = row.get("gold_branches") or []
+        if len(branches) != 2:
+            continue
+        agree, _ = analyser.outcomes_agree(branches[0]["outcome"], branches[1]["outcome"])
+        out[row["instance_id"]] = bool(agree)
+    return out
+
+
 def _provenance(annotation: dict) -> str:
     """Two classes of evidence, which the paper must never pool.
 
@@ -101,11 +127,12 @@ def build() -> list[dict]:
     if not SOURCE.exists():
         raise SystemExit(f"corpus not found: {SOURCE}")
 
+    rows = [json.loads(line) for line in SOURCE.read_text(encoding="utf-8").splitlines()
+            if line.strip()]
+    agree_by_id = _outcomes_agree(rows)
+
     records = []
-    for line in SOURCE.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        row = json.loads(line)
+    for row in rows:
         rec = {
             "id": row["instance_id"], "q": row["query"], "dom": row["domain"],
             "con": row["construction"], "sep": row.get("separation"),
@@ -116,6 +143,9 @@ def build() -> list[dict]:
         }
         if row.get("gold_branches"):
             rec["b"] = [_branch(b) for b in row["gold_branches"]]
+        if row["instance_id"] in agree_by_id:
+            # Python's NLI verdict, not a lexical stand-in. See _outcomes_agree.
+            rec["oa"] = agree_by_id[row["instance_id"]]
         if row.get("gold_scoped_answer"):
             rec["sa"] = row["gold_scoped_answer"]
         if row.get("selection_answer"):
