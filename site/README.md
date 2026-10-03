@@ -9,6 +9,7 @@ site/
   favicon.svg
   assets/css/styles.css
   assets/js/engines.js           pure logic, ported from Python
+  assets/js/motion.js            WebGL field, reveals, cursor, intro
   assets/js/app.js               DOM wiring
   data/corpus.js                 generated — what the page loads
   data/corpus.json               generated — the same records as plain JSON
@@ -83,6 +84,37 @@ publish step, which is harmless.
 **The site reproduces unpublished results.** Enabling Pages makes the corpus,
 the findings and the decisive experiment publicly readable. That is a decision
 to take deliberately with a supervisor, not a side effect of a push.
+
+## The motion layer
+
+`assets/js/motion.js` carries the WebGL field, the word reveals, the cursor
+and the intro. Three rules it does not break:
+
+- **Native scrolling is never intercepted.** No scroll-jacking, nothing
+  pinned, no smoothing library. On a high-refresh display the browser's own
+  scrolling is smoother than anything that replaces it, and every scroll
+  handler here is passive and writes a custom property rather than reading
+  layout.
+- **GPU or nothing.** The field is one fullscreen fragment shader at a capped
+  1.5x DPR, paused by `IntersectionObserver` the moment it leaves view.
+  Everything else is `transform` and `opacity`.
+- **The field means something.** The two regions are the two applicability
+  sets. Their centres and radii come from whatever `compare()` returned for
+  the pair on screen, and the contour drawn through each is the applicability
+  boundary. Change the instance in the hero and the geometry changes with it.
+
+If WebGL is unavailable, `app.js` falls back to a 2D canvas. `<html>` carries
+`gl` or `no-gl` so which path ran is observable rather than guessed.
+
+**The intro veil is fail-safe.** It is lifted by JavaScript adding `.ready`,
+but a CSS animation drops it at 2.8s regardless. A veil that depends solely on
+a script is a permanently blank page the first time that script fails, which
+is not a risk worth taking with a page shown to an audience.
+
+> Verifying this with headless Chrome is limited: screenshots there do not
+> advance CSS transitions, and WebGL is not composited into them at all. The
+> engine output was checked instead by reading pixels back out of the GL
+> framebuffer, and the reveal and layout behaviour through DOM assertions.
 
 ## Conventions
 

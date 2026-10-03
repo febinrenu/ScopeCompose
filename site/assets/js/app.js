@@ -221,6 +221,9 @@ let target = {ax:.38, ar:.23, bx:.52, br:.12}, cur = Object.assign({}, target);
 let dots = [], running = false, dpr = 1;
 
 function paintField(setRel, inside){
+  // motion.js owns the field when WebGL is available; this 2D path is the
+  // fallback for contexts that cannot give us a GL context.
+  if (window.SCField) window.SCField.setRelation(setRel);
   if (setRel === REL.DISJOINT)         target = {ax:.30, ar:.17, bx:.70, br:.17};
   else if (setRel === REL.OVERLAPPING) target = {ax:.42, ar:.21, bx:.60, br:.21};
   else if (setRel === REL.EQUAL)       target = {ax:.50, ar:.21, bx:.50, br:.21};
@@ -250,7 +253,7 @@ function blob(x, y, r, col){
   g.addColorStop(0, col + "38"); g.addColorStop(0.62, col + "18"); g.addColorStop(1, col + "00");
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
 }
-if (!REDUCED){
+if (!REDUCED && !window.__SC_GL){
   sizeField();
   addEventListener("resize", sizeField, {passive:true});
   new IntersectionObserver(es => {
@@ -502,6 +505,30 @@ if (!REDUCED && "IntersectionObserver" in window){
     });
   }, {rootMargin:"-45% 0px -50% 0px"});
   secs.forEach(s => io.observe(s));
+})();
+
+/* ======================================================================
+   Marquee. Figures only, read from the corpus -- it is a readout, not
+   decoration, so it says nothing the rest of the page does not.
+   ====================================================================== */
+(function marquee(){
+  const host = $("#marquee");
+  if (!host) return;
+  const rel = countBy("rel"), ty = countBy("ty"), sep = countBy("sep");
+  const branchy = CORPUS.filter(r => (r.b || []).length).length;
+  const nBranch = CORPUS.reduce((s, r) => s + (r.b || []).length, 0);
+  const items = [
+    [CORPUS.length, "instances"], [ty.conditional || 0, "conditional conflicts"],
+    [rel.refinement || 0, "refinement"], [rel.disjoint || 0, "disjoint"],
+    [rel.redundant || 0, "redundant"], [rel.opposed || 0, "opposed"],
+    [sep.cross_document || 0, "cross-document"], [branchy, "with branch structure"],
+    [nBranch, "gold branches"], ["1.0000", "order invariance, 47 permutations"],
+    ["0.34", "candidates per pairing"], ["29→80%", "distinct after re-pairing"],
+    ["518", "tests passing"], ["κ 1.000", "n = 39, p_e = 0.540"],
+    ["−12.5%", "decisive difference, interval spans zero"],
+  ];
+  const html = items.map(([v, k]) => "<span><b>" + v + "</b>" + k + "</span>").join("");
+  host.innerHTML = html + html;    // doubled: the -50% keyframe seams exactly
 })();
 
 /* ---- boot ---- */

@@ -337,3 +337,161 @@ footer{padding:48px 0 70px; border-top:1px solid var(--line); color:var(--muted)
   .js .rv{opacity:1; transform:none}
   .bslot.collapsed{display:none}
 }
+
+/* ==========================================================================
+   MOTION LAYER
+   Everything below animates transform or opacity only. Nothing is pinned to
+   the scroll and native scrolling is never intercepted.
+   ========================================================================== */
+
+/* No content-visibility here on purpose. It does cut paint cost, but the
+   reserved intrinsic size never matches the real section height, so the
+   scrollbar resizes as sections render and the scroll position drifts under
+   the pointer. On a page this size the paint saving is not worth buying
+   scroll jank with. */
+
+/* ---- intro veil ---- */
+#veil{
+  position:fixed; inset:0; z-index:200; background:var(--ground);
+  display:grid; place-items:center; pointer-events:none;
+  transition:opacity .7s ease .15s, visibility .7s step-end .15s;
+  /* Fail-safe. The veil is lifted by JS adding .ready, but if the script
+     never runs -- blocked, erroring, fonts hanging -- an un-lifted veil is a
+     permanently blank page. This drops it regardless, so the worst case is a
+     slightly late reveal rather than a black screen in front of an audience. */
+  animation:veil-failsafe .4s linear 2.8s forwards;
+}
+@keyframes veil-failsafe{ to{ opacity:0; visibility:hidden } }
+.ready #veil{opacity:0; visibility:hidden; animation:none}
+#veil .vmark{
+  width:58px; height:58px; position:relative;
+  animation:vspin 1.5s cubic-bezier(.65,0,.35,1) infinite;
+}
+#veil .vmark i{
+  position:absolute; border-radius:50%; border:1px solid var(--field-a);
+  inset:0; opacity:.85;
+}
+#veil .vmark i:last-child{
+  inset:30% 8% 30% 46%; border-color:var(--field-b); background:var(--delete-bg);
+}
+@keyframes vspin{
+  0%{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(180deg) scale(.82)}
+  100%{transform:rotate(360deg) scale(1)}
+}
+
+/* ---- word masks ---- */
+.msk{display:inline-block; overflow:hidden; vertical-align:bottom; padding-bottom:.06em}
+.msk-i{
+  display:inline-block; transform:translate3d(0,110%,0);
+  transition:transform .95s cubic-bezier(.16,1,.3,1);
+}
+.shown .msk-i{transform:translate3d(0,0,0)}
+/* the hero holds until the veil lifts, so the two are one gesture */
+.js #hero [data-split] .msk-i{transition-delay:0ms}
+.js.ready #hero [data-split].shown .msk-i{transition-delay:inherit}
+html:not(.js) .msk-i{transform:none}
+.no-intro .msk-i{transform:none !important}
+
+/* ---- hero scale: let it actually dominate ---- */
+h1.serif{font-size:clamp(52px,10.2vw,132px); line-height:.92; letter-spacing:-.034em}
+#hero{padding-top:148px; padding-bottom:96px; min-height:92vh}
+#field{opacity:1}
+h2.serif{font-size:clamp(36px,6.1vw,70px); letter-spacing:-.022em; line-height:1.0}
+
+/* a thin rule that draws itself as the section arrives */
+.eyebrow::after{transform:scaleX(0); transform-origin:left;
+  transition:transform 1.05s cubic-bezier(.16,1,.3,1) .1s}
+.rv.in .eyebrow::after,.eyebrow.shown::after{transform:scaleX(1)}
+
+/* ---- cursor ---- */
+@media (pointer:fine){
+  body.has-cur{cursor:none}
+  body.has-cur a,body.has-cur button,body.has-cur select,
+  body.has-cur input,body.has-cur .row,body.has-cur .stage{cursor:none}
+  .cur-dot,.cur-ring{
+    position:fixed; left:0; top:0; z-index:150; pointer-events:none;
+    opacity:0; transition:opacity .25s ease;
+  }
+  .has-cur .cur-dot,.has-cur .cur-ring{opacity:1}
+  .cur-dot{width:5px; height:5px; border-radius:50%; background:var(--field-a)}
+  .cur-ring{
+    width:30px; height:30px; border-radius:50%; border:1px solid var(--line-2);
+    display:grid; place-items:center;
+    transition:width .32s cubic-bezier(.16,1,.3,1), height .32s cubic-bezier(.16,1,.3,1),
+               border-color .3s ease, background .3s ease, opacity .25s ease;
+  }
+  .cur-ring.big{width:58px; height:58px; border-color:var(--field-a);
+                background:color-mix(in srgb, var(--field-a) 11%, transparent)}
+  .cur-ring.down{width:21px; height:21px}
+  .cur-lab{
+    font-family:"JetBrains Mono",monospace; font-size:8.5px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--field-a); opacity:0; transition:opacity .2s;
+    white-space:nowrap;
+  }
+  .cur-ring.big .cur-lab{opacity:1}
+}
+
+/* ---- interactive affordances ---- */
+.cell{position:relative; overflow:hidden}
+.cell::before{
+  content:""; position:absolute; inset:0; background:var(--field-a); opacity:0;
+  transform:scaleY(0); transform-origin:bottom;
+  transition:transform .5s cubic-bezier(.16,1,.3,1), opacity .5s ease;
+}
+@media (pointer:fine){
+  .cell:hover::before{opacity:.055; transform:scaleY(1)}
+  .cell:hover .rel{transform:translate3d(6px,0,0)}
+}
+.cell .rel{transition:transform .45s cubic-bezier(.16,1,.3,1)}
+
+.row{position:relative}
+.row::after{
+  content:""; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background:var(--field-a); transform:scaleY(0); transform-origin:top;
+  transition:transform .4s cubic-bezier(.16,1,.3,1);
+}
+.row:hover::after{transform:scaleY(1)}
+
+.bar nav a{position:relative}
+.bar nav a::after{
+  content:""; position:absolute; left:10px; right:10px; bottom:3px; height:1px;
+  background:var(--field-a); transform:scaleX(0); transform-origin:right;
+  transition:transform .4s cubic-bezier(.16,1,.3,1);
+}
+.bar nav a:hover::after,.bar nav a.on::after{transform:scaleX(1); transform-origin:left}
+
+.seg button,.tog{transition:transform .3s cubic-bezier(.16,1,.3,1),
+                            background .16s, color .16s, border-color .18s}
+
+/* ---- marquee: corpus facts, not filler ---- */
+.marq{
+  overflow:hidden; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  padding:15px 0; background:var(--sunk);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);
+}
+.marq-t{display:flex; width:max-content; animation:marq 46s linear infinite}
+.marq:hover .marq-t{animation-play-state:paused}
+.marq-t span{
+  display:inline-flex; align-items:center; gap:13px; padding:0 26px; white-space:nowrap;
+  font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--muted);
+  letter-spacing:.04em;
+}
+.marq-t span b{color:var(--ink); font-weight:500; font-size:14px}
+.marq-t span::after{content:""; width:3px; height:3px; border-radius:50%;
+                    background:var(--field-a); opacity:.6; margin-left:13px}
+@keyframes marq{from{transform:translate3d(0,0,0)} to{transform:translate3d(-50%,0,0)}}
+
+/* ---- stat cards lift ---- */
+.stat{transition:background .3s ease}
+@media (pointer:fine){ .stat:hover{background:var(--sunk)} }
+
+@media (prefers-reduced-motion: reduce){
+  .msk-i{transform:none !important}
+  .marq-t{animation:none}
+  #veil{display:none}
+  .eyebrow::after{transform:scaleX(1)}
+  .cur-dot,.cur-ring{display:none}
+  body.has-cur{cursor:auto}
+}
