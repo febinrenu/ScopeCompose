@@ -77,7 +77,14 @@ OPINION_CUES: tuple[str, ...] = (
 )
 
 _NUM_RE = re.compile(r"\d+(?:[.,]\d+)?\s*%?")
-_YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
+#: The group is NON-capturing, and that is the whole point of this comment.
+#: With a capturing ``(19|20)``, ``findall`` returns the GROUP rather than the
+#: match, so every year collapsed to the string "19" or "20" and
+#: ``year_clash`` could not tell 2019 from 2024. It only ever fired across the
+#: century boundary, which no real policy pair crosses -- the feature was
+#: silently dead on all 128 corpus instances. Regression test:
+#: tests/test_features.py::test_year_clash_distinguishes_years_in_one_century
+_YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
 _MODAL_RE = re.compile(r"\b(may|must|shall|can|cannot|will not|won't|should)\b", re.I)
 _WORD_RE = re.compile(r"[a-z']+")
 

@@ -48,14 +48,11 @@ const EXCEPTION_CUES = STRONG_EXCEPTION_CUES.concat(WEAK_CONDITION_CUES);
 
 const _F_NUM_RE = /\d+(?:[.,]\d+)?\s*%?/g;
 
-// NOT a typo, and not worth "fixing" here. Python's pattern is
-// `\b(19|20)\d{2}\b` with a CAPTURING group, and re.findall returns the
-// group rather than the whole match -- so every 20xx year collapses to the
-// string "20" and two different years in the same century never clash.
-// features.py's year_clash is therefore almost always 0. This port
-// reproduces that, because the site's job is to show what the pipeline
-// actually does, not a tidied-up version of it.
-const _F_YEAR_RE = /\b(19|20)\d{2}\b/g;
+// Non-capturing, matching features.py. This port originally reproduced a
+// capturing group there, under which re.findall returned "19"/"20" rather
+// than the year and year_clash could not tell 2019 from 2024 -- dead on all
+// 128 corpus instances. The Python has since been fixed, so this follows.
+const _F_YEAR_RE = /\b(?:19|20)\d{2}\b/g;
 const _F_MODAL_RE = /\b(may|must|shall|can|cannot|will not|won't|should)\b/gi;
 const _F_WORD_RE = /[a-z']+/g;
 
@@ -75,11 +72,8 @@ function _numSet(text){
   return out;
 }
 
-/** Python's findall returns the capturing group -- see _F_YEAR_RE above. */
 function _yearSet(text){
-  const out = new Set();
-  for (const m of String(text || "").matchAll(_F_YEAR_RE)) out.add(m[1]);
-  return out;
+  return new Set(String(text || "").match(_F_YEAR_RE) || []);
 }
 
 function _setsEqual(a, b){

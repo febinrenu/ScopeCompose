@@ -8,6 +8,13 @@ Every component the proposal specifies exists and is tested. No experiment has
 run on real data at a size that could support a conclusion. That is the gap,
 and it is not a gap more engineering closes.
 
+> **Superseded in part, 2026-10-03.** A stage-level measurement has since been
+> taken over all 42 annotated instances, and it locates the gap precisely: the
+> operator preserves 0.976 given a conflict, the detector finds 0 of 42, and
+> Preservation Rate turns out to be gameable by verbosity. See the addendum
+> before the critical path, and `docs/detector_operator_gap.md`. The headline
+> above is still right that more engineering on the *operator* closes nothing.
+
 ---
 
 ## Fixed in this pass
@@ -82,8 +89,10 @@ and at 12 instances it never could have been.
 137+ instances per the table above. Decide with the supervisor *before* the
 number arrives what the paper says if it stays negative — §6.5 already commits
 to reporting that as prominently as a positive, and a measured null on a
-well-specified claim, with a benchmark and validated metric suite as the
-contribution, is a publishable paper. Deciding after the number arrives is how
+well-specified claim, with a benchmark and metric suite as the contribution,
+is a publishable paper. (The suite is **not** validated — the LLM judge has
+never been run against human labels, and PR needs a precision term before it
+can adjudicate a PR table at all. See the addendum.) Deciding after the number arrives is how
 a project ends up quietly dropping a component.
 
 ### 4. The headline metrics have a 42-instance denominator
@@ -150,6 +159,18 @@ Tier-1 scarcity, the same-guide category, the deterministic scorer standing in
 for a validated judge, two domains, UK-only, English-only, first-order
 conflicts only.
 
+Four more, added 2026-10-03 and each with a number attached:
+
+- **Detection recall is 0.064.** The end-to-end claim cannot be tested on this
+  detector at any corpus size. State it as a limitation, not a footnote.
+- **Preservation Rate has no precision term** and is maximised by verbosity;
+  concatenation scores 0.855 against the gold answer's 0.699.
+- **Every branch-scored number is measured on 42 authored synthetic splits.**
+  Zero mined instances carry branch annotation, so none of the branch metrics
+  has yet been computed on the cross-document case the project is about.
+- **The one decisive run straddles all three splits** and is majority test
+  data. It is exploratory.
+
 ### 10. The LLM judge is implemented but unvalidated
 
 `validate_judge` exists and `judge_branches` now has a client path. The
@@ -184,18 +205,60 @@ the repository.
 
 ---
 
+## Addendum, 2026-10-03 — the gap is not where this audit assumed
+
+Running every stage over all 42 annotated instances, rather than the twelve
+the decisive experiment used, moved the problem. Full write-up in
+`docs/detector_operator_gap.md`; the three items that change this audit:
+
+**The detector, not the operator, is the bottleneck.** Given gold routing and
+gold branches the composition operator preserves **0.976** of gold branches.
+The detector in front of it fires on **0 of 42**, topping out at 0.2206
+against an escalation floor of 0.35 — so stage 2 is unreachable with or
+without an API key. Over all 128: precision 0.833, recall 0.064, 2 of 67
+conditional conflicts recovered. §3 below said the central claim "points the
+wrong way"; it is now clear *where*.
+
+**Preservation Rate is gameable by verbosity.** Concatenating both passages
+scores PR 0.855, above the gold answer's 0.699, because PR is containment
+with no length normalisation and the suite has no precision-side term. This
+invalidates PR-only comparisons between a composed answer and a verbose one —
+which is the comparison the paper wants. **Add a precision term before
+reporting any PR table.** This supersedes the "validated metric suite"
+language used elsewhere.
+
+**The decisive run used what is now test data.** Its twelve instances were
+picked by file order before splits existed and now straddle 5 test / 4 train /
+3 dev. It must be described as exploratory, and the re-run must be on a
+defined split. `decisive.json` now carries full provenance and all 24
+per-branch outcomes; previously it carried neither.
+
+Also corrected since this audit: three of the pipeline arm's five metrics
+(distortion, HCR, SCR) are structurally incapable of being non-zero and must
+read `n/a`; `year_clash` was a dead feature (capturing-group bug) and is now
+fixed with a regression test.
+
+---
+
 ## The critical path
 
 1. **Annotate branch structure** on the 86 instances lacking it — unblocks every
    headline metric.
-2. **Verify the authored `redundant`/`opposed` cases**, then author enough to
+2. **Add a precision term to the metric suite.** Nothing else on this list is
+   worth measuring until PR can tell a composed answer from a concatenated
+   one. New, and now first among the measurement items.
+3. **Verify the authored `redundant`/`opposed` cases**, then author enough to
    reach the floor of 20 each.
-3. **`run_probe --live`** — Member B's go/no-go, answerable now.
-4. **Re-run the decisive experiment at 137+ instances**, per the power table.
-5. **Validate the judge** against human labels, or commit to the deterministic
+4. **Make detection work, or reframe around it.** Train the head, or route on
+   extracted scope attributes instead of surface overlap. At 3% recall the
+   end-to-end claim cannot be tested at any corpus size.
+5. **`run_probe --live`** — Member B's go/no-go, answerable now.
+6. **Re-run the decisive experiment at 137+ instances on a defined split**,
+   per the power table.
+7. **Validate the judge** against human labels, or commit to the deterministic
    scorer and justify it.
-6. **Clear licensing** before any release.
-7. **Write the limitations section.**
+8. **Clear licensing** before any release.
+9. **Write the limitations section.**
 
-Items 1 and 2 are annotation. Items 3 to 5 are runs. Nothing on this list is a
-build.
+Items 1 and 3 are annotation. Items 5 to 7 are runs. Items 2 and 4 are builds,
+and they were not on this list before the measurement above.

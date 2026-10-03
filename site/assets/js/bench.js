@@ -313,8 +313,9 @@
           expected the hard part to be composing branches without mangling them. It is not. The
           operator does that well. The hard part is noticing there is a conflict at all, and the
           untrained lexical scorer in front of it is not close &mdash; over the whole 128-instance
-          corpus it reaches precision 0.800 but recall 0.051, recovering 2 of 67 conditional
-          conflicts. Conservative, not random.</p>
+          corpus it reaches precision <b>0.833</b> but recall <b>0.064</b>, recovering 2 of 67
+          conditional conflicts. Conservative, not random: when it fires it is usually right, and
+          it almost never fires.</p>
 
         <div class="panel" style="margin-top:34px">
           <div class="phead"><span class="ptitle">Stage 1 score, one bar per instance</span>

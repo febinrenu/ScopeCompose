@@ -74,6 +74,29 @@ def test_numeric_clash_fires_on_a_factual_contradiction():
     assert f.numeric_clash == 1.0
 
 
+def test_year_clash_distinguishes_years_in_one_century():
+    """The regression this exists to prevent.
+
+    ``_YEAR_RE`` used a CAPTURING group, ``(19|20)``, and ``re.findall``
+    returns the group rather than the match. Every year therefore collapsed
+    to the string "19" or "20", so 2019 and 2024 compared equal and
+    ``year_clash`` could only fire across the century boundary -- which no
+    real policy pair crosses. The feature was silently dead on all 128
+    corpus instances, contributing its 0.10 weight to nothing.
+    """
+    clash = extract_pair_features("the rate applies with effect from 2019",
+                                  "the rate applies with effect from 2024")
+    assert clash.year_clash == 1.0
+
+    same = extract_pair_features("in force since 2021", "in force since 2021")
+    assert same.year_clash == 0.0
+
+
+def test_year_clash_needs_a_year_on_both_sides():
+    """One-sided evidence is not disagreement."""
+    assert extract_pair_features("effective from 2024", "no date given").year_clash == 0.0
+
+
 def test_unrelated_passages_share_few_tokens():
     assert extract_pair_features(FEE_RULE, UNRELATED).token_jaccard < 0.2
 
