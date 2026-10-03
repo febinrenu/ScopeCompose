@@ -311,8 +311,8 @@
           <div class="n">Batch 1 paired guide sections (5/17). Batch 2 paired the public guide
             against its rules appendix (12/15).</div></div>
         <div class="stat"><div class="v mono">1.0000</div><div class="k">order invariance</div>
-          <div class="n">47 permutations, 40 records. Branch roles derive from the applicability
-            relation, never retrieval order.</div></div>
+          <div class="n">71 permutations over 128 records, <b>65 of 71 non-positional</b>.
+            Branch roles derive from the applicability relation, never retrieval order.</div></div>
       </div>
       <p class="note" style="max-width:74ch"><b>The mechanism, not just the number.</b> A gov.uk
         <i>guide</i> is one CMS document with many parts, each with its own URL. Ten of seventeen
@@ -408,14 +408,27 @@
             <div class="k">difference</div>
             <div class="n">[&minus;37.5%, +12.5%] &middot; McNemar p = 0.508 &middot; interval spans
               zero, so no conclusion is available in either direction.</div></div>
-          <div class="stat"><div class="v mono">0.000</div><div class="k">pipeline distortion</div>
-            <div class="n">vs <b>0.333</b> baseline. The one contrast that favours the pipeline:
-              it preserves fewer branches but does not corrupt the ones it keeps.</div></div>
+          <div class="stat unmeasured"><div class="v mono">n/a</div>
+            <div class="k">pipeline distortion, HCR, SCR</div>
+            <div class="n"><b>Not measurable at the routing step.</b> The pipeline arm scores a
+              branch as <i>survived</i> if its pair routed to compose, so the code can only ever
+              record preserved or suppressed &mdash; <span class="ic">distorted</span> and
+              <span class="ic">hallucinated</span> are never assigned, and SCR divides an empty
+              denominator. The baseline's 0.333 distortion comes from a real generated answer put
+              through the aligner. The two are not comparable, so they are not compared.</div></div>
         </div>
         <p class="note"><b>Denominator, stated up front:</b> the four headline metrics score gold
           branches, and only <b>42 of 128 instances carry branch structure</b> (83 branches). The
           remaining 86 have detection labels and no branch annotation yet. Hatched figures above
           mean <i>cannot support a conclusion</i> &mdash; not <i>bad result</i>.</p>
+        <p class="note"><b>And those 42 are not mined prose.</b> All of them are authored
+          <span class="ic">wp1_*</span> probe instances &mdash; 42 of 42 are
+          <span class="ic">construction=split</span>, <span class="ic">separation=synthetic_split</span>.
+          <b>Zero mined instances carry branch annotation.</b> Every branch-scored number on this
+          page, including the ones below, is therefore measured on constructed splits of single
+          documents rather than on the cross-document case the project exists to address. That is
+          the most load-bearing limitation here, and the reason the annotation backlog &mdash; not
+          more engineering &mdash; is the critical path.</p>
       </div>
     </div>
 
@@ -459,11 +472,12 @@
         <ul class="clean">
           <li>A formal four-way scope relation with an executable routing table, and a benchmark
             schema that enforces it.</li>
-          <li>Order invariance as a structural property, verified at 1.0000 over 47 permutations.</li>
+          <li>Order invariance as a structural property: <b>1.0000 over 71 permutations</b>,
+            65 of them assigning a role to something other than the first-listed passage.</li>
           <li>Tier-1 scarcity with its mechanism &mdash; a result about where cross-document
             conditional conflicts live.</li>
-          <li>A validated metric suite (PR / SR / HCR / SCR) with provenance recorded on every
-            judged number.</li>
+          <li>A metric suite (PR / SR / HCR / SCR) with provenance recorded on every judged
+            number. The LLM judge path is <b>unvalidated</b> and unreachable by default.</li>
         </ul>
       </div>
       <div>

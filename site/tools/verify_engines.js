@@ -1,21 +1,23 @@
-/*  Check the browser engine against the Python it ports.
+/*  Check the browser engines against the Python they port.
  *
  *      python site/tools/make_reference.py    # record Python's answers
  *      node   site/tools/verify_engines.js    # replay them through the JS
  *
- *  Exits non-zero on any disagreement. Wired into the deploy workflow, so a
- *  drifted port stops the site shipping rather than being discovered by a
- *  reviewer who notices the page disagrees with the paper.
+ *  Exits non-zero on any disagreement. The deploy workflow runs both, and
+ *  diffs the regenerated reference, so neither a drifted port nor a stale
+ *  reference can ship.
  *
- *  Two checks:
+ *  Four families, because one of them used to hide a hole:
  *
- *    1. compare() against every ordered branch pair in the corpus, both
- *       directions, including the SUBSET/SUPERSET asymmetry that assigns
- *       branch roles.
- *    2. the four-way relation derived from the two determinations against the
- *       gold label on every two-branch instance. This one is the stronger
- *       statement: the page is not displaying the stored label, it is
- *       recomputing it and arriving at the same answer.
+ *    compare         every ordered branch pair, both directions
+ *    combine         the FULL truth table, including arms the corpus cannot
+ *                    reach -- replaying only corpus cases left `redundant`
+ *                    untested while reporting a confident pass
+ *    route           every (type, relation) the table can be asked about
+ *    outcomes_agree  NOT a port check. Python decides this with an NLI model
+ *                    the browser cannot run. Recorded so the divergence
+ *                    between it and the browser's lexical stand-in is a
+ *                    reported number rather than a silent difference.
  */
 "use strict";
 
@@ -25,62 +27,79 @@ const path = require("path");
 const SITE = path.resolve(__dirname, "..");
 const load = p => fs.readFileSync(path.join(SITE, p), "utf8");
 
-// engines.js is a classic script, not a module -- evaluate it and lift out
-// the symbols rather than maintaining a parallel export list.
-const engines = load("assets/js/engines.js");
-const { compare, combine } = new Function(
-  engines + "\nreturn { compare, combine };"
+// engines.js is a classic script, not a module -- evaluate it and lift the
+// symbols out rather than maintaining a parallel export list.
+const { compare, combine, routeFor } = new Function(
+  load("assets/js/engines.js") + "\nreturn { compare, combine, routeFor };"
 )();
 
-const corpus = JSON.parse(load("data/corpus.json"));
 const refPath = path.join(__dirname, "compare_reference.json");
 if (!fs.existsSync(refPath)) {
-  console.error("No reference file. Run: python site/tools/make_reference.py");
+  console.error("No reference. Run: python site/tools/make_reference.py");
   process.exit(2);
 }
-const reference = JSON.parse(fs.readFileSync(refPath, "utf8"));
+const ref = JSON.parse(fs.readFileSync(refPath, "utf8"));
+const corpus = JSON.parse(load("data/corpus.json"));
 const byId = new Map(corpus.map(r => [r.id, r]));
 
 let failures = 0;
+const fail = msg => { failures++; if (failures <= 20) console.error("  " + msg); };
 
-/* --- 1. compare() ------------------------------------------------------- */
-let matched = 0;
-for (const c of reference) {
+/* --- compare ------------------------------------------------------------ */
+let ok = 0;
+for (const c of ref.compare) {
   const rec = byId.get(c.inst);
-  if (!rec) { console.error(`  MISSING instance ${c.inst}`); failures++; continue; }
-  const a = rec.b.find(x => x.id === c.a);
-  const b = rec.b.find(x => x.id === c.b);
+  if (!rec) { fail(`MISSING instance ${c.inst}`); continue; }
+  const a = rec.b.find(x => x.id === c.a), b = rec.b.find(x => x.id === c.b);
   const got = compare({ def: a.def, at: a.at }, { def: b.def, at: b.at });
-  if (got === c.rel) matched++;
-  else {
-    failures++;
-    if (failures <= 15) {
-      console.error(`  MISMATCH ${c.inst} ${c.a}->${c.b}: python=${c.rel} js=${got}`);
-    }
-  }
+  if (got === c.rel) ok++;
+  else fail(`compare ${c.inst} ${c.a}->${c.b}: python=${c.rel} js=${got}`);
 }
-console.log(`compare()          ${matched}/${reference.length} match Python`);
+console.log(`compare         ${ok}/${ref.compare.length} match Python`);
 
-/* --- 2. the four-way relation ------------------------------------------- */
-let agree = 0, differ = 0;
-for (const r of corpus) {
-  if (!r.b || r.b.length !== 2) continue;
-  const [x, y] = r.b;
-  const setRel = compare({ def: x.def, at: x.at }, { def: y.def, at: y.at });
-  const outcomesAgree = x.out.trim().toLowerCase() === y.out.trim().toLowerCase();
-  const [derived] = combine(setRel, outcomesAgree);
-  if (derived === r.rel) agree++;
-  else {
-    differ++; failures++;
-    if (differ <= 10) {
-      console.error(`  RELATION ${r.id}: gold=${r.rel} derived=${derived} (set=${setRel})`);
-    }
-  }
+/* --- combine: the full truth table -------------------------------------- */
+let okc = 0;
+for (const c of ref.combine) {
+  const [got] = combine(c.set, c.agree);
+  if (got === c.rel) okc++;
+  else fail(`combine (${c.set}, agree=${c.agree}): python=${c.rel} js=${got}`);
 }
-console.log(`four-way relation  ${agree} derived == gold, ${differ} differ`);
+const arms = [...new Set(ref.combine.map(c => c.rel))].sort().join(", ");
+console.log(`combine         ${okc}/${ref.combine.length} truth-table rows  [${arms}]`);
+
+/* --- route -------------------------------------------------------------- */
+let okr = 0;
+for (const c of ref.route) {
+  let got;
+  try { got = routeFor(c.type, c.rel); }
+  catch (e) { got = "THREW: " + e.message; }
+  if (got === c.action) okr++;
+  else fail(`route (${c.type}, ${c.rel}): python=${c.action} js=${got}`);
+}
+console.log(`route           ${okr}/${ref.route.length} (type, relation) combinations`);
+
+/* --- outcomes_agree: a disclosure, not a check -------------------------- */
+const oa = ref.outcomes_agree || [];
+let lexAgree = 0, pyAgree = 0, diverged = 0;
+for (const c of oa) {
+  const rec = byId.get(c.inst);
+  if (!rec || (rec.b || []).length !== 2) continue;
+  const [x, y] = rec.b;
+  const lexical = x.out.trim().toLowerCase() === y.out.trim().toLowerCase();
+  if (lexical !== c.lexical) fail(`lexical outcomes_agree ${c.inst}: ref=${c.lexical} js=${lexical}`);
+  lexAgree += lexical; pyAgree += c.agree;
+  if (lexical !== c.agree) diverged++;
+}
+console.log(`outcomes_agree  ${oa.length} instances: python agrees on ${pyAgree}, `
+          + `browser's lexical test on ${lexAgree}`);
+if (diverged) {
+  console.log(`                ${diverged} divergence(s) -- EXPECTED. Python uses an NLI model`);
+  console.log(`                the browser cannot run. The site must label its own`);
+  console.log(`                outcome determination as a lexical approximation.`);
+}
 
 if (failures) {
-  console.error(`\nFAILED: ${failures} disagreement(s). The port has drifted from Python.`);
+  console.error(`\nFAILED: ${failures} disagreement(s). A port has drifted from Python.`);
   process.exit(1);
 }
-console.log("\nOK: the browser engine agrees with the Python implementation.");
+console.log("\nOK: the browser engines agree with the Python implementation.");

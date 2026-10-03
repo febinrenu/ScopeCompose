@@ -522,7 +522,7 @@ if (!REDUCED && "IntersectionObserver" in window){
     [rel.refinement || 0, "refinement"], [rel.disjoint || 0, "disjoint"],
     [rel.redundant || 0, "redundant"], [rel.opposed || 0, "opposed"],
     [sep.cross_document || 0, "cross-document"], [branchy, "with branch structure"],
-    [nBranch, "gold branches"], ["1.0000", "order invariance, 47 permutations"],
+    [nBranch, "gold branches"], ["1.0000", "order invariance, 71 permutations"],
     ["0.34", "candidates per pairing"], ["29→80%", "distinct after re-pairing"],
     ["518", "tests passing"], ["κ 1.000", "n = 39, p_e = 0.540"],
     ["−12.5%", "decisive difference, interval spans zero"],

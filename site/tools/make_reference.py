@@ -1,18 +1,42 @@
-"""Record what the Python engine decides, so the JavaScript port can be checked.
+"""Record what the Python engines decide, so the JavaScript ports can be checked.
 
-The site reimplements ``scope/attributes.py::compare`` and
-``ScopeAnalyser._combine`` in JavaScript so the detector can run in a browser
-with no server. A reimplementation is a liability: it can drift from the
-Python it claims to mirror, and a page that computes a *different* relation
-from the pipeline is worse than a page with a screenshot, because it looks
+The site reimplements parts of the pipeline in JavaScript so the detector can
+run in a browser with no server. A reimplementation is a liability: it can
+drift from the Python it mirrors, and a page that computes a *different*
+answer from the pipeline is worse than a screenshot, because it looks
 authoritative while being wrong.
 
-This writes the Python answer for every ordered branch pair in the corpus.
-``verify_engines.js`` replays those cases through the JavaScript and fails on
-any disagreement, so drift is caught rather than demonstrated to a reviewer.
+This records Python's answer for every case the browser will face.
+``verify_engines.js`` replays them and fails on any disagreement.
 
     python site/tools/make_reference.py
     node site/tools/verify_engines.js
+
+Four families:
+
+``compare``
+    Every ordered branch pair in the corpus, both directions. ``compare()`` is
+    deliberately argument-relative -- SUBSET one way, SUPERSET the other -- and
+    a port that silently symmetrised it would invert branch roles, making the
+    general rule the exception.
+
+``combine``
+    The **full truth table** of ``ScopeAnalyser._combine``: every SetRelation
+    crossed with both outcome verdicts. This exists because the corpus cannot
+    exercise it. No corpus pair produces ``redundant``, so replaying only
+    corpus cases leaves that arm of the four-way relation untested while
+    reporting a confident pass. A truth table costs nothing and closes it.
+
+``outcomes_agree``
+    Python's **actual** verdict per corpus pair, from the NLI-backed
+    ``ScopeAnalyser.outcomes_agree``. The browser cannot run that model, so it
+    uses a lexical approximation -- and the two disagree on a measurable
+    number of pairs. Recording Python's answer turns that from a hidden
+    divergence into a reported one, and lets the browser use the real value
+    for corpus instances instead of guessing.
+
+``route``
+    The routing table over every (type, relation) combination.
 """
 
 from __future__ import annotations
@@ -25,45 +49,126 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from contract.gold import GoldInstance            # noqa: E402
-from scope.attributes import compare              # noqa: E402
+from contract.gold import GoldInstance                              # noqa: E402
+from contract.models import ConflictPair, ConflictType, ScopeRelation  # noqa: E402
+from contract.routing import route                                  # noqa: E402
+from scope.attributes import SetRelation, compare                   # noqa: E402
+from scope.relation import ScopeAnalyser                            # noqa: E402
 
 SOURCE = ROOT / "benchmark" / "data" / "corpus.jsonl"
 OUT = Path(__file__).resolve().parent / "compare_reference.json"
 
 
-def main() -> int:
+def _load() -> list[GoldInstance]:
     if not SOURCE.exists():
         raise SystemExit(f"corpus not found: {SOURCE}")
-
-    instances = [
+    return [
         GoldInstance.model_validate(json.loads(line))
         for line in SOURCE.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
 
+
+def _compare_cases(instances: list[GoldInstance]) -> list[dict]:
     cases = []
     for inst in instances:
-        branches = inst.gold_branches or []
-        # Both orderings: compare() is deliberately argument-relative (SUBSET
-        # one way, SUPERSET the other), and a port that silently symmetrised
-        # it would invert branch roles -- the general rule would be treated as
-        # the exception. Checking both directions catches exactly that.
-        for a in branches:
-            for b in branches:
+        for a in inst.gold_branches or []:
+            for b in inst.gold_branches or []:
                 if a.branch_id == b.branch_id:
                     continue
                 cases.append({
-                    "inst": inst.instance_id,
-                    "a": a.branch_id,
-                    "b": b.branch_id,
+                    "inst": inst.instance_id, "a": a.branch_id, "b": b.branch_id,
                     "rel": compare(a.applicability, b.applicability).value,
                 })
+    return cases
 
-    OUT.write_text(json.dumps(cases, separators=(",", ":")), encoding="utf-8")
-    print(f"wrote {len(cases)} reference cases -> {OUT.relative_to(ROOT)}")
-    for rel, n in sorted(Counter(c["rel"] for c in cases).items()):
-        print(f"  {rel:<12} {n}")
+
+def _combine_cases() -> list[dict]:
+    """The whole truth table, including the arms the corpus never reaches."""
+    cases = []
+    for rel in SetRelation:
+        for agree in (True, False):
+            relation, _ = ScopeAnalyser._combine(rel, agree)
+            cases.append({"set": rel.value, "agree": agree, "rel": relation.value})
+    return cases
+
+
+def _outcomes_agree_cases(instances: list[GoldInstance]) -> list[dict]:
+    """Python's real verdict, which the browser cannot compute.
+
+    Also records what a lexical equality test would have said, so the
+    divergence is a number on the page rather than a surprise.
+    """
+    analyser = ScopeAnalyser(heuristic_nli=True)
+    cases = []
+    for inst in instances:
+        branches = inst.gold_branches or []
+        if len(branches) != 2:
+            continue
+        a, b = branches
+        agree, _ = analyser.outcomes_agree(a.outcome, b.outcome)
+        lexical = a.outcome.strip().lower() == b.outcome.strip().lower()
+        cases.append({
+            "inst": inst.instance_id, "agree": bool(agree), "lexical": lexical,
+        })
+    return cases
+
+
+def _route_cases() -> list[dict]:
+    """Every (type, relation) the routing table can be asked about."""
+    cases = []
+    for ctype in ConflictType:
+        relations: list[ScopeRelation | None]
+        relations = list(ScopeRelation) if ctype is ConflictType.CONDITIONAL else [None]
+        if ctype is ConflictType.FACTUAL:
+            relations = [None, ScopeRelation.REFINEMENT]
+        for rel in relations:
+            is_conflict = ctype is not ConflictType.NO_CONFLICT
+            try:
+                pair = ConflictPair(
+                    doc_i="p0", doc_j="p1", is_conflict=is_conflict,
+                    type=ctype, scope_relation=rel, confidence=0.9,
+                )
+            except Exception:
+                continue  # the contract forbids this combination; nothing to check
+            decision = route(pair)
+            cases.append({
+                "type": ctype.value, "rel": rel.value if rel else None,
+                "action": decision.action.value,
+            })
+    return cases
+
+
+def main() -> int:
+    instances = _load()
+    reference = {
+        "compare": _compare_cases(instances),
+        "combine": _combine_cases(),
+        "outcomes_agree": _outcomes_agree_cases(instances),
+        "route": _route_cases(),
+    }
+    OUT.write_text(json.dumps(reference, separators=(",", ":"), sort_keys=True),
+                   encoding="utf-8")
+
+    print(f"wrote {OUT.relative_to(ROOT)}")
+    print(f"  compare         {len(reference['compare']):>4} ordered branch pairs "
+          f"over {sum(1 for i in instances if i.gold_branches)} annotated instances")
+    for rel, n in sorted(Counter(c["rel"] for c in reference["compare"]).items()):
+        print(f"      {rel:<12} {n}")
+    print(f"  combine         {len(reference['combine']):>4} truth-table rows "
+          f"(every SetRelation x both outcome verdicts)")
+    for rel, n in sorted(Counter(c["rel"] for c in reference["combine"]).items()):
+        print(f"      {rel:<12} {n}")
+
+    oa = reference["outcomes_agree"]
+    diverged = [c for c in oa if c["agree"] != c["lexical"]]
+    print(f"  outcomes_agree  {len(oa):>4} two-branch instances")
+    print(f"      python says agree on {sum(c['agree'] for c in oa)}, "
+          f"lexical equality says {sum(c['lexical'] for c in oa)}")
+    if diverged:
+        print(f"      *** {len(diverged)} divergences -- the browser's lexical test is NOT")
+        print(f"          the pipeline's NLI test, and the site must not imply it is.")
+    print(f"  route           {len(reference['route']):>4} (type, relation) combinations")
     return 0
 
 

@@ -94,6 +94,21 @@ function combine(setRel, outcomesAgree){
   return ["opposed", "the applicability sets overlap, neither contains the other, and the outcomes disagree on the overlap — a real contradiction"];
 }
 
+/* ---- routing: contract/routing.py::route ----
+ *
+ * routeFor() mirrors the Python in full: type is decided before relation, so
+ * a factual or temporal pair reaches prior work without its scope relation
+ * ever being consulted. ROUTE below is the conditional sub-table, kept
+ * because the UI indexes it directly by relation.
+ */
+function routeFor(type, relation){
+  if (type === "no_conflict") return "pass_through";
+  if (type !== "conditional") return "prior_work";
+  const row = ROUTE[relation];
+  if (!row) throw new Error("conditional pair with no scope relation: " + relation);
+  return row[0];
+}
+
 /* ---- routing: contract/routing.py::route ---- */
 const ROUTE = {refinement:["compose","both branches are true and both are preserved"],
                disjoint:["compose","no case falls under both; compose trivially"],

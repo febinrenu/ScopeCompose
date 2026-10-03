@@ -41,10 +41,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      # Replays the committed Python reference through the browser engine.
-      # Regenerate it with site/tools/make_reference.py whenever the corpus
-      # or scope/attributes.py changes.
-      - name: Verify the browser engine against Python
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Only these three are needed. torch and transformers are imported
+      # lazily inside CrossEncoderNLI, which the reference never constructs.
+      - name: Install the reference generator's dependencies
+        run: pip install --quiet pydantic pyyaml numpy
+
+      # Regenerate and diff. Without this the gate only replays whatever was
+      # committed, so editing scope/attributes.py and forgetting to rebuild
+      # the reference passes green on a stale port -- verifying the JS
+      # against its own outdated expectations.
+      - name: Reference must be current
+        run: |
+          python site/tools/make_reference.py
+          git diff --exit-code -- site/tools/compare_reference.json             || { echo "::error::compare_reference.json is stale. Run python site/tools/make_reference.py"; exit 1; }
+
+      - name: Verify the browser engines against Python
         run: node site/tools/verify_engines.js
 
   deploy:
