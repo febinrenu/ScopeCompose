@@ -114,6 +114,55 @@ def _outcomes_agree_cases(instances: list[GoldInstance]) -> list[dict]:
     return cases
 
 
+def _detector_cases(instances: list[GoldInstance]) -> list[dict]:
+    """Stage 1 exactly as it runs offline, per instance.
+
+    This is the centrepiece of the site's bench, so a drifted port here would
+    make the headline wrong. Records the score, the verdict, and all 17
+    features.
+    """
+    from detection.stage1 import Stage1Filter
+
+    s1 = Stage1Filter(heuristic_nli=True, auto_load_head=False)
+    cases = []
+    for inst in instances:
+        for cand in s1.score_pairs(inst.passages):
+            p = cand.confidence if cand.is_conflict else 1.0 - cand.confidence
+            cases.append({
+                "inst": inst.instance_id, "i": cand.doc_i, "j": cand.doc_j,
+                "score": round(p, 10),
+                "conflict": bool(cand.is_conflict),
+                "escalate": bool(cand.needs_escalation),
+                "nli": [round(cand.nli.entailment, 10), round(cand.nli.neutral, 10),
+                        round(cand.nli.contradiction, 10)],
+                "f": {k: round(float(v), 10)
+                      for k, v in zip(cand.features.names(), cand.features.as_vector())},
+            })
+    return cases
+
+
+def _textual_cases(instances: list[GoldInstance]) -> list[dict]:
+    """preservation.py's textual judging path, over every resolver the bench
+    shows. Verifies similarity/containment and the two inline thresholds."""
+    from metrics.preservation import judge_branches
+
+    cases = []
+    for inst in instances:
+        if not inst.gold_branches:
+            continue
+        answers = {
+            "selection": inst.selection_answer or "",
+            "concat": " ".join(p.text for p in inst.passages),
+            "gold": inst.gold_scoped_answer or "",
+        }
+        for name, text in answers.items():
+            cases.append({
+                "inst": inst.instance_id, "sys": name,
+                "j": [j.value for j in judge_branches(text, inst.gold_branches)],
+            })
+    return cases
+
+
 def _route_cases() -> list[dict]:
     """Every (type, relation) the routing table can be asked about."""
     cases = []
@@ -146,6 +195,8 @@ def main() -> int:
         "combine": _combine_cases(),
         "outcomes_agree": _outcomes_agree_cases(instances),
         "route": _route_cases(),
+        "detector": _detector_cases(instances),
+        "textual": _textual_cases(instances),
     }
     OUT.write_text(json.dumps(reference, separators=(",", ":"), sort_keys=True),
                    encoding="utf-8")
@@ -169,6 +220,14 @@ def main() -> int:
         print(f"      *** {len(diverged)} divergences -- the browser's lexical test is NOT")
         print(f"          the pipeline's NLI test, and the site must not imply it is.")
     print(f"  route           {len(reference['route']):>4} (type, relation) combinations")
+
+    det = reference["detector"]
+    fired = sum(c["conflict"] for c in det)
+    esc = sum(c["escalate"] for c in det)
+    top = max((c["score"] for c in det), default=0.0)
+    print(f"  detector        {len(det):>4} pairs: {fired} flagged conflict, "
+          f"{esc} escalated, max score {top:.4f}")
+    print(f"  textual         {len(reference['textual']):>4} (instance, resolver) judgements")
     return 0
 
 

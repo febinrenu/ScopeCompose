@@ -33,6 +33,16 @@ const { compare, combine, routeFor } = new Function(
   load("assets/js/engines.js") + "\nreturn { compare, combine, routeFor };"
 )();
 
+const { screenPair } = new Function(
+  load("assets/js/detector.js") + "\nreturn { screenPair };"
+)();
+
+const { judgeTextual } = new Function(
+  load("assets/js/match.js") + "\nreturn { judgeTextual };"
+)();
+
+const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps;
+
 const refPath = path.join(__dirname, "compare_reference.json");
 if (!fs.existsSync(refPath)) {
   console.error("No reference. Run: python site/tools/make_reference.py");
@@ -97,6 +107,42 @@ if (diverged) {
   console.log(`                the browser cannot run. The site must label its own`);
   console.log(`                outcome determination as a lexical approximation.`);
 }
+
+/* --- detector: stage 1 exactly as it runs offline ----------------------- */
+let okd = 0, fired = 0, maxScore = 0;
+for (const c of ref.detector || []) {
+  const rec = byId.get(c.inst);
+  if (!rec) { fail(`detector: missing instance ${c.inst}`); continue; }
+  const pi = rec.p.find(x => x.id === c.i), pj = rec.p.find(x => x.id === c.j);
+  const got = screenPair(pi.t, pj.t);
+  maxScore = Math.max(maxScore, got.score);
+  fired += got.isConflict ? 1 : 0;
+  let bad = null;
+  if (!near(got.score, c.score)) bad = `score python=${c.score} js=${got.score}`;
+  else if (got.isConflict !== c.conflict) bad = `conflict python=${c.conflict} js=${got.isConflict}`;
+  else if (got.needsEscalation !== c.escalate) bad = `escalate python=${c.escalate} js=${got.needsEscalation}`;
+  else for (const [k, v] of Object.entries(c.f)) {
+    if (!near(got.features[k], v)) { bad = `feature ${k} python=${v} js=${got.features[k]}`; break; }
+  }
+  if (bad) fail(`detector ${c.inst}: ${bad}`); else okd++;
+}
+console.log(`detector        ${okd}/${(ref.detector || []).length} pairs `
+          + `(score, verdict, escalation, all 17 features)`);
+console.log(`                fires on ${fired}, max score ${maxScore.toFixed(4)}`);
+
+/* --- textual judging ---------------------------------------------------- */
+let okt = 0;
+for (const c of ref.textual || []) {
+  const rec = byId.get(c.inst);
+  if (!rec) { fail(`textual: missing instance ${c.inst}`); continue; }
+  const text = c.sys === "selection" ? (rec.sel || "")
+             : c.sys === "concat"    ? rec.p.map(x => x.t).join(" ")
+             :                         (rec.sa || "");
+  const got = judgeTextual(text, rec.b);
+  if (got.length === c.j.length && got.every((v, i) => v === c.j[i])) okt++;
+  else fail(`textual ${c.inst}/${c.sys}: python=[${c.j}] js=[${got}]`);
+}
+console.log(`textual         ${okt}/${(ref.textual || []).length} resolver judgements`);
 
 if (failures) {
   console.error(`\nFAILED: ${failures} disagreement(s). A port has drifted from Python.`);
