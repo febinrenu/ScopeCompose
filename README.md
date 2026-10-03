@@ -439,8 +439,25 @@ conflict-rag/
 ├── experiments/           # end-to-end runners, ablations            [joint]
 ├── scripts/               # setup and maintenance utilities
 ├── docs/                  # WP0 positioning memo, design notes
+├── site/                  # static project site — runs the detector in a browser
 └── tests/                 # pytest
 ```
+
+### The project site
+
+`site/` is a dependency-free static site that **runs** the detector rather than
+describing it: the scope algebra, the four-way relation, the routing table and
+the power analysis are ported to JavaScript and execute on the real corpus,
+which ships with the page.
+
+```bash
+python -m http.server 8000 --directory site      # then http://localhost:8000
+```
+
+Opening `site/index.html` directly works too. The port is not trusted on
+faith — `site/tools/verify_engines.js` replays Python's answers for every
+branch pair in the corpus and fails on any disagreement, and the deploy
+workflow runs it before publishing. See `site/README.md`.
 
 ---
 

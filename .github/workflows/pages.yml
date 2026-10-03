@@ -1,0 +1,52 @@
+name: Deploy site
+
+# The site reimplements part of the Python pipeline in JavaScript so the
+# detector can run in a browser. That port is allowed to ship only while it
+# still agrees with the Python, so verification gates the deploy rather than
+# running beside it.
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # Replays the committed Python reference through the browser engine.
+      # Regenerate the reference with site/tools/make_reference.py whenever
+      # the corpus or scope/attributes.py changes.
+      - name: Verify the browser engine against Python
+        run: node site/tools/verify_engines.js
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

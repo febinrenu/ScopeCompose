@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScopeCompose &mdash; conditional knowledge conflicts in RAG</title>
+<meta name="description" content="Detecting and resolving conditional knowledge conflicts in retrieval-augmented generation. The detector, the benchmark and the power analysis run live in the browser.">
+<meta name="author" content="Johann George, Febin K">
+<meta name="color-scheme" content="dark light">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="ScopeCompose">
+<meta property="og:description" content="A general rule and a valid exception are both true. Selection-based RAG deletes one of them silently. This is the detector that does not.">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Archivo:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<div class="bar">
+  <span class="brand">Scope<b>Compose</b></span>
+  <nav id="nav">
+    <a href="#hero">Demo</a>
+    <a href="#relations">Relations</a>
+    <a href="#position">Positioning</a>
+    <a href="#pipeline">Pipeline</a>
+    <a href="#corpus">Corpus</a>
+    <a href="#findings">Findings</a>
+    <a href="#claims">Claims</a>
+    <a href="#repro">Reproduce</a>
+  </nav>
+  <button class="tog" id="themeBtn" aria-label="Switch colour theme" title="Switch theme">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+</div>
+
+<!-- ===================== 1. HERO / LIVE DEMO ===================== -->
+<section id="hero">
+  <canvas id="field" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <h1 class="serif">Two passages.<br>Both true.<br><em>Pick one and someone gets the wrong answer.</em></h1>
+    <p class="sub">Retrieval-augmented generation resolves conflicting sources by choosing the
+      more credible one. When the conflict is <i>conditional</i> &mdash; a general rule and a valid
+      exception &mdash; every choice silently deletes a branch that was true for somebody.
+      This page runs the detector live. Set a reader below and watch it decide.</p>
+    <p class="byline">A final-year research project &middot; <b>Johann George</b> (detection &amp;
+      scope analysis) and <b>Febin K</b> (extraction, composition &amp; generation)
+      &middot; Karunya Institute of Technology and Sciences</p>
+
+    <div class="panel rv" style="margin-top:44px">
+      <div class="phead">
+        <span class="ptitle">Engine 1 &amp; 3 &middot; live</span>
+        <div class="ctl" style="margin-left:auto">
+          <label class="lab" for="heroInst">Instance</label>
+          <select id="heroInst"></select>
+        </div>
+      </div>
+      <div class="pbody">
+        <p id="heroQ" style="font-size:19px; margin-bottom:6px"></p>
+        <p class="note" id="heroProv" style="margin-top:0"></p>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+                    margin:22px 0 16px; padding-bottom:16px; border-bottom:1px solid var(--line)">
+          <span class="lab">Reader</span>
+          <div id="personaCtl" class="ctl"></div>
+        </div>
+
+        <div class="cols2" style="gap:26px">
+          <div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:13px">
+              <span class="lab">Strategy</span>
+              <div class="seg" role="group" aria-label="Resolution strategy">
+                <button id="mSel" aria-pressed="true">Selection</button>
+                <button id="mComp" aria-pressed="false">Composition</button>
+              </div>
+              <span id="selWhich" class="pill" hidden></span>
+            </div>
+            <div class="branches" id="heroBranches"></div>
+            <div class="verdict" id="heroVerdict"></div>
+          </div>
+          <div>
+            <span class="lab">What the detector computed</span>
+            <dl class="kv" id="heroCalc" style="margin-top:12px"></dl>
+            <p class="note" id="heroRationale"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note rv">Nothing above is hardcoded. The set relation comes from a direct port of
+      <span class="ic">scope/attributes.py::compare</span>, the four-way relation from
+      <span class="ic">ScopeAnalyser._combine</span>, and the routing from
+      <span class="ic">contract/routing.py::route</span>. Membership of the reader in each branch is
+      evaluated against the gold applicability attributes &mdash; which is why the verdict changes
+      when you change the reader.</p>
+  </div>
+</section>
+
+<!-- ===================== 2. THE TWO DETERMINATIONS ===================== -->
+<section id="relations">
+  <div class="wrap">
+    <div class="eyebrow rv">02 &mdash; The correction at the centre of the project</div>
+    <h2 class="serif rv">One question gives the wrong answer.<br>Two questions give the right one.</h2>
+    <p class="lede rv">An earlier revision of this design asked only <i>&ldquo;do these scopes
+      overlap?&rdquo;</i> and treated overlap as conflict. That cannot tell a passage restating the
+      general rule for a specific group from a passage carving out a real exception &mdash; both have
+      nested scope. The fix is to decide applicability and outcome agreement
+      <b>independently</b>, then combine them. Neither determination alone yields the right answer
+      for any row.</p>
+
+    <div class="grid22 rv" style="margin-top:38px">
+      <div class="g-h"></div>
+      <div class="g-h">Outcomes agree</div>
+      <div class="g-h">Outcomes disagree</div>
+
+      <div class="g-r">Scopes<br>disjoint</div>
+      <div class="cell" data-rel="disjoint">
+        <span class="rel">disjoint</span><span class="act">&rarr; compose</span>
+        <p class="why">No case falls under both, so outcome comparison is vacuous. Compose trivially.</p>
+        <p class="cnt"><b id="c-disjoint">&mdash;</b> <span style="color:var(--muted)">instances</span></p>
+      </div>
+      <div class="cell" data-rel="disjoint">
+        <span class="rel">disjoint</span><span class="act">&rarr; compose</span>
+        <p class="why">Same cell. When the sets never intersect the outcomes cannot contradict.</p>
+      </div>
+
+      <div class="g-r">Scopes<br>nested</div>
+      <div class="cell" data-rel="redundant" data-thin="1">
+        <span class="rel">redundant</span><span class="act">&rarr; merge</span>
+        <p class="why">A narrower restatement that agrees with the rule. Composing it as two
+          branches would invent a distinction that is not there.</p>
+        <p class="cnt"><b id="c-redundant">&mdash;</b> <span style="color:var(--muted)">instances</span></p>
+      </div>
+      <div class="cell" data-rel="refinement">
+        <span class="rel">refinement</span><span class="act">&rarr; compose</span>
+        <p class="why">A genuine exception, narrowing the default without contesting it. Both
+          branches are true. This is the case prior work deletes.</p>
+        <p class="cnt"><b id="c-refinement">&mdash;</b> <span style="color:var(--muted)">instances</span></p>
+      </div>
+
+      <div class="g-r">Scopes<br>overlapping</div>
+      <div class="cell" data-rel="redundant" data-thin="1">
+        <span class="rel">redundant</span><span class="act">&rarr; merge</span>
+        <p class="why">Crossing scopes that nonetheless agree wherever they meet.</p>
+      </div>
+      <div class="cell" data-rel="opposed" data-thin="1">
+        <span class="rel">opposed</span><span class="act">&rarr; select</span>
+        <p class="why">A real contradiction. Selection is the honest answer here &mdash; and
+          reporting it <i>as</i> a selection is part of the contribution.</p>
+        <p class="cnt"><b id="c-opposed">&mdash;</b> <span style="color:var(--muted)">instances</span></p>
+      </div>
+    </div>
+
+    <p class="note rv" style="max-width:74ch">Counts are computed from the embedded corpus at page
+      load. <b>Two of the four cells are nearly empty, and the page does not hide it:</b>
+      <span class="ic">redundant</span> and <span class="ic">opposed</span> have never once appeared
+      in mined data across nine annotation pilots and 91 document pairings. The explanation is
+      clean &mdash; organisations do not publish either on purpose. A redundant restatement is
+      pointless to write, and an opposed pair is a drafting error. They can only come from
+      constructed instances, which is what the synthetic-split tier exists for.</p>
+  </div>
+</section>
+
+<!-- ===================== 3. POSITIONING ===================== -->
+<section id="position">
+  <div class="wrap">
+    <div class="eyebrow rv">03 &mdash; What is already solved, and what is not</div>
+    <h2 class="serif rv">The gap is between documents.</h2>
+    <div class="cols2 rv" style="margin-top:34px">
+      <div>
+        <p style="color:var(--ink-2)">Three literatures touch this problem and none closes it.
+          The honest version of the claim is narrower than the one this project started with, and
+          the narrowing came from actually reading the closest work rather than from a reviewer.</p>
+        <ul class="clean">
+          <li><b>Span-Grounded Deontic Trees</b> (Chen et al.) already names Silent Scope Omission
+            and handles nested exception structure &mdash; recursively, and well. Credit where it
+            is due: the phenomenon is not ours to claim.</li>
+          <li><b>ConditionalQA</b> supplies conditional answers but assumes the conditions live in
+            one supplied document.</li>
+          <li><b>Defeasible NLI</b> models a rule being overridden, as a sentence-pair judgement,
+            with no retrieval and no scope algebra.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="panel">
+          <div class="phead"><span class="ptitle">The narrowed claim</span></div>
+          <div class="pbody">
+            <p class="quote">Conditional conflict resolution is addressed within a single
+              document. It is <b>not</b> addressed when the rule and its exception are retrieved
+              from separate documents, where no shared structure links them and the resolver must
+              decide whether a scope relation exists at all.</p>
+            <p class="note">This is the <b>Structure&ndash;Grounding Gap</b>. SG-DT grounds its tree
+              in one document's span structure; cross-document retrieval destroys exactly that
+              structure. 37% of the verification set confirmed the narrowed form. The wider claim
+              &mdash; that the phenomenon is unaddressed &mdash; is not defensible and is not made.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 4. PIPELINE ===================== -->
+<section id="pipeline">
+  <div class="wrap">
+    <div class="eyebrow rv">04 &mdash; The instrument</div>
+    <h2 class="serif rv">Seven stages, one contract.</h2>
+    <p class="lede rv">Hover or click any stage. Frozen contract <span class="ic">v1.2.0</span>
+      sits between the two halves, so each side can be built and tested against a mock of the
+      other.</p>
+    <div class="pipe rv" style="margin-top:32px">
+      <svg viewBox="0 0 880 150" role="img" aria-label="Seven-stage pipeline diagram">
+        <path class="conn" d="M118 56 H132 M238 56 H252 M358 56 H372 M478 56 H492 M598 56 H612 M718 56 H732"/>
+        <g class="stage" data-s="0" tabindex="0"><rect x="8" y="30" width="110" height="52" rx="3"/>
+          <text x="20" y="52">Retrieval</text><text class="sn" x="20" y="70">A1</text></g>
+        <g class="stage" data-s="1" tabindex="0"><rect x="128" y="30" width="110" height="52" rx="3"/>
+          <text x="140" y="52">Detection</text><text class="sn" x="140" y="70">A2 &middot; two-stage</text></g>
+        <g class="stage" data-s="2" tabindex="0"><rect x="248" y="30" width="110" height="52" rx="3"/>
+          <text x="260" y="52">Typing</text><text class="sn" x="260" y="70">A3 &middot; 5-class</text></g>
+        <g class="stage" data-s="3" tabindex="0"><rect x="368" y="30" width="110" height="52" rx="3"/>
+          <text x="380" y="52">Scope</text><text class="sn" x="380" y="70">A4 &middot; 4-way</text></g>
+        <g class="stage" data-s="4" tabindex="0"><rect x="488" y="30" width="110" height="52" rx="3"/>
+          <text x="500" y="52">Probing</text><text class="sn" x="500" y="70">B1 &middot; probe</text></g>
+        <g class="stage" data-s="5" tabindex="0"><rect x="608" y="30" width="110" height="52" rx="3"/>
+          <text x="620" y="52">Composition</text><text class="sn" x="620" y="70">B2 &middot; operator</text></g>
+        <g class="stage" data-s="6" tabindex="0"><rect x="728" y="30" width="110" height="52" rx="3"/>
+          <text x="740" y="52">Generation</text><text class="sn" x="740" y="70">B3 &middot; scoped</text></g>
+        <text x="8" y="118" class="sn" style="fill:var(--muted)">Member A &mdash; detection &amp; scope</text>
+        <text x="488" y="118" class="sn" style="fill:var(--muted)">Member B &mdash; resolution &amp; answer</text>
+        <path class="conn" d="M483 8 V128" stroke-dasharray="3 4" opacity=".75"/>
+        <text x="493" y="140" class="sn" style="fill:var(--field-a)">frozen contract v1.2.0</text>
+      </svg>
+    </div>
+    <div class="stagenote rv" id="stageNote"></div>
+  </div>
+</section>
+
+<!-- ===================== 5. CORPUS ===================== -->
+<section id="corpus">
+  <div class="wrap">
+    <div class="eyebrow rv">05 &mdash; The data, openable</div>
+    <h2 class="serif rv">128 instances. Search them yourself.</h2>
+    <p class="lede rv">Every instance in the benchmark is embedded in this page &mdash; passages,
+      gold labels, branch structure, source URLs and annotation provenance. Nothing is summarised
+      away.</p>
+
+    <div class="panel rv" style="margin-top:34px">
+      <div class="phead"><span class="ptitle">Engine 2 &middot; corpus explorer</span>
+        <span class="pill" id="expCount" style="margin-left:auto"></span></div>
+      <div class="filters">
+        <input type="search" id="fq" placeholder="Search query or passage text&hellip;" style="flex:1; min-width:180px">
+        <select id="fType"><option value="">all types</option></select>
+        <select id="fRel"><option value="">all relations</option></select>
+        <select id="fSep"><option value="">all separations</option></select>
+        <select id="fSplit"><option value="">all splits</option></select>
+        <select id="fDom"><option value="">all domains</option></select>
+      </div>
+      <div class="exp">
+        <div class="explist" id="expList"></div>
+        <div class="expdet" id="expDet"></div>
+      </div>
+    </div>
+
+    <div class="cols2 rv" style="margin-top:44px">
+      <div>
+        <h3 class="serif" style="font-size:25px; margin-bottom:14px">Composition</h3>
+        <div class="tscroll"><table>
+          <thead><tr><th>Dimension</th><th class="num">n</th><th>Note</th></tr></thead>
+          <tbody id="compTable"></tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3 class="serif" style="font-size:25px; margin-bottom:14px">Splits, and the leak that was there</h3>
+        <p style="color:var(--ink-2); font-size:14.5px">The corpus was 89 dev, 39 train, <b>zero
+          test</b>. Worse, <b>18 source documents spanned dev and train</b> &mdash; 128 instances draw
+          on 186 documents and one gov.uk guide alone appears in five, so independent assignment put
+          the same document on both sides. A system that memorised its wording would score on the
+          held-out side for having seen the other, and nothing in any output would have shown it.</p>
+        <p class="note">Assignment is now by <b>document group</b>, using connected components over
+          shared documents &mdash; an instance citing two documents links them, so the relation is
+          transitive and components, not documents, are the indivisible unit. The cost is stated
+          rather than hidden: groups are indivisible, so exact proportions are unreachable.</p>
+        <div class="stats" style="margin-top:18px">
+          <div class="stat"><div class="v mono">77/26/25</div><div class="k">train / dev / test</div></div>
+          <div class="stat"><div class="v mono">0</div><div class="k">documents spanning splits</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 6. FINDINGS ===================== -->
+<section id="findings">
+  <div class="wrap">
+    <div class="eyebrow rv">06 &mdash; Results that do not depend on the main claim</div>
+    <h2 class="serif rv">Three findings that already stand.</h2>
+
+    <div class="rv" style="margin-top:38px">
+      <h3 class="serif" style="font-size:27px">1 &middot; Natural cross-document conflicts are scarce, and we know why</h3>
+      <div class="stats" style="margin-top:18px">
+        <div class="stat"><div class="v mono">0.34</div><div class="k">candidates per pairing</div>
+          <div class="n">Over 91 gov.uk pairings across five mining batches.</div></div>
+        <div class="stat"><div class="v mono">29&rarr;80%</div><div class="k">distinct-document rate</div>
+          <div class="n">Batch 1 paired guide sections (5/17). Batch 2 paired the public guide
+            against its rules appendix (12/15).</div></div>
+        <div class="stat"><div class="v mono">1.0000</div><div class="k">order invariance</div>
+          <div class="n">47 permutations, 40 records. Branch roles derive from the applicability
+            relation, never retrieval order.</div></div>
+      </div>
+      <p class="note" style="max-width:74ch"><b>The mechanism, not just the number.</b> A gov.uk
+        <i>guide</i> is one CMS document with many parts, each with its own URL. Ten of seventeen
+        batch-1 pairings were one document wearing two URLs. More importantly, organisations state
+        their carve-outs <i>beside</i> the rule, in the same document &mdash; which is precisely why
+        the cross-document case the literature leaves open is also the hardest one to collect. That
+        is a finding about the world, and it is the reason the benchmark needs a constructed tier.</p>
+    </div>
+
+    <div class="rv" style="margin-top:46px">
+      <h3 class="serif" style="font-size:27px">2 &middot; The annotation gate, and what it cost</h3>
+      <div class="cols2" style="margin-top:18px">
+        <div>
+          <div class="tscroll"><table>
+            <thead><tr><th>Axis</th><th class="num">&kappa;</th><th class="num">n</th><th class="num">p<sub>e</sub></th></tr></thead>
+            <tbody>
+              <tr><td>Five-class conflict type</td><td class="num">1.000</td><td class="num">39</td><td class="num">0.540</td></tr>
+              <tr><td>Four-way scope relation</td><td class="num">1.000</td><td class="num">14</td><td class="num">0.541</td></tr>
+            </tbody>
+          </table></div>
+          <p class="note">Pilot 9 only. <b>Never the pooled figure</b> &mdash; an earlier pilot
+            reported &kappa; on 34 instances where only 18 were informative, which reads as a
+            stronger result and is a weaker one. The <span class="ic">[1.000, 1.000]</span>
+            bootstrap interval is an artifact, not a confidence statement: every resample of a
+            sample with no disagreement is also perfect, so the interval collapses regardless of n.
+            The code now prints that caveat beside the number.</p>
+        </div>
+        <div>
+          <p style="color:var(--ink-2); font-size:14.5px">Reaching a defensible &kappa; took nine
+            pilots, and each one failed in a way worth writing down. One batch was <b>voided
+            entirely</b> because the build step emitted instances with no query text and gave
+            annotators no way to supply one &mdash; &kappa; came back at &minus;0.013 and a second
+            defect was hiding it, because the agreement tool pooled every batch together.</p>
+          <p class="note">Both are now impossible: the CLI refuses to label a query-less instance,
+            agreement is scoped by batch prefix, and a pass whose timing is implausible for genuine
+            reading is rejected by <span class="ic">pass_plausibility</span> before &kappa; is
+            computed at all. One pass was discarded on that basis and the batch re-run.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="rv" style="margin-top:46px">
+      <h3 class="serif" style="font-size:27px">3 &middot; Negative controls</h3>
+      <p style="color:var(--ink-2); max-width:74ch">Each guard below destroyed a number the project
+        wanted. That is the cost of having them, and it is the reason to report them.</p>
+      <div class="cols2" style="margin-top:20px">
+        <div class="panel"><div class="phead"><span class="ptitle">Refused</span></div>
+          <div class="pbody">
+            <div class="repro"><span class="c"># metrics &mdash; prevalence_estimate()</span>
+<br>ValueError: the corpus was built by
+<br>targeted mining, not random sampling.
+<br>A prevalence figure from it would
+<br>describe the search, not the world.</div>
+            <p class="note">The tempting sentence was &ldquo;conditional conflicts occur in 8% of
+              retrieved sets.&rdquo; The function raises rather than returning a number the design
+              cannot support.</p>
+          </div>
+        </div>
+        <div class="panel"><div class="phead"><span class="ptitle">Permitted</span></div>
+          <div class="pbody">
+            <p style="font-size:14.5px; color:var(--ink-2)">&ldquo;Of 91 document pairings selected
+              for likely conditional structure, 31 yielded candidate conflicts (0.34 per pairing).
+              This is a yield rate under targeted search and <b>is not an estimate of prevalence in
+              retrieval</b>.&rdquo;</p>
+            <p class="note">Same data. The difference is that the second sentence is true.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 7. CLAIMS ===================== -->
+<section id="claims">
+  <div class="wrap">
+    <div class="eyebrow rv">07 &mdash; The part most projects leave out</div>
+    <h2 class="serif rv">What we cannot claim yet.</h2>
+    <p class="lede rv">The instrument is built and tested. <b>The measurement has not been
+      taken.</b> The experiment designated as able to falsify the central claim has run once, at
+      twelve instances, and it favours the baseline. Reporting that as prominently as a positive
+      was committed to in code before the number existed.</p>
+
+    <div class="panel rv" style="margin-top:34px">
+      <div class="phead"><span class="ptitle">Decisive experiment &middot; n = 12 instances, 24 gold branches</span>
+        <span class="pill p-un" style="margin-left:auto">underpowered &mdash; concludes nothing</span></div>
+      <div class="pbody">
+        <div class="stats">
+          <div class="stat"><div class="v mono">0.500</div><div class="k">pipeline PR</div>
+            <div class="n">Wilson 95% [0.314, 0.686]</div></div>
+          <div class="stat"><div class="v mono">0.625</div><div class="k">baseline PR</div>
+            <div class="n">Wilson 95% [0.427, 0.788]</div></div>
+          <div class="stat unmeasured"><div class="v mono">&minus;12.5%</div>
+            <div class="k">difference</div>
+            <div class="n">[&minus;37.5%, +12.5%] &middot; McNemar p = 0.508 &middot; interval spans
+              zero, so no conclusion is available in either direction.</div></div>
+          <div class="stat"><div class="v mono">0.000</div><div class="k">pipeline distortion</div>
+            <div class="n">vs <b>0.333</b> baseline. The one contrast that favours the pipeline:
+              it preserves fewer branches but does not corrupt the ones it keeps.</div></div>
+        </div>
+        <p class="note"><b>Denominator, stated up front:</b> the four headline metrics score gold
+          branches, and only <b>42 of 128 instances carry branch structure</b> (83 branches). The
+          remaining 86 have detection labels and no branch annotation yet. Hatched figures above
+          mean <i>cannot support a conclusion</i> &mdash; not <i>bad result</i>.</p>
+      </div>
+    </div>
+
+    <div class="panel rv" style="margin-top:28px">
+      <div class="phead"><span class="ptitle">Engine 4 &middot; how much data would be enough</span></div>
+      <div class="pbody">
+        <div class="cols2">
+          <div>
+            <div class="slider">
+              <div class="sl"><span>Difference to detect</span><span class="sv" id="vEff">10%</span></div>
+              <input type="range" id="sEff" min="2" max="30" value="10" step="1">
+            </div>
+            <div class="slider">
+              <div class="sl"><span>Discordant rate</span><span class="sv" id="vDis">35%</span></div>
+              <input type="range" id="sDis" min="10" max="70" value="35" step="1">
+            </div>
+            <p class="note" style="margin-top:0">Observed in the decisive run: 9 of 24 branches
+              discordant (37.5%). Only discordant branches inform McNemar.</p>
+          </div>
+          <div>
+            <div class="stats">
+              <div class="stat"><div class="v mono" id="pwBranch">&mdash;</div><div class="k">gold branches needed</div></div>
+              <div class="stat"><div class="v mono" id="pwInst">&mdash;</div><div class="k">instances needed</div></div>
+            </div>
+            <p class="note" id="pwNote"></p>
+          </div>
+        </div>
+        <p class="note" style="border-top:1px solid var(--line); padding-top:15px"><b>Counterintuitive,
+          and worth resisting the intuition:</b> a <i>lower</i> discordant rate needs <i>fewer</i>
+          branches. The effect being sized is a difference over all branches, so a low discordant
+          rate means it is concentrated in a small subset &mdash; easier to see, not harder. Two
+          systems that mostly agree but differ sharply where they differ are cheaper to distinguish
+          than two that disagree everywhere by a little. A unit test asserting the intuitive
+          direction failed; the model was right.</p>
+      </div>
+    </div>
+
+    <div class="cols2 rv" style="margin-top:40px">
+      <div>
+        <h3 class="serif" style="font-size:24px; margin-bottom:12px">Can claim today</h3>
+        <ul class="clean">
+          <li>A formal four-way scope relation with an executable routing table, and a benchmark
+            schema that enforces it.</li>
+          <li>Order invariance as a structural property, verified at 1.0000 over 47 permutations.</li>
+          <li>Tier-1 scarcity with its mechanism &mdash; a result about where cross-document
+            conditional conflicts live.</li>
+          <li>A validated metric suite (PR / SR / HCR / SCR) with provenance recorded on every
+            judged number.</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="serif" style="font-size:24px; margin-bottom:12px">Cannot claim yet</h3>
+        <ul class="clean">
+          <li>That composition beats selection. One run, n = 12, interval spanning zero, pointing
+            the other way.</li>
+          <li>Anything about <span class="ic">redundant</span> or <span class="ic">opposed</span>
+            at scale &mdash; two instances each.</li>
+          <li>Any judged metric: the LLM judge is implemented but not yet validated against human
+            labels at the 0.89 bar.</li>
+          <li>Prevalence of conditional conflict in real retrieval. The corpus cannot support it
+            and the code refuses to compute it.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 8. REPRODUCE ===================== -->
+<section id="repro">
+  <div class="wrap">
+    <div class="eyebrow rv">08 &mdash; Contributions and reproduction</div>
+    <h2 class="serif rv">Everything here re-runs from one command each.</h2>
+    <div class="cols2 rv" style="margin-top:32px">
+      <div>
+        <h3 class="serif" style="font-size:22px; margin-bottom:12px">Division of work</h3>
+        <div class="tscroll"><table>
+          <thead><tr><th>Component</th><th>Lead</th></tr></thead>
+          <tbody>
+            <tr><td>A1&ndash;A4 retrieval, detection, typing, scope analysis</td><td>Johann George</td></tr>
+            <tr><td>B1&ndash;B3 probing, composition operator, scoped generation</td><td>Febin K</td></tr>
+            <tr><td>Frozen contract, metric suite, statistics layer</td><td>joint</td></tr>
+            <tr><td>Corpus mining, annotation protocol, &kappa; pilots</td><td>joint</td></tr>
+          </tbody>
+        </table></div>
+        <div class="stats" style="margin-top:20px">
+          <div class="stat"><div class="v mono" id="nTests">518</div><div class="k">tests passing</div></div>
+          <div class="stat"><div class="v mono">17</div><div class="k">packages</div></div>
+          <div class="stat"><div class="v mono">v1.2.0</div><div class="k">frozen contract</div></div>
+        </div>
+      </div>
+      <div>
+        <h3 class="serif" style="font-size:22px; margin-bottom:12px">Commands</h3>
+        <div class="repro"><span class="c"># corpus composition and split audit</span>
+<br>python -m benchmark.corpus_plan
+<br>python -m benchmark.splits --data \
+<br>&nbsp;&nbsp;benchmark/data/corpus.jsonl --audit
+<br><br><span class="c"># the decisive experiment (seeded)</span>
+<br>python -m experiments.run_decisive --seed 0
+<br><br><span class="c"># power table</span>
+<br>python -m metrics.power --data \
+<br>&nbsp;&nbsp;benchmark/data/corpus.jsonl
+<br><br><span class="c"># order-invariance gate</span>
+<br>python -m scope.order_invariance --check
+<br><br><span class="c"># full suite</span>
+<br>pytest -q</div>
+        <p class="note">Every experiment writes a manifest recording the git SHA, model tiers and
+          seed. Runs are reproducible from the manifest alone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>ScopeCompose &mdash; detecting and resolving conditional knowledge conflicts in
+      retrieval-augmented generation.</p>
+    <p style="margin-top:8px">Johann George &amp; Febin K &middot; Karunya Institute of Technology
+      and Sciences &middot; figures computed live from the embedded benchmark.</p>
+  </div>
+</footer>
+
+<script src="data/corpus.js"></script>
+<script src="assets/js/engines.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

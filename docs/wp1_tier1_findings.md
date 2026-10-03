@@ -407,15 +407,15 @@ every run so the decision is visible where it applies.
 ## Batch 2 — the pairing SHAPE was the problem, not gov.uk
 
 **2026-09-25.** Batch 1 concluded that gov.uk pairings were mostly one guide
-wearing two URLs: 10 of 17 same-guide, 7 distinct. Batch 2 changed what gets
+wearing two URLs: 10 of 17 same-guide, 5 distinct, 2 broken. Batch 2 changed what gets
 paired and the result inverted.
 
 | | batch 1 | batch 2 |
 |---|---|---|
 | pairing shape | guide section vs guide section | **public guide vs rules appendix / caseworker guidance** |
-| distinct documents | 7 / 17 (41%) | **12 / 15 (80%)** |
+| distinct documents | 5 / 17 (29%) | **12 / 15 (80%)** |
 | same guide, two URLs | 10 / 17 | **0 / 15** |
-| broken | 0 | 3 (404) |
+| broken | 2 / 17 | 3 (404) |
 
 gov.uk publishes three genuinely separate things per immigration route: the
 public-facing guide, the Immigration Rules appendix, and the caseworker
