@@ -1,29 +1,54 @@
-# Simple workflow for deploying static content to GitHub Pages
+# Deploy the project site to GitHub Pages.
+#
+# Two corrections to the default static-content template this started from:
+#
+#   path: 'site' rather than '.'
+#     The repository root has no index.html, so uploading the whole repo
+#     publishes a listing of the source tree instead of the site, and puts
+#     every working document in the project on a public URL as a side effect.
+#
+#   a verification gate before publishing
+#     site/assets/js/engines.js reimplements scope/attributes.py::compare and
+#     ScopeAnalyser._combine in JavaScript so the detector runs in the
+#     browser. A port that drifts from the Python makes the page compute a
+#     different relation from the pipeline, which is worse than a screenshot
+#     because it still looks authoritative. The replay below fails the build
+#     rather than shipping that.
+
 name: Deploy static content to Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["master"]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# One deployment at a time; never cancel one that is already publishing.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # Replays the committed Python reference through the browser engine.
+      # Regenerate it with site/tools/make_reference.py whenever the corpus
+      # or scope/attributes.py changes.
+      - name: Verify the browser engine against Python
+        run: node site/tools/verify_engines.js
+
   deploy:
+    needs: verify
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -36,8 +61,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: 'site'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
