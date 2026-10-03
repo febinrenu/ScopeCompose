@@ -465,15 +465,28 @@
 
   /* ----------------------------------------------------------- routing */
 
+  // Hash routing over three top-level views. Anchors inside the overview
+  // ("#relations") keep working because anything not matching "#/..." falls
+  // through to the overview.
+  const VIEWS = { "#/bench": "view-bench", "#/byo": "view-byo" };
+
   function syncRoute(){
-    const bench = location.hash.startsWith("#/bench");
-    document.getElementById("view-overview").hidden = bench;
-    host.hidden = !bench;
+    const hash = location.hash;
+    const target = VIEWS[hash] || "view-overview";
+    for (const id of ["view-overview", ...Object.values(VIEWS)]){
+      const el = document.getElementById(id);
+      if (el) el.hidden = id !== target;
+    }
     document.querySelectorAll("#nav a").forEach(a => {
-      if (a.classList.contains("route")) a.classList.toggle("on", bench);
-      else if (bench) a.classList.remove("on");
+      if (a.classList.contains("route")) a.classList.toggle("on", a.getAttribute("href") === hash);
+      else if (target !== "view-overview") a.classList.remove("on");
     });
-    if (bench && !host.dataset.built){ render(); host.dataset.built = "1"; scrollTo(0, 0); }
+    // The bench is the only view expensive enough to defer; built once.
+    if (target === "view-bench" && !host.dataset.built){
+      render();
+      host.dataset.built = "1";
+    }
+    if (target !== "view-overview") scrollTo(0, 0);
   }
   addEventListener("hashchange", syncRoute);
   syncRoute();

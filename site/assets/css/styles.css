@@ -526,3 +526,18 @@ svg.trace .flab{fill:var(--delete); font-size:9px; letter-spacing:.09em;
 .rchips{display:flex; gap:6px; flex-wrap:wrap; margin-top:9px}
 
 table.bench .na{color:var(--unmeasured); font-style:italic; font-size:12px}
+
+/* ---- bring your own ---- */
+.byo-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px}
+@media (max-width:760px){ .byo-grid{grid-template-columns:1fr} }
+.byo-col{min-width:0}
+.byo-col label.lab{display:block; margin:12px 0 5px}
+.byo-col textarea,.byo-col input[type=text]{
+  width:100%; background:var(--ground); border:1px solid var(--line);
+  border-radius:var(--radius); padding:8px 10px; font-size:13.5px; resize:vertical;
+  font-family:inherit; color:var(--ink);
+}
+.byo-col textarea:hover,.byo-col input:hover{border-color:var(--line-2)}
+.byo-attr{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
+#byoQ{background:var(--ground); border:1px solid var(--line); border-radius:var(--radius);
+      padding:9px 11px; font-size:15px; color:var(--ink)}

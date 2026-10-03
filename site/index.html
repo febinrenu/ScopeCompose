@@ -26,6 +26,7 @@
   <span class="brand">Scope<b>Compose</b></span>
   <nav id="nav">
     <a href="#/bench" class="route">Bench</a>
+    <a href="#/byo" class="route">Try it</a>
     <a href="#hero">Demo</a>
     <a href="#relations">Relations</a>
     <a href="#position">Positioning</a>
@@ -423,6 +424,13 @@
           branches, and only <b>42 of 128 instances carry branch structure</b> (83 branches). The
           remaining 86 have detection labels and no branch annotation yet. Hatched figures above
           mean <i>cannot support a conclusion</i> &mdash; not <i>bad result</i>.</p>
+        <p class="note"><b>This run read data that is now held out.</b> The twelve instances were
+          picked by file order, before splits existed. Under the assignment now in the corpus they
+          straddle all three: <b>5 test, 4 train, 3 dev</b>. So the one headline experiment
+          corresponds to no defined split and is majority test data. It is recorded here rather
+          than quietly re-run, and <span class="ic">benchmark/data/decisive.json</span> now carries
+          the instance ids, the seed, the commit and all 24 per-branch outcomes so anyone can
+          check. The re-run at 137+ instances has to be on a defined split.</p>
         <p class="note"><b>And those 42 are not mined prose.</b> All of them are authored
           <span class="ic">wp1_*</span> probe instances &mdash; 42 of 42 are
           <span class="ic">construction=split</span>, <span class="ic">separation=synthetic_split</span>.
@@ -548,6 +556,8 @@
 
 <div class="view" id="view-bench" hidden></div>
 
+<div class="view" id="view-byo" hidden></div>
+
 <footer>
   <div class="wrap">
     <p>ScopeCompose &mdash; detecting and resolving conditional knowledge conflicts in
@@ -566,5 +576,6 @@
 <script src="assets/js/compose.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/bench.js"></script>
+<script src="assets/js/byo.js"></script>
 </body>
 </html>

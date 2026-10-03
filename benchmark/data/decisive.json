@@ -56,5 +56,202 @@
       "n": 24
     },
     "n_shared": 24
-  }
+  },
+  "provenance": {
+    "data": "benchmark\\data\\wp1_probe.jsonl",
+    "limit": 12,
+    "seed": 0,
+    "instance_ids": [
+      "wp1_fin_imp_001",
+      "wp1_fin_imp_002",
+      "wp1_fin_imp_003",
+      "wp1_fin_imp_004",
+      "wp1_fin_imp_005",
+      "wp1_fin_imp_006",
+      "wp1_fin_imp_007",
+      "wp1_fin_imp_008",
+      "wp1_fin_imp_009",
+      "wp1_fin_imp_010",
+      "wp1_imm_imp_011",
+      "wp1_imm_imp_012"
+    ],
+    "splits_in_data": {
+      "wp1_fin_imp_001": "dev",
+      "wp1_fin_imp_002": "dev",
+      "wp1_fin_imp_003": "dev",
+      "wp1_fin_imp_004": "dev",
+      "wp1_fin_imp_005": "dev",
+      "wp1_fin_imp_006": "dev",
+      "wp1_fin_imp_007": "dev",
+      "wp1_fin_imp_008": "dev",
+      "wp1_fin_imp_009": "dev",
+      "wp1_fin_imp_010": "dev",
+      "wp1_imm_imp_011": "dev",
+      "wp1_imm_imp_012": "dev"
+    },
+    "splits_in_corpus": {
+      "wp1_fin_imp_001": "dev",
+      "wp1_fin_imp_002": "train",
+      "wp1_fin_imp_003": "dev",
+      "wp1_fin_imp_004": "train",
+      "wp1_fin_imp_005": "train",
+      "wp1_fin_imp_006": "train",
+      "wp1_fin_imp_007": "test",
+      "wp1_fin_imp_008": "test",
+      "wp1_fin_imp_009": "test",
+      "wp1_fin_imp_010": "test",
+      "wp1_imm_imp_011": "dev",
+      "wp1_imm_imp_012": "test"
+    },
+    "bootstrap_resamples": 10000,
+    "git_sha": "3a9c9739141aa70439464a8ac10c3f91d3bdeb99",
+    "note": "The pipeline arm is scored at the routing step (survived = default or composed) and the baseline arm by align() over generated branches. The two arms therefore cannot be compared on distortion, hallucination or spurious-condition rate: the pipeline arm never assigns them.",
+    "split_warning": "These instances were selected by file order before splits existed. Under the assignment now in benchmark/data/corpus.jsonl they straddle all three splits, so this run read instances that are now held-out test data. Re-run on a defined split before reporting."
+  },
+  "branches": [
+    {
+      "instance_id": "wp1_fin_imp_001",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": false
+    },
+    {
+      "instance_id": "wp1_fin_imp_001",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": false
+    },
+    {
+      "instance_id": "wp1_fin_imp_002",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_002",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_003",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_003",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": false
+    },
+    {
+      "instance_id": "wp1_fin_imp_004",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_004",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": false
+    },
+    {
+      "instance_id": "wp1_fin_imp_005",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_005",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_006",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_006",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_007",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_007",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_008",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_008",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_009",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_fin_imp_009",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": false
+    },
+    {
+      "instance_id": "wp1_fin_imp_010",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": false
+    },
+    {
+      "instance_id": "wp1_fin_imp_010",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": false
+    },
+    {
+      "instance_id": "wp1_imm_imp_011",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_imm_imp_011",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": true
+    },
+    {
+      "instance_id": "wp1_imm_imp_012",
+      "branch_id": "b0",
+      "pipeline_survived": true,
+      "baseline_survived": false
+    },
+    {
+      "instance_id": "wp1_imm_imp_012",
+      "branch_id": "b1",
+      "pipeline_survived": false,
+      "baseline_survived": false
+    }
+  ]
 }

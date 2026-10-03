@@ -8,9 +8,15 @@ site/
   index.html                     markup
   favicon.svg
   assets/css/styles.css
-  assets/js/engines.js           pure logic, ported from Python
+  assets/js/engines.js           scope algebra, four-way relation, routing
+  assets/js/match.js             branch matching and the textual judge
+  assets/js/detector.js          lexical features, heuristic NLI, stage 1
+  assets/js/compose.js           composition operator and renderer
+  assets/js/stats.js             Wilson, McNemar, Holm-Bonferroni
   assets/js/motion.js            WebGL field, reveals, cursor, intro
-  assets/js/app.js               DOM wiring
+  assets/js/app.js               overview wiring
+  assets/js/bench.js             the bench, and hash routing
+  assets/js/byo.js               bring your own branches
   data/corpus.js                 generated — what the page loads
   data/corpus.json               generated — the same records as plain JSON
   build_data.py                  regenerates both from the benchmark
@@ -84,6 +90,47 @@ publish step, which is harmless.
 **The site reproduces unpublished results.** Enabling Pages makes the corpus,
 the findings and the decisive experiment publicly readable. That is a decision
 to take deliberately with a supervisor, not a side effect of a push.
+
+## Routes
+
+| route | what it is |
+|---|---|
+| `#/` | the overview: the live demo, the four relations, findings, claims |
+| `#/bench` | five resolvers scored side by side, the detector trace, retrieval loss, the order-invariance prover |
+| `#/byo` | type two branches and run the composition operator on them |
+
+Anything that is not `#/...` falls through to the overview, so in-page
+anchors like `#relations` keep working.
+
+**The bench is the one to show someone.** It answers "how is this different
+from what already exists?" by running the alternatives rather than describing
+them, and the answer it gives is not a win:
+
+```
+Selection (prior work)             PR 0.542
+ScopeCompose, as it actually runs  PR 0.446   routing-level
+Full context, both passages        PR 0.855   gameable
+ScopeCompose, routing oracle       PR 0.976   ORACLE, upper bound
+Gold scoped answer                 PR 0.699   the scorer's ceiling
+```
+
+The composition operator preserves 97.6% of gold branches when it is told a
+conflict exists. The detector in front of it finds **0 of 42**, topping out at
+0.2206 against an escalation floor of 0.35 — so stage 2 never runs, with or
+without an API key. That gap is the remaining research problem, and it is the
+opposite of the one the project expected.
+
+Three framing rules the bench must not lose:
+
+- The oracle column is fed gold routing **and** gold branches, because B1
+  extraction has no offline path. It carries a permanent badge.
+- The as-it-runs column is scored at the routing step, exactly as
+  `run_decisive` scores the pipeline arm, so it reads no gold branch text.
+  An earlier version fed gold branches into `compose()` and then scored the
+  rendered string against those same branches, which inflated it to 0.687.
+- Concatenation scoring above the gold answer is a defect in the metric, not
+  a property of the resolver: PR is containment with no length normalisation
+  and no precision counterweight. It is shown with answer length beside it.
 
 ## The motion layer
 

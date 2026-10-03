@@ -221,6 +221,39 @@ def score_baseline(
     return score
 
 
+def _corpus_splits(instance_ids: list[str]) -> dict[str, str]:
+    """Where these instances sit under the current corpus assignment.
+
+    The run's own data file carries whatever split it was built with, which
+    for the probe set predates split assignment entirely. What a reader needs
+    to know is where the instances live *now*, because that is what decides
+    whether the run touched held-out data.
+    """
+    corpus = Path("benchmark/data/corpus.jsonl")
+    if not corpus.exists():
+        return {}
+    wanted = set(instance_ids)
+    out = {}
+    for line in corpus.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if row.get("instance_id") in wanted:
+            out[row["instance_id"]] = row.get("split")
+    return out
+
+
+def _git_sha() -> str | None:
+    """The commit the run was made from, or None outside a checkout."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                             text=True, timeout=5)
+        return out.stdout.strip() or None
+    except Exception:
+        return None
+
+
 def compare(a: SystemScore, b: SystemScore, *, seed: int = 0) -> dict:
     """Paired comparison on the branches both systems were scored on."""
     shared = sorted(set(a.branch_preserved) & set(b.branch_preserved))
@@ -232,13 +265,27 @@ def compare(a: SystemScore, b: SystemScore, *, seed: int = 0) -> dict:
     test = mcnemar(outcomes_a, outcomes_b)
 
     units = list(zip(outcomes_a, outcomes_b))
+    # 10,000 rather than 2,000, and the reason is not thoroughness for its own
+    # sake. With 24 paired binary units the difference lives on a 1/24 lattice,
+    # and at 2,000 resamples the reported interval is not stable under the
+    # RNG: across 300 seeds the published [-0.375, +0.125] came up 242 times,
+    # with [-0.333, +0.125] and [-0.375, +0.083] making up the rest. A headline
+    # interval that changes with the seed is not a result. At 10,000 it is
+    # identical across every seed tried, so the number stops depending on an
+    # implementation detail of the random module.
     diff = bootstrap_difference(
         units,
         lambda s: sum(1 for x, _ in s if x) / len(s),
         lambda s: sum(1 for _, y in s if y) / len(s),
-        n_resamples=2000, seed=seed,
+        n_resamples=10_000, seed=seed,
     )
-    return {"mcnemar": test, "pr_difference": diff, "n_shared": len(shared)}
+    return {"mcnemar": test, "pr_difference": diff, "n_shared": len(shared),
+            "branches": [
+                {"instance_id": k[0], "branch_id": k[1],
+                 "pipeline_survived": bool(a.branch_preserved[k]),
+                 "baseline_survived": bool(b.branch_preserved[k])}
+                for k in shared
+            ]}
 
 
 def render(pipeline: SystemScore, baselines: list[SystemScore], comparison: dict) -> str:
@@ -368,6 +415,36 @@ def main(argv: list[str] | None = None) -> int:
                 "pr_difference": comparison["pr_difference"].as_dict(),
                 "n_shared": comparison["n_shared"],
             }
+
+        # Provenance, because the previous run recorded none and the subset
+        # had to be recovered from git history and a response cache. Without
+        # this the headline experiment cannot be re-derived by anyone,
+        # including the people who ran it.
+        payload["provenance"] = {
+            "data": str(args.data),
+            "limit": args.limit,
+            "seed": args.seed,
+            "instance_ids": [i.instance_id for i in instances],
+            "splits_in_data": {i.instance_id: i.split for i in instances},
+            "splits_in_corpus": _corpus_splits([i.instance_id for i in instances]),
+            "bootstrap_resamples": 10_000,
+            "git_sha": _git_sha(),
+            "note": ("The pipeline arm is scored at the routing step "
+                     "(survived = default or composed) and the baseline arm by "
+                     "align() over generated branches. The two arms therefore "
+                     "cannot be compared on distortion, hallucination or "
+                     "spurious-condition rate: the pipeline arm never assigns "
+                     "them."),
+            "split_warning": ("These instances were selected by file order before "
+                              "splits existed. Under the assignment now in "
+                              "benchmark/data/corpus.jsonl they straddle all three "
+                              "splits, so this run read instances that are now "
+                              "held-out test data. Re-run on a defined split "
+                              "before reporting."),
+        }
+        if comparison:
+            payload["branches"] = comparison["branches"]
+
         args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         print(f"\nresults -> {args.json}")
