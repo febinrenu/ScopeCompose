@@ -163,6 +163,66 @@ def _textual_cases(instances: list[GoldInstance]) -> list[dict]:
     return cases
 
 
+def _oracle_cases(instances: list[GoldInstance]) -> list[dict]:
+    """The whole oracle chain: gold routing -> compose -> render -> judge.
+
+    This is the bench's headline column, so it is verified end to end rather
+    than stage by stage. If the rendered string or any judgement differs, the
+    number on the page is not the number the operator produces.
+    """
+    from composition.operator import CompositionOperator
+    from generation.scoped_answer import check_faithfulness, render_template
+    from metrics.preservation import judge_branches
+
+    op = CompositionOperator()
+    cases = []
+    for inst in instances:
+        if not inst.gold_branches:
+            continue
+        record = inst.to_query_record(include_gold_pairs=True)
+        composed = op.compose(record, inst.gold_branches)
+        answer = render_template(composed)
+        faith = check_faithfulness(answer, composed.branches)
+        cases.append({
+            "inst": inst.instance_id,
+            "resolution": composed.resolution.value,
+            "kept": [b.branch_id for b in composed.branches],
+            "nested": bool(composed.flags.nested),
+            "crossed": bool(composed.flags.crossed),
+            "answer": answer,
+            "judge": [j.value for j in judge_branches(answer, inst.gold_branches)],
+            "faithful": bool(faith.ok),
+        })
+    return cases
+
+
+def _retrieval_cases(instances: list[GoldInstance]) -> list[dict]:
+    """The three implemented retrieval baselines, and which branches they lose.
+
+    run_baselines.py's rule: a branch is lost iff it names a supporting
+    passage and that passage was dropped. A branch with no support always
+    survives.
+    """
+    from baselines.retrieval_side import NLIFilter, RerankTop1, StandardRAG
+
+    systems = [StandardRAG(), RerankTop1(), NLIFilter(heuristic_nli=True)]
+    cases = []
+    for inst in instances:
+        if not inst.gold_branches:
+            continue
+        record = inst.to_query_record(include_gold_pairs=False)
+        for sys_ in systems:
+            out = sys_.run(record)
+            kept = {p.id for p in out.kept}
+            cases.append({
+                "inst": inst.instance_id, "sys": sys_.name,
+                "kept": sorted(kept),
+                "lost": sorted(b.branch_id for b in inst.gold_branches
+                               if b.supporting_passage and b.supporting_passage not in kept),
+            })
+    return cases
+
+
 def _route_cases() -> list[dict]:
     """Every (type, relation) the routing table can be asked about."""
     cases = []
@@ -197,6 +257,8 @@ def main() -> int:
         "route": _route_cases(),
         "detector": _detector_cases(instances),
         "textual": _textual_cases(instances),
+        "oracle": _oracle_cases(instances),
+        "retrieval": _retrieval_cases(instances),
     }
     OUT.write_text(json.dumps(reference, separators=(",", ":"), sort_keys=True),
                    encoding="utf-8")
@@ -228,6 +290,24 @@ def main() -> int:
     print(f"  detector        {len(det):>4} pairs: {fired} flagged conflict, "
           f"{esc} escalated, max score {top:.4f}")
     print(f"  textual         {len(reference['textual']):>4} (instance, resolver) judgements")
+
+    orc = reference["oracle"]
+    res = Counter(c["resolution"] for c in orc)
+    preserved = sum(j == "preserved" for c in orc for j in c["judge"])
+    total = sum(len(c["judge"]) for c in orc)
+    print(f"  oracle          {len(orc):>4} instances: "
+          + ", ".join(f"{k} {v}" for k, v in sorted(res.items())))
+    print(f"      PR {preserved}/{total} = {preserved / total:.4f} "
+          f"(upper bound -- gold routing AND gold branches)")
+
+    ret = reference["retrieval"]
+    bysys = {}
+    for c in ret:
+        a = bysys.setdefault(c["sys"], [0, 0, 0])
+        a[0] += len(c["lost"]); a[1] += 1; a[2] += 1 if c["lost"] else 0
+    print(f"  retrieval       {len(ret):>4} (instance, baseline) runs")
+    for name, (lost, n, hit) in sorted(bysys.items()):
+        print(f"      {name:<14} lost {lost:>3} branches, {hit}/{n} instances affected")
     return 0
 
 

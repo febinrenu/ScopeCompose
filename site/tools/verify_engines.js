@@ -33,12 +33,18 @@ const { compare, combine, routeFor } = new Function(
   load("assets/js/engines.js") + "\nreturn { compare, combine, routeFor };"
 )();
 
-const { screenPair } = new Function(
-  load("assets/js/detector.js") + "\nreturn { screenPair };"
+const { screenPair, heuristicNLI } = new Function(
+  load("assets/js/detector.js") + "\nreturn { screenPair, heuristicNLI };"
 )();
 
-const { judgeTextual } = new Function(
-  load("assets/js/match.js") + "\nreturn { judgeTextual };"
+// compose.js leans on compare/REL from engines.js and outcomes_match from
+// match.js, so the three are evaluated in one scope, exactly as the browser
+// loads them.
+const { judgeTextual, composeBranches, renderTemplate, checkFaithfulness } = new Function(
+  load("assets/js/engines.js") + "\n" +
+  load("assets/js/match.js") + "\n" +
+  load("assets/js/compose.js") +
+  "\nreturn { judgeTextual, composeBranches, renderTemplate, checkFaithfulness };"
 )();
 
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) <= eps;
@@ -143,6 +149,71 @@ for (const c of ref.textual || []) {
   else fail(`textual ${c.inst}/${c.sys}: python=[${c.j}] js=[${got}]`);
 }
 console.log(`textual         ${okt}/${(ref.textual || []).length} resolver judgements`);
+
+/* --- oracle chain: gold routing -> compose -> render -> judge ----------- */
+let oko = 0, oraclePreserved = 0, oracleTotal = 0;
+for (const c of ref.oracle || []) {
+  const rec = byId.get(c.inst);
+  if (!rec) { fail(`oracle: missing instance ${c.inst}`); continue; }
+  const action = routeFor(rec.ty, rec.rel);
+  const composed = composeBranches(rec, rec.b, action);
+  const answer = renderTemplate(composed);
+  const judged = judgeTextual(answer, rec.b);
+  oracleTotal += judged.length;
+  oraclePreserved += judged.filter(j => j === "preserved").length;
+
+  let bad = null;
+  if (composed.resolution !== c.resolution)
+    bad = `resolution python=${c.resolution} js=${composed.resolution}`;
+  else if (composed.branches.map(b => b.id).join(",") !== c.kept.join(","))
+    bad = `kept python=[${c.kept}] js=[${composed.branches.map(b => b.id)}]`;
+  else if (answer !== c.answer)
+    bad = `answer\n      python: ${c.answer}\n      js:     ${answer}`;
+  else if (judged.join(",") !== c.judge.join(","))
+    bad = `judge python=[${c.judge}] js=[${judged}]`;
+  else if (checkFaithfulness(answer, composed.branches).ok !== c.faithful)
+    bad = `faithful python=${c.faithful}`;
+  if (bad) fail(`oracle ${c.inst}: ${bad}`); else oko++;
+}
+console.log(`oracle          ${oko}/${(ref.oracle || []).length} instances `
+          + `(resolution, kept branches, rendered answer, judgements, faithfulness)`);
+if (oracleTotal) {
+  console.log(`                PR ${oraclePreserved}/${oracleTotal} = `
+            + `${(oraclePreserved / oracleTotal).toFixed(4)}  <- UPPER BOUND, gold routing and gold branches`);
+}
+
+/* --- retrieval-side baselines ------------------------------------------ */
+const RETR = {
+  standard_rag: rec => rec.p.map(p => p.id),
+  rerank_top1: rec => [rec.p[0].id],
+  nli_filter: rec => {
+    const ps = rec.p;
+    if (ps.length < 2) return ps.map(p => p.id);
+    const totals = ps.map((a, i) => ps.reduce((acc, b, j) =>
+      i === j ? acc : acc + heuristicNLI(b.t, a.t).contradiction, 0));
+    let worst = 0;
+    for (let i = 1; i < ps.length; i++){
+      if (totals[i] > totals[worst]
+          || (totals[i] === totals[worst] && ps[i].id > ps[worst].id)) worst = i;
+    }
+    if (totals[worst] < 0.5) return ps.map(p => p.id);
+    return ps.filter((_, i) => i !== worst).map(p => p.id);
+  },
+};
+let okret = 0;
+const lostBy = {};
+for (const c of ref.retrieval || []) {
+  const rec = byId.get(c.inst);
+  if (!rec) { fail(`retrieval: missing instance ${c.inst}`); continue; }
+  const kept = new Set(RETR[c.sys](rec));
+  const lost = rec.b.filter(b => b.sup && !kept.has(b.sup)).map(b => b.id).sort();
+  lostBy[c.sys] = (lostBy[c.sys] || 0) + lost.length;
+  if ([...kept].sort().join(",") !== c.kept.join(",")) fail(`retrieval ${c.inst}/${c.sys}: kept differs`);
+  else if (lost.join(",") !== c.lost.join(",")) fail(`retrieval ${c.inst}/${c.sys}: lost python=[${c.lost}] js=[${lost}]`);
+  else okret++;
+}
+console.log(`retrieval       ${okret}/${(ref.retrieval || []).length} baseline runs  `
+          + Object.entries(lostBy).sort().map(([k, v]) => `${k} lost ${v}`).join(", "));
 
 if (failures) {
   console.error(`\nFAILED: ${failures} disagreement(s). A port has drifted from Python.`);

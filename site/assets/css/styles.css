@@ -495,3 +495,34 @@ h2.serif{font-size:clamp(36px,6.1vw,70px); letter-spacing:-.022em; line-height:1
   .cur-dot,.cur-ring{display:none}
   body.has-cur{cursor:auto}
 }
+
+/* ==========================================================================
+   BENCH
+   ========================================================================== */
+.view[hidden]{display:none}
+.bar nav a.route{color:var(--field-a); font-weight:600}
+.bar nav a.route::before{content:"\2192"; margin-right:5px; opacity:.55}
+
+table.bench td{vertical-align:top}
+table.bench td .sub{font-size:11px; color:var(--muted); margin-top:2px; letter-spacing:.03em}
+table.bench td.why{font-size:12.5px; color:var(--ink-2); line-height:1.5; max-width:34ch}
+table.bench td.why code,table.bench td.why b{font-size:inherit}
+table.bench .pill{margin-top:6px}
+
+svg.trace{width:100%; height:auto; display:block}
+svg.trace .bars rect{fill:var(--field-a); opacity:.65}
+svg.trace .floor{stroke:var(--delete); stroke-width:1.2}
+svg.trace .axis{stroke:var(--line-2); stroke-width:1}
+svg.trace .flab{fill:var(--delete); font-size:9px; letter-spacing:.09em;
+                font-family:"JetBrains Mono",monospace; text-transform:uppercase}
+
+.rcol{border-top:1px solid var(--line); padding:15px 0}
+.rcol:first-of-type{border-top:none}
+.rhead{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; margin-bottom:7px}
+.rhead .sub{font-size:11.5px; color:var(--muted)}
+.rans{font-size:14.5px; line-height:1.55; color:var(--ink-2);
+      background:var(--sunk); border:1px solid var(--line); border-radius:var(--radius);
+      padding:11px 13px}
+.rchips{display:flex; gap:6px; flex-wrap:wrap; margin-top:9px}
+
+table.bench .na{color:var(--unmeasured); font-style:italic; font-size:12px}
