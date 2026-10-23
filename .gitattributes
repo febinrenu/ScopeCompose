@@ -1,0 +1,5 @@
+site/public/engine/*.js -text
+site/public/data/* -text
+*.bat text eol=crlf
+*.sh text eol=lf
+*.command text eol=lf

@@ -439,25 +439,27 @@ conflict-rag/
 ├── experiments/           # end-to-end runners, ablations            [joint]
 ├── scripts/               # setup and maintenance utilities
 ├── docs/                  # WP0 positioning memo, design notes
-├── site/                  # static project site — runs the detector in a browser
+├── site/                  # project site — a 3D scroll story that runs the detector in the browser
 └── tests/                 # pytest
 ```
 
 ### The project site
 
-`site/` is a dependency-free static site that **runs** the detector rather than
-describing it: the scope algebra, the four-way relation, the routing table and
-the power analysis are ported to JavaScript and execute on the real corpus,
-which ships with the page.
+`site/` is a Vite + TypeScript + Three.js site that **runs** the detector rather
+than describing it: the scope algebra, the four-way relation, the routing table,
+the stage-1 detector, the composition operator and the power analysis are ported
+to JavaScript and execute on the real corpus, which ships with the page.
 
 ```bash
-python -m http.server 8000 --directory site      # then http://localhost:8000
+cd site && npm ci && npm run build && npm run preview   # then http://localhost:4173
 ```
 
-Opening `site/index.html` directly works too. The port is not trusted on
-faith — `site/tools/verify_engines.js` replays Python's answers for every
-branch pair in the corpus and fails on any disagreement, and the deploy
-workflow runs it before publishing. See `site/README.md`.
+It no longer opens from `file://` (Three.js is ES-modules only); any static
+server over `site/dist` works offline. The port is not trusted on faith —
+`site/tools/verify_engines.js` replays Python's answers across the corpus and
+fails on any disagreement, and CI also checks the build ships those engine files
+byte-identical. Publishing is disabled in CI pending supervisor sign-off. See
+`site/README.md`.
 
 ---
 

@@ -43,3 +43,12 @@ Thumbs.db
 .vscode/
 .idea/
 models/
+
+# Site build (Vite)
+site/node_modules/
+site/dist/
+site/test-results/
+
+# Office lock and autosave files
+~$*
+~WRL*.tmp

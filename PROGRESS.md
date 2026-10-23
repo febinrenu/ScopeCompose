@@ -11,6 +11,92 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-10-22 - The site rebuilt as a 3D scroll story; the engines untouched and now guarded four ways
+
+`site/` was a dependency-free single page. It is now a Vite + TypeScript +
+Three.js + GSAP/Lenis build. The page tells the project as eleven acts in one
+persistent WebGL world:
+
+- the collision, and the deletion of a true branch;
+- the empty socket;
+- the four scope relations as volumes;
+- the engine as an instrument;
+- a live reasoner;
+- the recomposition;
+- the research;
+- the honest frontier.
+
+Branch `site-immersive`. Nothing outside `site/` changed except the CI workflow
+and the README section.
+
+**The engines were moved, not touched.** `git mv` put them into
+`site/public/engine/`, which Vite copies verbatim, and the renames are 100%.
+
+- `verify_engines.js` now loads them from there.
+- Four layers keep them honest:
+  - **Port check:** the existing replay against Python.
+  - **Byte check:** `check_dist.mjs` proves `dist/` ships them byte-identical
+    and in order, and that no bundle contains a second copy.
+  - **Single door:** only `bridge.ts` may name an engine global, enforced by a
+    test.
+  - **Golden replay:** the site's own orchestration replays the Python
+    reference.
+- The retrieval baselines existed twice: inline in the verifier and in the
+  bench. They are now one file, `public/engine/baselines.js`, loaded by both.
+  So the copy that ships is the copy that is checked.
+
+**A real inconsistency removed.** The old hero derived the default branch by
+array position; the bench sorted by passage id, mirroring
+`ScopeAnalyser.analyse`. Only the bench version is order-invariant, and it is
+now the only version (`deriveRelation` in `src/engine/pipeline.ts`).
+
+**Two genuine analyser-vs-gold disagreements surfaced.** These are
+`wp1_fin_imp_019` (gold refinement, analyser redundant) and `wp1_imm_opp_055`
+(gold opposed, analyser redundant). The second is the authored opposed case
+already flagged for verification.
+
+- The golden test pins both, so a change is a deliberate review rather than a
+  silent drift.
+- The reasoner shows them as disagreements.
+- The old README's "39/39 relations derived match gold" was stale.
+
+**One HCR misdescription corrected on the page.** The bench prose said "HCR
+catches only invented figures". The code's HCR counts predicted branches
+citing a passage that does not exist (`metrics/preservation.py:363`).
+
+**Numbers on the page.**
+
+- Everything is computed from corpus and engines, or imported from the
+  artifact (`benchmark/data/decisive.json`).
+- Stage-1 precision 0.833 and recall 0.064 were hand-typed and are now
+  computed.
+- What cannot be computed in a browser sits in `src/data/facts.ts` with a
+  `source` the page shows. This covers the κ pilots, the Tier-1 pilot, and two
+  figures re-run today:
+  - **520 Python tests passing.** The site had said 518 and PROGRESS 501.
+  - **The order-invariance gate passes at 1.0000:** 60 records, 72
+    permutations, 66 non-positional.
+
+**Why the world maps scroll the way it does.** Each act holds its own
+keyframes while pinned and travels to the next act only while scrolling out
+(`cursorFor`). The first version transitioned during the pinned phase, so the
+scope volumes slid into the failure act while its copy was still on screen.
+
+**What was found by looking.** Headless Chrome with the real GPU found:
+
+- an overflowing wordmark;
+- copy and objects colliding;
+- textures decoded as sRGB in a raw ShaderMaterial, which rendered dark;
+- the router passing arbitrary hashes to `querySelector`, which throws;
+- lab views locking page scroll, because `lenis.stop()` hides overflow.
+
+All are fixed.
+
+**Not deployed.** The deploy job is `if: false`: publishing makes unpublished
+results public, which is the supervisor's call. CI now verifies (Python
+reference and corpus staleness, engine replay), then builds and uploads the
+artifact.
+
 ### 2026-10-02 - Everything buildable is built. 501 tests.
 
 Four gaps closed. The repo now holds every component the proposal specifies;
