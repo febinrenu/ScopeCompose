@@ -25,6 +25,7 @@ Annotation ownership:
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -34,6 +35,7 @@ from contract.models import (
     Construction,
     Domain,
     MultiExceptionFlags,
+    Opposition,
     Passage,
     QueryRecord,
     ScopeRelation,
@@ -181,6 +183,58 @@ class Branch(BaseModel):
         return self
 
 
+class Persona(BaseModel):
+    """A short first-person case description that falls in exactly one gold region.
+
+    Personas are what case-complete accuracy (CCA) is scored over: for each one
+    the reader must determine, from a system's answer alone, the outcome that
+    holds for that person. ``statement`` is paraphrased from the source wording
+    (never from attribute identifiers) and human-verified; ``branch_id`` names
+    the gold branch that governs this person, so the gold outcome is derived
+    from the instance, not stored twice.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    persona_id: str = Field(..., min_length=1)
+    statement: str = Field(..., min_length=1)
+    branch_id: str = Field(..., min_length=1, description="The gold branch that governs this person.")
+    attributes: dict[str, str] = Field(
+        default_factory=dict,
+        description="Attribute values the persona fixes, keyed like ScopeAttribute.name. Informational.",
+    )
+
+
+class PersonaPair(BaseModel):
+    """A minimal counterfactual pair (proposal v8 §6.5).
+
+    ``flip='relevant'`` changes only the attribute that defines the exception
+    region, so the gold outcome MUST change. ``flip='irrelevant'`` changes an
+    attribute no frame constrains (a city of residence for a fee rule), so the
+    gold outcome MUST NOT change. These pairs validate the reader (V2) and give
+    a system-level consistency score.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    base_persona_id: str = Field(..., min_length=1)
+    flipped_persona_id: str = Field(..., min_length=1)
+    flip: Literal["relevant", "irrelevant"]
+    attribute: str = Field(..., min_length=1, description="The attribute that was flipped.")
+    gold_changes: bool = Field(..., description="Whether the gold outcome differs between the two personas.")
+
+    @model_validator(mode="after")
+    def _check_flip_matches_expectation(self) -> PersonaPair:
+        if self.base_persona_id == self.flipped_persona_id:
+            raise ValueError("a persona pair needs two different personas")
+        if (self.flip == "relevant") is not self.gold_changes:
+            raise ValueError(
+                f"flip={self.flip!r} requires gold_changes={self.flip == 'relevant'}, "
+                f"got gold_changes={self.gold_changes}"
+            )
+        return self
+
+
 class Annotation(BaseModel):
     """Provenance of the labels, for the three-stage protocol and kappa reporting."""
 
@@ -225,6 +279,13 @@ class GoldInstance(BaseModel):
     # -- Member A's labels --------------------------------------------------- #
     gold_conflict_type: ConflictType
     gold_scope_relation: ScopeRelation | None = None
+    gold_opposition: Opposition | None = Field(
+        default=None,
+        description=(
+            "v1.3.0. Refines gold_scope_relation='opposed' into crossing / same_scope / "
+            "unknown. Absent for every other relation, and for pre-1.3.0 records."
+        ),
+    )
     is_distractor: bool = Field(
         default=False,
         description=(
@@ -249,6 +310,10 @@ class GoldInstance(BaseModel):
     )
     gold_multi_exception_flags: MultiExceptionFlags = Field(default_factory=MultiExceptionFlags)
 
+    # -- v1.3.0: case-complete accuracy ------------------------------------- #
+    personas: list[Persona] = Field(default_factory=list)
+    persona_pairs: list[PersonaPair] = Field(default_factory=list)
+
     annotation: Annotation = Field(default_factory=Annotation)
 
     # -- validation ---------------------------------------------------------- #
@@ -263,6 +328,54 @@ class GoldInstance(BaseModel):
             raise ValueError(
                 f"{self.instance_id!r}: a no_conflict instance must not carry a scope_relation"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _check_opposition(self) -> GoldInstance:
+        if self.gold_opposition is not None and self.gold_scope_relation is not ScopeRelation.OPPOSED:
+            raise ValueError(
+                f"{self.instance_id!r}: gold_opposition={self.gold_opposition.value!r} is only "
+                f"meaningful for scope_relation='opposed', got {self.gold_scope_relation!r}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _check_personas(self) -> GoldInstance:
+        """Personas must land in a real gold branch; pairs must agree with the branches.
+
+        The pair's ``gold_changes`` is *derived* data (from the two personas'
+        branches), so it is checked against that derivation here rather than
+        trusted: a hand-edited pair whose flag contradicts the branches would
+        otherwise silently corrupt the reader-validity numbers.
+        """
+        if not self.personas and not self.persona_pairs:
+            return self
+        if not self.gold_branches:
+            raise ValueError(f"{self.instance_id!r}: personas need gold_branches to be governed by")
+
+        branches = {b.branch_id: b for b in self.gold_branches}
+        ids = [p.persona_id for p in self.personas]
+        if len(set(ids)) != len(ids):
+            raise ValueError(f"{self.instance_id!r}: duplicate persona_ids {ids}")
+        by_id = {p.persona_id: p for p in self.personas}
+        for p in self.personas:
+            if p.branch_id not in branches:
+                raise ValueError(
+                    f"{self.instance_id!r}: persona {p.persona_id!r} cites unknown branch {p.branch_id!r}"
+                )
+        for pair in self.persona_pairs:
+            for pid in (pair.base_persona_id, pair.flipped_persona_id):
+                if pid not in by_id:
+                    raise ValueError(f"{self.instance_id!r}: persona pair cites unknown persona {pid!r}")
+            base = branches[by_id[pair.base_persona_id].branch_id]
+            flipped = branches[by_id[pair.flipped_persona_id].branch_id]
+            derived = base.outcome.strip().casefold() != flipped.outcome.strip().casefold()
+            if derived is not pair.gold_changes:
+                raise ValueError(
+                    f"{self.instance_id!r}: pair ({pair.base_persona_id}, {pair.flipped_persona_id}) "
+                    f"says gold_changes={pair.gold_changes}, but the two personas' branches "
+                    f"{'differ' if derived else 'agree'} in outcome"
+                )
         return self
 
     @model_validator(mode="after")
@@ -367,6 +480,7 @@ class GoldInstance(BaseModel):
                     is_conflict=self.gold_conflict_type is not ConflictType.NO_CONFLICT,
                     type=self.gold_conflict_type,
                     scope_relation=self.gold_scope_relation,
+                    opposition=self.gold_opposition,
                     confidence=1.0,
                     decided_by=DecidedBy.GOLD,
                 )
@@ -383,6 +497,14 @@ class GoldInstance(BaseModel):
             conflict_pairs=pairs,
             multi_exception_flags=self.gold_multi_exception_flags,
         )
+
+    def branch_for_persona(self, persona_id: str) -> Branch:
+        """The gold branch governing a persona -- the source of the gold outcome."""
+        branches = {b.branch_id: b for b in self.gold_branches}
+        for p in self.personas:
+            if p.persona_id == persona_id:
+                return branches[p.branch_id]
+        raise KeyError(f"no persona {persona_id!r} in instance {self.instance_id!r}")
 
     @property
     def exception_branches(self) -> list[Branch]:

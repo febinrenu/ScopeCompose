@@ -21,8 +21,15 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-CONTRACT_VERSION = "1.2.0"
-"""Semantic version of this schema. Stamped onto every record so drift is detectable."""
+CONTRACT_VERSION = "1.3.0"
+"""Semantic version of this schema. Stamped onto every record so drift is detectable.
+
+1.3.0 is purely additive over 1.2.0 (proposal v8): ``Opposition`` and
+``ConflictPair.opposition``; in ``contract.gold`` the ``Persona`` /
+``PersonaPair`` types and ``GoldInstance.{personas, persona_pairs,
+gold_opposition}``; and the new ``contract.frames`` module. Every new field is
+optional, so v1.2.0 records still validate and ``check_version`` accepts them
+in non-strict mode."""
 
 
 # --------------------------------------------------------------------------- #
@@ -70,6 +77,31 @@ class ScopeRelation(str, Enum):
     DISJOINT = "disjoint"
     REDUNDANT = "redundant"
     OPPOSED = "opposed"
+
+
+class Opposition(str, Enum):
+    """What kind of ``opposed`` pair this is (proposal v8 §4.2).
+
+    ``ScopeRelation.OPPOSED`` lumps together two structurally different cases,
+    and only one of them is a candidate for selection:
+
+    CROSSING
+        The applicability sets overlap, neither contains the other, and the
+        outcomes differ on the overlap. This is **not** default-plus-exception.
+        The non-overlapping parts are reported as stated and the overlap as
+        contested. Never counted as a composition success.
+    SAME_SCOPE
+        The applicability sets are equal and the outcomes differ. The principal
+        case in which credibility- or recency-based selection is appropriate,
+        subject to evidence sufficiency and source reliability.
+    UNKNOWN
+        Not yet decided. The default for every pre-v1.3.0 ``opposed`` label, and
+        treated as contested by the operator, never silently selected.
+    """
+
+    CROSSING = "crossing"
+    SAME_SCOPE = "same_scope"
+    UNKNOWN = "unknown"
 
 
 class Construction(str, Enum):
@@ -228,6 +260,13 @@ class ConflictPair(BaseModel):
             "type == no_conflict."
         ),
     )
+    opposition: Opposition | None = Field(
+        default=None,
+        description=(
+            "Only meaningful when scope_relation == opposed: whether the pair is "
+            "crossing, same-scope or not yet decided. Absent otherwise."
+        ),
+    )
     confidence: float = Field(..., ge=0.0, le=1.0)
     decided_by: DecidedBy | None = None
 
@@ -280,6 +319,11 @@ class ConflictPair(BaseModel):
             raise ValueError(
                 f"scope_relation is only meaningful for conditional (or borderline factual) "
                 f"pairs; got type={self.type.value!r}"
+            )
+        if self.opposition is not None and self.scope_relation is not ScopeRelation.OPPOSED:
+            raise ValueError(
+                f"opposition={self.opposition.value!r} is only meaningful when "
+                f"scope_relation='opposed'; got {self.scope_relation!r}"
             )
         return self
 

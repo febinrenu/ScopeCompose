@@ -52,3 +52,6 @@ site/test-results/
 # Office lock and autosave files
 ~$*
 ~WRL*.tmp
+
+# Third-party sources cloned for reading; vendor only what is used, at a pinned commit
+third_party/normbench_src/

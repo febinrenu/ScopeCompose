@@ -37,6 +37,8 @@ from contract.gold import (
     Branch,
     Explicitness,
     GoldInstance,
+    Persona,
+    PersonaPair,
     ScopeAttribute,
 )
 from contract.models import (
@@ -44,6 +46,7 @@ from contract.models import (
     Construction,
     Domain,
     MultiExceptionFlags,
+    Opposition,
     Passage,
     ScopeRelation,
     Separation,
@@ -219,6 +222,25 @@ def _build_financial_refinement(rng: random.Random, idx: int, tpl: Template) -> 
             f"However, the fee is waived for {exc_label}-tier cardholders (per p1)."
         ),
         selection_answer=f"{txn.capitalize()} incur a {pct} fee.",
+        # v1.3.0 fixture: a default persona, an exception persona, and one
+        # relevant and one irrelevant counterfactual flip.
+        personas=[
+            Persona(persona_id="u_default", branch_id="b0",
+                    statement=f"I hold a standard card and I am making a {txn.rstrip('s')} payment.",
+                    attributes={"card_tier": _CARD_TIERS[0], "city": "Leeds"}),
+            Persona(persona_id="u_exception", branch_id="b1",
+                    statement=f"I hold a {exc_label}-tier card and I am making a {txn.rstrip('s')} payment.",
+                    attributes={"card_tier": exc_label, "city": "Leeds"}),
+            Persona(persona_id="u_default_city", branch_id="b0",
+                    statement=f"I hold a standard card, I live in York, and I am making a {txn.rstrip('s')} payment.",
+                    attributes={"card_tier": _CARD_TIERS[0], "city": "York"}),
+        ],
+        persona_pairs=[
+            PersonaPair(base_persona_id="u_default", flipped_persona_id="u_exception",
+                        flip="relevant", attribute="card_tier", gold_changes=True),
+            PersonaPair(base_persona_id="u_default", flipped_persona_id="u_default_city",
+                        flip="irrelevant", attribute="city", gold_changes=False),
+        ],
         annotation=Annotation(annotator_a="mock", annotator_b="mock"),
     )
 
@@ -415,6 +437,7 @@ def _build_opposed(rng: random.Random, idx: int, tpl: Template) -> GoldInstance:
         passages=passages,
         gold_conflict_type=tpl.conflict_type,
         gold_scope_relation=tpl.scope_relation,
+        gold_opposition=Opposition.CROSSING,
         gold_branches=branches,
         gold_scoped_answer=(
             "The sources genuinely disagree for the same population; the more authoritative "
