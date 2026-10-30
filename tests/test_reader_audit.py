@@ -261,3 +261,51 @@ def test_entailment_items_load_by_item_id(tmp_path):
     p = tmp_path / "e.jsonl"
     p.write_text(json.dumps(to_review_payload(D("z1"))) + "\n", encoding="utf-8")
     assert [i.item_id for i in load_items("entailment", p)] == ["z1"]
+
+
+# --------------------------------------------------------------------------- #
+# The driver
+# --------------------------------------------------------------------------- #
+
+
+def test_build_decisions_covers_every_system_and_persona():
+    from experiments.reader_audit import build_decisions
+
+    ii = insts(3)
+    systems = {"a": {i.instance_id: i.gold_scoped_answer for i in ii}, "b": {ii[0].instance_id: "A 3% fee applies."}}
+    ds = build_decisions(ii, systems, sentence_reader, VariedNLI())
+    want = sum(len(i.personas) for i in ii) + len(ii[0].personas)
+    assert len(ds) == want and len({d.item_id for d in ds}) == want
+    assert {d.system for d in ds} == {"a", "b"}
+
+
+def test_truth_needs_both_annotators_and_leaves_disputes_unresolved():
+    from experiments.reader_audit import truth_from_reviews
+
+    a = {"1": "yes", "2": "no", "3": "yes", "4": "yes"}
+    b = {"1": "yes", "2": "no", "3": "no", "5": "no"}
+    truth, disputed = truth_from_reviews(a, b)
+    assert truth == {"1": True, "2": False} and disputed == ["3"], "4 and 5 have one label each: skipped, not guessed"
+    truth2, disputed2 = truth_from_reviews(a, b, {"3": True})
+    assert truth2["3"] is True and disputed2 == []
+
+
+def test_the_evaluate_command_scores_and_calibrates_from_review_files(tmp_path, capsys):
+    from dataclasses import asdict
+
+    from benchmark.review import Decision as ReviewDecision
+    from experiments.reader_audit import main
+
+    good = [D(f"g{i}", ent=0.80 + i * 0.01) for i in range(10)]
+    bad = [D(f"b{i}", ent=0.20 + i * 0.01) for i in range(10)]
+    path = tmp_path / "decisions.jsonl"
+    path.write_text("".join(json.dumps(asdict(d)) + "\n" for d in good + bad), encoding="utf-8")
+    for who in ("ann", "bea"):
+        st = ReviewStore(tmp_path, "entailment", who)
+        for d in good + bad:
+            st.append(ReviewDecision(d.item_id, "entailment", who, "yes" if d.item_id.startswith("g") else "no"))
+    code = main(["evaluate", "--decisions", str(path), "--annotators", "ann", "bea", "--review-dir", str(tmp_path),
+                 "--tau", "0.5"])
+    out = capsys.readouterr().out
+    assert code == 0 and "20 items with agreed labels; 0 disputed" in out and "V2 reader validity: PASS" in out
+    assert "calibrated tau: 0.8" in out

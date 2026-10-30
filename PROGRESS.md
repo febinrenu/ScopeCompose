@@ -11,6 +11,43 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-10-31 (night) - scoped precision, the V1 and V2 drivers, the release bundle, the generated datasheet
+
+**Done** (1,911 tests collected, full suite green, exit 0)
+- `metrics/scoped.py`: each claim in an answer is labelled aligned / misattached / unsupported / extraneous against
+  the gold branches (same value matcher as CCA plus an attachment test); an optional EVAL-tier judge may only
+  rescue a claim the matcher could not read. `metrics/validity.py` now evaluates three scoped criteria (gold over
+  every-passage concatenation, over the grounding passages, over gold plus filler) where it had a placeholder.
+- `experiments/validity_battery.py`: the V1 driver. Dev or train only (the test split is refused), and any
+  instance lacking personas, branches or reference answers is an error naming its id.
+- `experiments/reader_audit.py` driver: `sample` runs the real reader over the battery outputs (and any cell files),
+  draws the stratified sample and writes blind review items; `evaluate` scores V2 against two annotators, leaves
+  disputes for adjudication and calibrates tau. Run live on four mock instances: 96 decisions explained.
+- `release/bundle.py`: text of non-open passages is withheld and recorded as URL, offsets and SHA-256;
+  `rehydrate` restores it from documents the user fetches and reports drift instead of accepting changed text.
+  Run on the real corpus: 48 of 256 passages withheld, 42 restorable, 6 not locatable in the stored documents
+  (listed as unrestorable; the build refuses them unless explicitly allowed). No quoted spans leaked.
+- `benchmark/datasheet_v7.py` generates strata, tiers, label provenance, agreement, annotation hours and release
+  counts from the data. `benchmark/manual/review_guide_v7.md` covers the five human tasks.
+- README section 6 gains a Phase 6 status table. Retrieval-miner output committed.
+
+**Decisions / findings** (reasoning in `docs/v7_decisions.md`, D7.1)
+- The end-to-end test found a real bug: the attachment pattern missed "for signature-tier cardholders", so the
+  mock gold answer scored 0.79 against itself. The restricting-phrase test is now structural, not a word list.
+- Real-corpus release check found passages that differ from their documents only in typography (curly quotes,
+  non-breaking hyphens, a replacement character from a bad PDF decode); location now folds typography and whitespace.
+- Retrieval miner: 110 candidates produced 3 verified proposals. S1 will not reach 60 by mining. The narrowing
+  rule stands; the generated datasheet shows S1 test = 1 only because the re-split has not been applied.
+
+**Blocked / open**
+- **Humans have not started.** Nothing is verified, branch-annotated, persona-checked, VACS-labelled or audited
+  by a person. After that: `benchmark.strata --resplit --incremental --apply`, G1, the freeze.
+- Not run on real data: G1, V1 with the real reader on real dev instances, V2, the matrix. The NLI threshold is untuned.
+- Six corpus passages cannot be rehydrated from the stored documents (re-fetch or drop those instances before release).
+
+**Next up**
+- Annotate (`benchmark/manual/review_guide_v7.md`), then `experiments.validity_battery` and `experiments.reader_audit`.
+
 ### 2026-10-31 (later) - v7/v8 build: systems, detection, gates, analysis and the claims ledger
 
 **Done** (1,791 tests collected, full suite green; every module below has tests, and the riskiest guards were mutation-tested)

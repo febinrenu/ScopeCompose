@@ -218,3 +218,118 @@ def calibrate_threshold(decisions: Sequence[Decision], truth: Mapping[str, bool]
 
 def as_dicts(decisions: Sequence[Decision]) -> list[dict]:
     return [asdict(d) for d in decisions]
+
+
+# --------------------------------------------------------------------------- #
+# Driver: draw the sample, then score it once people have labelled it
+# --------------------------------------------------------------------------- #
+
+
+def build_decisions(instances: Sequence[GoldInstance], answers_by_system: Mapping[str, Mapping[str, str]],
+                    reader: Reader, nli: NLIScorerLike) -> list[Decision]:
+    """Run the reader on every (instance, system, persona) and record the raw flags."""
+    out: list[Decision] = []
+    for inst in instances:
+        for system, answers in answers_by_system.items():
+            if inst.instance_id not in answers:
+                continue
+            for p in inst.personas:
+                out.append(explain(inst, p.persona_id, system, answers[inst.instance_id], reader, nli))
+    return out
+
+
+def truth_from_reviews(a: Mapping[str, str], b: Mapping[str, str], adjudicated: Mapping[str, bool] | None = None
+                       ) -> tuple[dict[str, bool], list[str]]:
+    """Human truth from two annotators' yes/no labels.
+
+    An item is true/false only where both agree; the rest are returned as ``disputed`` for adjudication
+    and are *not* guessed. ``adjudicated`` resolves them. An item only one annotator labelled is skipped."""
+    truth: dict[str, bool] = {}
+    disputed: list[str] = []
+    for k in sorted(set(a) & set(b)):
+        if a[k] == b[k]:
+            truth[k] = a[k] == "yes"
+        elif adjudicated and k in adjudicated:
+            truth[k] = adjudicated[k]
+        else:
+            disputed.append(k)
+    return truth, disputed
+
+
+def load_decisions(path) -> list[Decision]:
+    import json
+
+    return [Decision(**json.loads(l)) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    import json
+    from pathlib import Path
+
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("sample", help="run the reader, draw a stratified sample, write blind review items")
+    s.add_argument("--data", type=Path, required=True)
+    s.add_argument("--split", default="dev", choices=("train", "dev"))
+    s.add_argument("--cells", type=Path, nargs="*", default=[], help="cell files of system answers (optional)")
+    s.add_argument("--n", type=int, default=200)
+    s.add_argument("--tau", type=float, default=0.5)
+    s.add_argument("--seed", type=int, default=0)
+    s.add_argument("--out-dir", type=Path, default=Path("experiments/runs/audit"))
+    e = sub.add_parser("evaluate", help="score the pipeline against two annotators and calibrate tau")
+    e.add_argument("--decisions", type=Path, required=True)
+    e.add_argument("--annotators", nargs=2, required=True)
+    e.add_argument("--review-dir", type=Path, default=None)
+    e.add_argument("--adjudicated", type=Path, default=None, help='JSON {"item_id": true|false}')
+    e.add_argument("--tau", type=float, default=0.5)
+    args = ap.parse_args(argv)
+
+    if args.cmd == "sample":
+        from detection.nli import CrossEncoderNLI
+        from experiments.run_matrix import load_answers, load_instances
+        from experiments.validity_battery import scorable, select
+        from metrics.case_accuracy import LLMReader
+        from metrics.validity import battery_outputs
+
+        insts, bad = scorable(select(load_instances(args.data), split=args.split))
+        if bad:
+            print(f"note: {len(bad)} instance(s) lack personas, branches or reference answers and are not audited")
+        systems: dict[str, dict[str, str]] = {}
+        for i in insts:
+            for name, text in battery_outputs(i).items():
+                systems.setdefault(f"battery:{name}", {})[i.instance_id] = text
+        for path in args.cells:
+            systems[path.stem] = load_answers(path)
+        ds = build_decisions(insts, systems, LLMReader(step="reader_audit"), CrossEncoderNLI())
+        picked = sample_for_audit(ds, n=args.n, tau=args.tau, seed=args.seed)
+        args.out_dir.mkdir(parents=True, exist_ok=True)
+        (args.out_dir / "decisions.jsonl").write_text(
+            "".join(json.dumps(d, ensure_ascii=False) + "\n" for d in as_dicts(ds)), encoding="utf-8")
+        (args.out_dir / "audit_items.jsonl").write_text(
+            "".join(json.dumps(to_review_payload(d), ensure_ascii=False) + "\n" for d in picked), encoding="utf-8")
+        print(f"{len(ds)} decisions explained; {len(picked)} sampled for the audit -> {args.out_dir}")
+        print("review with: python -m benchmark.review --kind entailment review "
+              f"--items {args.out_dir / 'audit_items.jsonl'} --annotator <you>")
+        return 0
+
+    from benchmark.review import DEFAULT_DIR, ReviewStore, labels
+
+    directory = args.review_dir or DEFAULT_DIR
+    a, b = (labels(ReviewStore(directory, "entailment", n)) for n in args.annotators)
+    adj = json.loads(args.adjudicated.read_text(encoding="utf-8")) if args.adjudicated else None
+    truth, disputed = truth_from_reviews(a, b, adj)
+    ds = load_decisions(args.decisions)
+    print(f"{len(truth)} items with agreed labels; {len(disputed)} disputed (adjudicate, do not guess)")
+    result = evaluate_v2(ds, truth, tau=args.tau)
+    print(result.render())
+    tau = calibrate_threshold(ds, truth)
+    print(f"calibrated tau: {tau if tau is None else round(tau, 3)}"
+          + ("  (no threshold reaches the precision bar)" if tau is None else ""))
+    return 0 if result.passes else 1
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main())

@@ -318,6 +318,28 @@ corpus before anything they print is quotable.
 Both gating items must close by **end of Week 4** — not Week 14. Either can reshape the paper, and
 both are cheap now and expensive late.
 
+### Phase 6 — the v7/v8 extension (contract v1.3.0)
+
+Same legend. DONE means built, tested and run on fixtures or a small live check; **PENDING** means it needs
+human labels or the frozen test split. Reasoning is in `docs/v7_decisions.md`.
+
+| Piece | What | Status |
+|---|---|---|
+| `contract/` v1.3.0 | additive: opposition, personas and counterfactual pairs, signatures and normative frames | DONE |
+| `benchmark/strata.py`, `relabel_v7.py` | strata S1-S5, grouped stratified re-split, S1 quota and narrowing rule | DONE; **re-split not applied** (needs labels) |
+| `benchmark/chunker.py`, `contexts.py` | K = 6 contexts, length-matched hard negatives | DONE |
+| `benchmark/mining/` (gov.uk search, retrieval miner) | S1 candidate mining | DONE; yield is low (3 verified of 110 candidates) |
+| `benchmark/review.py`, `manual/review_guide_v7.md` | timed, independent review of candidates, branches, personas, VACS, entailment | DONE; **humans have not started** |
+| `metrics/case_accuracy.py`, `values.py`, `counterfactual.py` | CCA strict and lenient, value matcher, counterfactual pairs | DONE |
+| `metrics/scoped.py`, `validity.py` | scoped precision; V1 battery of eight gameable outputs | DONE on fixtures; **not yet run with the real reader** |
+| `experiments/validity_battery.py`, `reader_audit.py` | V1 driver (dev only); V2 entailment audit and threshold calibration | DONE; V2 **needs the human audit** |
+| `detection/signature.py`, `frames.py`, `qnfa.py`, `composition/partition.py` | QNFA and partition composition (Propositions 2-3) | DONE |
+| `baselines/`, `pipelines/scopecompose.py` | B0, B3, B7c, B8, O3 | DONE; **matrix not run** |
+| `experiments/` (matrix, scheduler, G1, analysis, oracle cascade) | resumable cells, quota-aware scheduling, exact tests | DONE; **G1 and the matrix not run** |
+| `prereg/`, `reporting/` | freeze (hash, tag, committed test file), claims ledger | DONE; **freeze not taken** |
+| `release/bundle.py` | withhold non-open passage text, rehydrate with hash and drift checks | DONE; 48 of 256 corpus passages withheld, 6 unrestorable |
+| `benchmark/datasheet_v7.py` | strata, provenance, agreement, hours and release counts generated from the data | DONE |
+
 ---
 
 ## 7. Timeline (maps to WP0–WP5)
