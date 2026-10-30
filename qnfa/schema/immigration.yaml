@@ -1,0 +1,56 @@
+# QNFA decision-variable signature schema: UK immigration (gov.uk).
+#
+# `route` replaces banking's `object`: the immigration route or status the
+# decision concerns, at its BROADEST named class. Narrower facts (an applicant's
+# nationality, a sponsor's rating) are applicability, not signature.
+#
+# FROZEN at the pre-registration; see banking.yaml for the rules.
+domain: immigration
+schema_version: immigration-2026.10.31-1
+slots:
+  event:
+    any_event: {}
+    application: {parent: any_event, aliases: [apply, applying, applications]}
+    extension: {parent: any_event, aliases: [extend, extending, renewal]}
+    switch: {parent: any_event, aliases: [switching, change_route, switch_route, switch_visa]}
+    entry: {parent: any_event, aliases: [enter, entering, arrival, travel]}
+    stay: {parent: any_event, aliases: [remain, length_of_stay, how_long_stay]}
+    work: {parent: any_event, aliases: [working, employment, take_work, take_employment]}
+    study: {parent: any_event, aliases: [studying, course, education]}
+    dependants: {parent: any_event, aliases: [dependant, partner_and_children, bring_family, family_members]}
+    settlement: {parent: any_event, aliases: [indefinite_leave, ilr, permanent_residence, settle]}
+    citizenship: {parent: any_event, aliases: [naturalisation, british_citizenship]}
+    sponsorship: {parent: any_event, aliases: [sponsor, certificate_of_sponsorship, cos]}
+  route:
+    any_route: {}
+    work_route: {parent: any_route, aliases: [work_visa, employment_route]}
+    skilled_worker: {parent: work_route, aliases: [skilled_worker_visa]}
+    health_and_care: {parent: work_route, aliases: [health_and_care_worker, health_care_worker]}
+    scale_up: {parent: work_route, aliases: [scale_up_worker]}
+    global_talent: {parent: work_route, aliases: [global_talent_visa]}
+    innovator_founder: {parent: work_route, aliases: [innovator, founder, innovator_founder_visa]}
+    temporary_worker: {parent: work_route, aliases: [creative_worker, charity_worker, religious_worker, seasonal_worker, government_authorised_exchange]}
+    study_route: {parent: any_route, aliases: [study_visa]}
+    student: {parent: study_route, aliases: [student_visa, child_student]}
+    graduate: {parent: study_route, aliases: [graduate_visa, graduate_route]}
+    family_route: {parent: any_route, aliases: [family_visa, uk_family_visa]}
+    partner: {parent: family_route, aliases: [spouse, partner_visa]}
+    child: {parent: family_route, aliases: [child_visa, children]}
+    parent_route: {parent: family_route, aliases: [parent, parent_visa]}
+    visitor: {parent: any_route, aliases: [standard_visitor, visit, visitor_visa]}
+    youth_mobility: {parent: any_route, aliases: [youth_mobility_scheme]}
+    high_potential: {parent: any_route, aliases: [high_potential_individual, hpi]}
+    settlement_route: {parent: any_route, aliases: [ilr_route, settled_status]}
+  decision_kind:
+    any_decision: {}
+    eligibility: {parent: any_decision, aliases: [who_can_apply, eligible, qualify, qualifying_criteria]}
+    requirement: {parent: any_decision, aliases: [requirements, must_meet, condition, conditions, evidence]}
+    financial_requirement: {parent: requirement, aliases: [funds, maintenance_funds, savings_requirement, salary_threshold, minimum_salary]}
+    fee: {parent: any_decision, aliases: [cost, charge, application_fee, health_surcharge]}
+    duration: {parent: any_decision, aliases: [length, period, how_long, validity, maximum_stay]}
+    permission: {parent: any_decision, aliases: [allowed, permitted, can_you_work, work_conditions]}
+    prohibition: {parent: any_decision, aliases: [not_allowed, restrictions, cannot]}
+  location:
+    any_location: {}
+    in_country: {parent: any_location, aliases: [inside_uk, from_inside_uk, in_the_uk, in_uk]}
+    out_of_country: {parent: any_location, aliases: [outside_uk, from_outside_uk, overseas, abroad]}

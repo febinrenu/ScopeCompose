@@ -1,0 +1,69 @@
+# QNFA decision-variable signature schema: UK banking terms.
+#
+# A signature names WHAT IS BEING DECIDED, not who it applies to. "Premium
+# cardholders" is applicability; "a flat fee on cash withdrawals abroad" is the
+# decision variable. Slot values form a generality taxonomy (parent => broader):
+# `any_txn` is broader than `cash_withdrawal`, which is broader than
+# `atm_withdrawal`. An UNSPECIFIED slot is the top element: it is broader than
+# anything.
+#
+# FROZEN at the pre-registration. One revision is permitted before the freeze,
+# none after (plan v4 section 9). Editing this file changes the schema hash.
+#
+# Design note (docs/v7_decisions.md D2.2): foreignness lives in `location`, not
+# in the event. A cross-cutting event class ("any_foreign_txn") cannot be ordered
+# by generality against "cash_withdrawal"; a location value can. Proposal v8's
+# three worked fee variables come out identically.
+domain: banking
+schema_version: banking-2026.10.31-1
+slots:
+  event:
+    any_txn: {}
+    cash_withdrawal: {parent: any_txn, aliases: [withdrawal, cash_advance, cash_withdrawals]}
+    atm_withdrawal: {parent: cash_withdrawal, aliases: [atm, atm_cash_withdrawal]}
+    branch_withdrawal: {parent: cash_withdrawal, aliases: [over_the_counter_withdrawal]}
+    card_payment: {parent: any_txn, aliases: [purchase, card_purchase, card_transaction, point_of_sale]}
+    contactless_payment: {parent: card_payment, aliases: [contactless]}
+    online_card_payment: {parent: card_payment, aliases: [online_purchase, online_payment]}
+    transfer: {parent: any_txn, aliases: [payment, money_transfer, bank_transfer]}
+    domestic_transfer: {parent: transfer, aliases: [faster_payment, chaps, bacs]}
+    international_transfer: {parent: transfer, aliases: [overseas_transfer, swift_payment, foreign_transfer]}
+    direct_debit: {parent: any_txn, aliases: [standing_order]}
+    cheque: {parent: any_txn, aliases: [check, cheque_payment]}
+    cash_deposit: {parent: any_txn, aliases: [deposit, paying_in]}
+    currency_conversion: {parent: any_txn, aliases: [exchange, foreign_exchange, fx]}
+    account_maintenance: {parent: any_txn, aliases: [monthly_fee, account_fee, account_charge, maintenance]}
+    overdraft_use: {parent: any_txn, aliases: [overdrawn, overdraft_borrowing, going_overdrawn]}
+    card_replacement: {parent: any_txn, aliases: [replacement_card, lost_card]}
+    late_payment: {parent: any_txn, aliases: [missed_payment, arrears]}
+  object:
+    any_product: {}
+    account: {parent: any_product, aliases: [current_account, bank_account, student_account, graduate_account, premium_account, reward_account, packaged_account]}
+    savings: {parent: any_product, aliases: [savings_account, isa, easy_access_saver]}
+    debit_card: {parent: any_product, aliases: [debit]}
+    credit_card: {parent: any_product, aliases: [credit]}
+    overdraft: {parent: any_product, aliases: [arranged_overdraft, unarranged_overdraft]}
+    loan: {parent: any_product, aliases: [personal_loan]}
+    mortgage: {parent: any_product}
+  decision_kind:
+    any_decision: {}
+    any_fee: {parent: any_decision, aliases: [fee, charge, cost]}
+    flat_fee: {parent: any_fee, aliases: [fixed_fee, fixed_charge, per_transaction_fee, flat_charge]}
+    percentage_fee: {parent: any_fee, aliases: [percentage, percent_fee, percentage_charge, rate_fee]}
+    interest_rate: {parent: any_decision, aliases: [interest, apr, ear, rate, aer]}
+    limit: {parent: any_decision, aliases: [cap, maximum, daily_limit, withdrawal_limit]}
+    duration: {parent: any_decision, aliases: [period, time_limit, interest_free_period]}
+    eligibility: {parent: any_decision, aliases: [qualifying_criteria, who_can_apply, entitlement]}
+    access: {parent: any_decision, aliases: [benefit_access, perks, lounge_access]}
+  location:
+    any_location: {}
+    uk: {parent: any_location, aliases: [domestic, united_kingdom, in_uk]}
+    abroad: {parent: any_location, aliases: [overseas, foreign, outside_uk, international, non_uk, foreign_currency]}
+    eea: {parent: abroad, aliases: [europe, european_economic_area, eu]}
+    non_eea: {parent: abroad, aliases: [rest_of_world, outside_eea]}
+  channel:
+    any_channel: {}
+    atm: {parent: any_channel, aliases: [cash_machine]}
+    branch: {parent: any_channel, aliases: [in_branch, counter]}
+    online: {parent: any_channel, aliases: [internet_banking, app, mobile, mobile_app, web]}
+    phone: {parent: any_channel, aliases: [telephone_banking, telephone]}
