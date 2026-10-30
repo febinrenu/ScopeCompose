@@ -146,7 +146,15 @@ class ProposedPair:
     exception_content_id: str | None = None
 
 
-def propose(doc_a: SourceDoc, doc_b: SourceDoc, *, client=None) -> list[ProposedPair]:
+def propose(doc_a: SourceDoc, doc_b: SourceDoc, *, client=None,
+            tier: Tier = Tier.BULK) -> list[ProposedPair]:
+    """Propose rule/exception pairs for one pairing.
+
+    ``tier`` defaults to ``BULK`` so the pilot's runs reproduce. **Mining that
+    can reach a test set must pass ``Tier.EVAL``**: ``BULK`` is gpt-oss-20b,
+    which is also an evaluated detector (D3), and an evaluated system may not
+    touch test construction (plan v4 ground rule 4).
+    """
     client = client or get_client()
     result = client.complete(
         messages=[{"role": "user", "content": USER_TEMPLATE.format(
@@ -155,8 +163,8 @@ def propose(doc_a: SourceDoc, doc_b: SourceDoc, *, client=None) -> list[Proposed
             doc_b=doc_b.doc_id, text_b=doc_b.text[:MAX_CHARS_PER_DOC],
         )}],
         system=SYSTEM_PROMPT,
-        tier=Tier.BULK,
-        step=STEP,
+        tier=tier,
+        step=STEP if tier is Tier.BULK else f"{STEP}_{tier.value.lower()}",
         response_format={"type": "json_object"},
     )
     try:
@@ -201,6 +209,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--provider", default=None, help="run one pairing only")
     ap.add_argument("--limit", type=int, default=None, help="cap pairings, to protect quota")
     ap.add_argument("--json", type=Path, default=None)
+    ap.add_argument("--tier", choices=[t.value for t in (Tier.BULK, Tier.EVAL)], default="BULK",
+                    help="EVAL for anything that can reach a test set (BULK is an evaluated model)")
+    ap.add_argument("--skip", type=int, default=0, help="skip the first N pairings (resume a quota-limited run)")
     ap.add_argument("--pace", type=float, default=PACE_S,
                     help="seconds between pairings, to stay under the tokens-per-minute cap")
     args = ap.parse_args(argv)
@@ -213,6 +224,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.provider:
         by_provider = {k: v for k, v in by_provider.items() if k == args.provider}
     pairings = [(p, ds) for p, ds in by_provider.items() if len(ds) >= 2]
+    pairings = pairings[args.skip:]
     if args.limit:
         pairings = pairings[:args.limit]
 
@@ -228,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
         if i:
             time.sleep(args.pace)
         try:
-            proposed = propose(ds[0], ds[1])
+            proposed = propose(ds[0], ds[1], tier=Tier(args.tier))
         except Exception as exc:
             failures += 1
             print(f"  {provider:<26} ERROR {type(exc).__name__}: {str(exc)[:46]}")
