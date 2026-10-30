@@ -147,3 +147,12 @@ B3's published detector is trained on other data and is not reproduced. A weak d
 quietly degrade into B0. Given gold conflict groups B3 selects as often as it ever would, so any
 suppression measured is the upper bound for a selection-based resolver. B3 is reported as
 "ConflictRAG-style, with oracle detection".
+
+### D3.3 O3 must verbalise each decision separately
+
+First O3 draft merged the branches of every co-referential group into one list. The shared verbaliser
+then chose one default and rendered a *different decision's* outcome as that rule's exception
+("A 3% fee applies. However, if premium-tier cardholders, no fee applies.", for a flat fee and a
+percentage fee). That is the misattachment the design exists to prevent, and a loose `or` assertion in
+the first test hid it. Found by printing the actual output. Fixed by verbalising per component, with
+hedged frames and parse-only repairs rendered in their own sections; the test now asserts the exact text.

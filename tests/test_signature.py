@@ -306,3 +306,80 @@ def test_folded_constraint_uses_every_descendant_so_narrower_values_stay_inside(
     _, mid_app = fold_into_applicability(unify(broad, mid), broad, mid, EVERYONE, EVERYONE)
     _, leaf_app = fold_into_applicability(unify(broad, leaf), broad, leaf, EVERYONE, EVERYONE)
     assert compare(leaf_app, mid_app) is SetRelation.SUBSET, "ATM is inside cash withdrawal"
+
+
+# --------------------------------------------------------------------------- #
+# Groups of co-referential frames
+# --------------------------------------------------------------------------- #
+
+from detection.signature import coreference_components, fold_component  # noqa: E402
+
+
+def test_components_join_subsumption_and_keep_distinct_decisions_apart():
+    """Row 2 subsumes row 3 (one component); row 1 is a different decision from both (its own)."""
+    groups, _ = coreference_components([sig(**ROW2), sig(**ROW3)])
+    assert groups == [[0, 1]]
+    groups, _ = coreference_components([sig(**ROW1), sig(**ROW2), sig(**ROW3)])
+    assert groups == [[0], [1, 2]]
+
+
+def test_overlap_joins_frames_into_one_component():
+    groups, _ = coreference_components([sig(event="cash_withdrawal"), sig(location="abroad")])
+    assert groups == [[0, 1]]
+
+
+def test_distinct_signatures_stay_in_separate_components():
+    groups, uncertain = coreference_components([sig(event="transfer"), sig(event="cash_withdrawal")])
+    assert groups == [[0], [1]] and uncertain == []
+
+
+def test_uncertain_pairs_are_returned_not_joined():
+    free = Signature(domain="banking", slots={}, untyped_slots={"event": "lounge entry"}, schema_version="t")
+    groups, uncertain = coreference_components([free, sig(event="cash_withdrawal")])
+    assert groups == [[0], [1]] and uncertain == [(0, 1)]
+
+
+def test_components_are_independent_of_input_order():
+    sigs = [sig(**ROW2), sig(**ROW3), sig(**ROW1), sig(event="transfer")]
+    base, _ = coreference_components(sigs)
+    rng = random.Random(0)
+    for _ in range(10):
+        perm = list(range(len(sigs)))
+        rng.shuffle(perm)
+        groups, _ = coreference_components([sigs[i] for i in perm])
+        mapped = sorted(sorted(perm[k] for k in g) for g in groups)
+        assert mapped == sorted(sorted(g) for g in base)
+
+
+def test_fold_component_constrains_only_the_narrower_frames():
+    broad, mid, leaf = sig(event="any_txn"), sig(event="cash_withdrawal"), sig(event="atm_withdrawal")
+    apps = fold_component([broad, mid, leaf], [EVERYONE, EVERYONE, EVERYONE])
+    assert apps[0].is_default and not apps[1].is_default and not apps[2].is_default
+    assert compare(apps[2], apps[1]) is SetRelation.SUBSET and compare(apps[1], apps[0]) is SetRelation.SUBSET
+
+
+def test_fold_component_matches_the_pairwise_fold_on_two_frames():
+    broad = sig(event="cash_withdrawal", location="abroad", decision_kind="percentage_fee")
+    narrow = sig(event="atm_withdrawal", location="abroad", decision_kind="percentage_fee")
+    pair = fold_into_applicability(unify(broad, narrow), broad, narrow, EVERYONE, PREMIUM)
+    group = fold_component([broad, narrow], [EVERYONE, PREMIUM])
+    assert group[0] == pair[0] and [a.model_dump() for a in group[1:]] == [pair[1].model_dump()]
+
+
+def test_sibling_narrowings_come_out_disjoint():
+    atm, branch, cash = sig(event="atm_withdrawal"), sig(event="branch_withdrawal"), sig(event="cash_withdrawal")
+    a, b, c = fold_component([atm, branch, cash], [EVERYONE] * 3)
+    assert compare(a, b) is SetRelation.DISJOINT
+    assert c.is_default, "cash_withdrawal is broader than both, so it gains no constraint"
+
+
+def test_fold_component_unspecified_slot_makes_the_specified_frames_narrower():
+    a, b = fold_component([sig(decision_kind="flat_fee"), sig(decision_kind="flat_fee", location="abroad")],
+                          [EVERYONE, EVERYONE])
+    assert a.is_default and any(c.name == "sig:location" for c in b.attributes)
+
+
+def test_fold_component_requires_one_applicability_per_signature():
+    with pytest.raises(ValueError):
+        fold_component([sig(), sig()], [EVERYONE])
+    assert fold_component([], []) == []

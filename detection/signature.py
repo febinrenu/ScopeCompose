@@ -330,3 +330,86 @@ def fold_into_applicability(
 def schema_hashes(domains: Iterable[str] = ("banking", "immigration")) -> dict[str, str]:
     """Hashed into the pre-registration: the schemas are frozen from then on."""
     return {d: load_schema(d).sha for d in domains}
+
+
+# --------------------------------------------------------------------------- #
+# Groups of co-referential frames
+# --------------------------------------------------------------------------- #
+
+
+def coreference_components(
+    sigs: list[Signature], *, schema: Schema | None = None
+) -> tuple[list[list[int]], list[tuple[int, int]]]:
+    """Group signatures that govern the same decision.
+
+    Two signatures are joined when they unify as ``EQUIVALENT``, ``SUBSUMES`` or
+    ``OVERLAP``; ``DISTINCT`` pairs are different decisions and are never
+    composed together. ``UNCERTAIN`` pairs are *not* joined and are returned
+    separately, so the caller can escalate them (or report them) instead of
+    silently treating a maybe as a yes or a no.
+
+    Joining is transitive, so one group can hold two signatures that are
+    themselves distinct (``atm_withdrawal`` and ``branch_withdrawal`` are both
+    narrower than ``cash_withdrawal``). The typed constraints produced by
+    :func:`fold_component` keep such frames from being merged: they come out
+    disjoint.
+    """
+    parent = list(range(len(sigs)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    uncertain: list[tuple[int, int]] = []
+    for i in range(len(sigs)):
+        for j in range(i + 1, len(sigs)):
+            kind = unify(sigs[i], sigs[j], schema=schema).kind
+            if kind in (Kind.EQUIVALENT, Kind.SUBSUMES, Kind.OVERLAP):
+                parent[find(i)] = find(j)
+            elif kind is Kind.UNCERTAIN:
+                uncertain.append((i, j))
+    groups: dict[int, list[int]] = {}
+    for i in range(len(sigs)):
+        groups.setdefault(find(i), []).append(i)
+    return [sorted(g) for g in sorted(groups.values(), key=lambda g: g[0])], uncertain
+
+
+def fold_component(
+    sigs: list[Signature], apps: list[Applicability], *, schema: Schema | None = None
+) -> list[Applicability]:
+    """Fold every signature difference inside a group into typed applicability.
+
+    A frame gets a constraint ``sig:<slot> in {descendants of its value}`` on a
+    slot when another frame in the group is *broader* there -- unspecified, or a
+    strictly more general value. Generalises the pairwise
+    :func:`fold_into_applicability` to any number of frames.
+    """
+    if len(sigs) != len(apps):
+        raise ValueError("one applicability per signature")
+    if not sigs:
+        return []
+    sch = schema or load_schema(sigs[0].domain)
+    out: list[Applicability] = []
+    for i, (sig, app) in enumerate(zip(sigs, apps)):
+        extra: list[ScopeAttribute] = []
+        for slot, value in sorted(sig.slots.items()):
+            broader = False
+            for j, other in enumerate(sigs):
+                if j == i:
+                    continue
+                ov = other.slots.get(slot)
+                if ov is None:
+                    if slot not in other.untyped_slots:
+                        broader = True        # unspecified is the top element
+                elif ov != value and sch.leq(slot, value, ov):
+                    broader = True
+            if broader:
+                extra.append(ScopeAttribute(
+                    name=f"{SIG_ATTR_PREFIX}{slot}", kind=AttributeKind.CATEGORICAL,
+                    values=sch.descendants_or_self(slot, value)))
+        why = "narrower decision: " + ", ".join(
+            f"{c.name[len(SIG_ATTR_PREFIX):]}={'|'.join(c.values or [])}" for c in extra)
+        out.append(_with_signature_constraints(app, extra, why))
+    return out
