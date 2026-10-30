@@ -11,6 +11,49 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-10-31 (later) - v7/v8 build: systems, detection, gates, analysis and the claims ledger
+
+**Done** (1,791 tests collected, full suite green; every module below has tests, and the riskiest guards were mutation-tested)
+- Systems: `baselines/registry.py` (B0, B3 with oracle conflict groups, B7c, B8, shared verbaliser, prompt hash),
+  `pipelines/scopecompose.py` (O3: parse + frames + partition composition, repairs logged, falls back to its own
+  parse), `detection/frames.py` (batched extraction, verbatim gate, one re-ask), `detection/qnfa.py` (D5).
+- Experiment machinery: `experiments/run_matrix.py` (resumable cells, one model per cell), `scheduler.py`
+  (quota-aware, unattended), `g1.py` (token measurement, cut order), `staging.py` + `prereg/freeze.py`
+  (test runs refuse before a tagged, committed, hash-matched freeze), `analysis.py` (exact McNemar forced,
+  Holm, BCa, achieved power), `detection_eval.py` (E2/H2), `vacs_eval.py` + `benchmark/vacs.py`,
+  `oracle_cascade.py`, `make_results.py`, `reporting/claims.py` + `registry.py` (numbers reach the manuscript
+  only through results).
+- Human pipeline: `benchmark/review.py` (candidates, branches, personas, VACS; timed, independent),
+  `preannotate.py`, `personas.py`, `chunker.py`, `mining/retrieval_miner.py`, `govuk_search.py`.
+- Models: `scopecompose-reader` (llama3.1:8b) and `scopecompose-qwen7b` (qwen2.5:7b) built with pinned
+  `num_ctx`; both exercised for real.
+- 24 commits pushed to `origin/master`.
+
+**Decisions / findings** (reasoning in `docs/v7_decisions.md`)
+- The first reader prompt scored the **gold answer zero** (an 8B reader refused to apply a default); fixed and
+  guarded by `experiments/reader_smoke.py`.
+- B3 on two passages is degenerate (margin ~0 or ~1), so it often presents both sources: H1 may fail honestly.
+- O3 first merged distinct decisions into one list and rendered one as the other's exception; fixed.
+- `mcnemar` approximated at >= 25 discordant items; confirmatory path now forces the exact test.
+- Mining that can reach the test set was routed to the EVAL tier (it had been on an evaluated model).
+- Whole-document mining yielded 8 candidates however many pairings were added (0.12 per pairing).
+- First live call: full-context B0 on a clean two-passage context stated the exception correctly, so the paper
+  cannot claim full-context models fail on short clean contexts.
+
+**Blocked / open**
+- **Humans have not started.** S1 is still 14 instances; nothing has been verified, branch-annotated or
+  persona-checked by a person. The review tool is ready; hours are the bottleneck.
+- The retrieval miner's first 110-candidate run is still in flight; its yield is not yet known.
+- Not run on real data: G1 (token measurement), V1/V2 on real instances, VACS labelling, D5 vs baselines,
+  the matrix itself. The NLI entailment threshold is untuned (flagged in every output).
+- Not built: K = 6 contexts (`contexts.py`), the external-annotator audit, release bundle/datasheet updates.
+- `plan_v7/` is still untracked; `corpus.jsonl` has not been re-split (dry run only).
+
+**Next up**
+- Verify mined candidates with `python -m benchmark.review --kind candidates review --items <proposals> --annotator <you>`.
+- Pre-annotate branches (EVAL), correct them, generate personas, verify them; then re-split with `--incremental`.
+- Run `experiments/g1.py` on dev to fix the reasoning setting; run V1/V2; pick the H3 comparator on dev; freeze.
+
 ### 2026-10-31 - v7/v8 build, day 1: contract v1.3.0, CCA, the validity battery, Propositions 2-3, signatures
 
 **Done** (every item has tests; 540 -> 1,439 collected; full suite green, exit 0)

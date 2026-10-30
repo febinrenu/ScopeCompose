@@ -195,3 +195,20 @@ removing the gap-filling is itself the measured effect); unattached listing and 
 `experiments/reader_smoke.py` is the one-minute check to run after any change to the reader model or prompt.
 This is a smoke test, not validation: V2 is validated against the human entailment audit on real instances.
 The reader prompt hash in the manifest changes with it, so the prompt in force is the one pre-registered.
+
+### D6.1 First live backbone calls: B0 is not trivially suppressing
+
+Both pinned local models are installed and exercised (`scopecompose-reader` on llama3.1:8b,
+`scopecompose-qwen7b` on qwen2.5:7b, `num_ctx` 8192 each). One real call on a clean two-passage context
+(a 3% fee rule and a premium waiver): full-context B0 on the local 7B stated the exception correctly
+("...3% fee [p0]. However, this fee is waived for premium-tier cardholders [p1]"), and B7c produced both
+branches (with an awkward but model-written condition: "if are premium-tier cardholders").
+
+This is a single example, not a result, but it matters for how the paper is framed. The harm under study is
+**selection** (B3 deleting a passage before generation); a generator that is *given* both passages in a short,
+clean context may already handle them. So H1 (B3 worse than B0) can hold while B0 itself is fine, and B0's own
+failure, if any, will come from realistic K = 6 contexts with distractors and from persona-level checking, not
+from two-passage pilots. The headline must not imply "full-context LLMs cannot do this". The outcome table in
+`prereg/preregistration.md` already allows "H1 holds, B0 does not fail"; this note is why that row is likely.
+Verbaliser grammar is model-limited: the shared verbaliser cannot repair a model's malformed condition text,
+and CCA's reader sees it as written, identically for every structured system.
