@@ -123,6 +123,12 @@ class FetchedPage:
         return f"{self.base_path.strip('/')}" + (f"#{self.part_slug}" if self.part_slug else "")
 
 
+def _is_transient(page: "FetchedPage") -> bool:
+    """A failure worth retrying: the network, not the page. 404s and redirects are final."""
+    return bool(page.error) and (page.error.startswith(("URLError", "TimeoutError", "ConnectionError",
+                                                        "RemoteDisconnected", "HTTP 5", "HTTP 429")))
+
+
 def _get(path: str) -> dict:
     req = urllib.request.Request(f"{API}{path}", headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -295,6 +301,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="only report whether each pair is really two documents")
     ap.add_argument("--raw", type=Path, default=None,
                     help="also dump the fetched pages with full text")
+    ap.add_argument("--reuse", type=Path, default=None,
+                    help="a previous --raw dump: keep its good pages and refetch only those that "
+                         "failed on a transient network error (a 404 or redirect is not retried)")
     args = ap.parse_args(argv)
 
     pairs = parse_pairs(args.pairs)
@@ -303,12 +312,26 @@ def main(argv: list[str] | None = None) -> int:
 
     cache: dict[str, dict] = {}
     pages: dict[str, FetchedPage] = {}
+    previous: dict[str, FetchedPage] = {}
+    if args.reuse and args.reuse.exists():
+        for line in args.reuse.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rec = json.loads(line)
+                previous[rec["url"]] = FetchedPage(**rec)
+    kept = 0
     for i, url in enumerate(urls, 1):
+        prev = previous.get(url)
+        if prev is not None and not _is_transient(prev):
+            pages[url] = prev
+            kept += 1
+            continue
         page = fetch(url, cache)
         pages[url] = page
         status = "ok" if page.ok else (page.error or "empty")
         print(f"  [{i:>2}/{len(urls)}] {status:<12} {len(page.text):>6} chars  {url}")
 
+    if args.reuse:
+        print(f"\nreused {kept} good page(s) from {args.reuse.name}")
     report = audit_pairs(pairs, pages)
     print()
     print(report.render())
