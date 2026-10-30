@@ -134,6 +134,20 @@ def read_done(path: Path) -> dict[str, dict]:
     return done
 
 
+def check_cell_file(cell: Cell, path: Path) -> dict[str, dict]:
+    """The records already in a cell file, refusing any from a different model or system.
+
+    Called before a cell is run AND before a cell is declared complete: a finished file full of
+    answers from the wrong model is not a finished cell."""
+    done = read_done(path)
+    for rec in done.values():
+        if rec.get("model") != cell.model or rec.get("system") != cell.system:
+            raise CellMismatch(
+                f"{path.name} already holds answers from {rec.get('system')}/{rec.get('model')}, "
+                f"this run is {cell.system}/{cell.model}: a cell never mixes models")
+    return done
+
+
 def run_cell(
     cell: Cell,
     instances: Iterable[GoldInstance],
@@ -148,13 +162,7 @@ def run_cell(
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{cell.name}.jsonl"
     todo_instances = select(instances, cell)
-    done = read_done(path)
-
-    for rec in done.values():
-        if rec.get("model") != cell.model or rec.get("system") != cell.system:
-            raise CellMismatch(
-                f"{path.name} already holds answers from {rec.get('system')}/{rec.get('model')}, "
-                f"this run is {cell.system}/{cell.model}: a cell never mixes models")
+    done = check_cell_file(cell, path)
 
     spent = errors = 0
     summary = {"cell": cell.name, "model": cell.model, "total": 0, "skipped": len(done), "ran": 0,
