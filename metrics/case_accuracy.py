@@ -62,13 +62,21 @@ DEFAULT_NLI_THRESHOLD = 0.5
 
 READER_SYSTEM = (
     "You check whether a written answer settles the outcome for one specific person. "
-    "Use ONLY the answer text. Do not use outside knowledge, do not guess, and do not "
-    "assume the person qualifies for anything the answer does not say they qualify for. "
-    "If the answer does not state what happens in this person's circumstances, the outcome "
-    f'must be "{NOT_DETERMINED}". '
+    "Use ONLY the answer text. Do not use outside knowledge and do not guess.\n\n"
+    "How to read an answer:\n"
+    "- An answer may state a general rule and then exceptions, each with a condition. A person who "
+    "meets an exception's condition gets that exception's outcome. A person who clearly does NOT meet "
+    "any stated exception condition is covered by the general rule and gets the general rule's outcome.\n"
+    "- If the answer only lists possible outcomes without saying who each one applies to, or it hedges "
+    "('may', 'might', 'could', 'in some cases', 'depending on'), it does not settle the outcome for "
+    "anyone.\n"
+    "- If the answer says nothing that applies to this person, or the person's circumstances are not "
+    "enough to tell which statement applies, the outcome is "
+    f'"{NOT_DETERMINED}".\n\n'
     "Reply with one JSON object and nothing else:\n"
     '{"outcome": "<short statement of what happens to this person, or NOT_DETERMINED>", '
-    '"evidence": "<the sentence or clause COPIED WORD FOR WORD from the answer that states it>", '
+    '"evidence": "<the sentence or clause COPIED WORD FOR WORD from the answer that states the outcome '
+    'for this person>", '
     '"condition_used": "<the condition in the answer that matches this person, or null>"}'
 )
 

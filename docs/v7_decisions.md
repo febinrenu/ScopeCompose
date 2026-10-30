@@ -178,3 +178,20 @@ pairings added none: ~0.12 per pairing against the hand-mined pilot's 0.34, befo
 S1 therefore cannot reach the floor of 60 from this route. A retrieval-based miner (chunk pairs ranked
 locally, verified by the evaluation model, quotes required verbatim) was built as the alternative; its
 yield is recorded when its run completes.
+
+### D5.1 The first reader prompt scored the gold answer zero
+
+With Llama-3.1-8B and a prompt whose only guard was "do not assume the person qualifies for anything the
+answer does not say", the gold scoped answer scored CCA = 0: for a standard-card holder the reader answered
+NOT_DETERMINED although the answer stated the general rule outright. The guard against gap-filling made an
+8B model refuse to apply a *default*. This is the failure gate V2 (reader recall >= 0.85) exists to catch,
+and it was found by a five-answer smoke test, not by the gate -- which needs real annotated data.
+
+Fix: the prompt now states how an answer is read (a person who meets an exception gets it; a person who
+clearly meets none is covered by the general rule; a bare list of outcomes or any hedge settles nothing)
+without loosening the evidence requirements. After the fix: scoped = strict True; selection = strict False
+(the exception person is told the general rule: wrong); hedge = strict False / lenient True (the safeguard
+removing the gap-filling is itself the measured effect); unattached listing and null = False.
+`experiments/reader_smoke.py` is the one-minute check to run after any change to the reader model or prompt.
+This is a smoke test, not validation: V2 is validated against the human entailment audit on real instances.
+The reader prompt hash in the manifest changes with it, so the prompt in force is the one pre-registered.
