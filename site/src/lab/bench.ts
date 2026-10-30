@@ -11,6 +11,7 @@ import { annotated } from "../data/corpus";
 import { detectorAnnotatedStats, detectorCorpusStats, proveInvariance, retrievalLoss, scoreResolvers, screen } from "../engine/pipeline";
 import { ORDER_GATE } from "../data/facts";
 import { $, esc, fx, pct } from "../ui/dom";
+import { decodeFigures, growBars, introduce, settleRows } from "./motion";
 
 export function renderBench(host: HTMLElement) {
   const rows = annotated();
@@ -112,4 +113,8 @@ export function renderBench(host: HTMLElement) {
   };
   sel.addEventListener("change", () => show(sel.value));
   show(rows[0].id);
+  introduce(host);
+  decodeFigures(host);
+  growBars(host, ".trace-svg");
+  settleRows(host);
 }

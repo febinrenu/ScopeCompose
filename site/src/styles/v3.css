@@ -307,3 +307,25 @@ html.rm .portal, html.lab-on .portal, html:not(.gl-ready) .portal { display: non
 .magnet { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
 html.rm .glow::after { display: none; }
 html.rm .magnet { transform: none !important; }
+
+/* ---------- contrast fixes found by tools/contrast.mjs ---------------------------------- */
+/* the truth table's unlit cells are content, not decoration: readable, just quieter */
+.truth td { color: rgba(244, 242, 236, 0.58); }
+/* the brand's amber half on the paper header */
+html.bar-paper .brand b { color: #8a4f00; }
+/* the corpus explorer sits on paper */
+.paper .tag { color: var(--paper-muted); border-color: var(--paper-line); }
+.paper .tag.t-rel { color: #6b4300; border-color: #b8862d; }
+.paper .ex-row .rid { color: var(--paper-muted); }
+/* card captions over the glass sphere */
+.composed-card .k { color: var(--ivory-2); }
+/* text over the 3D subject gets a solid ground, at every width */
+.geo-tabs { background: rgba(5, 6, 8, 0.9); }
+.geo-tabs button { color: rgba(244, 242, 236, 0.66); }
+.tech { background: rgba(5, 6, 8, 0.9); padding: 0 12px; }
+.tech[open] { padding-bottom: 12px; }
+.composed-card { background: rgba(8, 11, 18, 0.94); }
+@media (max-width: 760px) {
+  .arrival-sub { background: rgba(5, 6, 8, 0.82); padding: 16px calc(var(--gutter) * 0.5); margin-left: calc(var(--gutter) * -0.5); margin-right: calc(var(--gutter) * -0.5);
+                 backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(244, 242, 236, 0.08); }
+}

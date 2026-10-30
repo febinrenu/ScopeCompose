@@ -119,7 +119,7 @@ def test_default_branch_from_the_rule_passage():
     p = Passage(id="p0", text="A 3% fee applies to international payments. It is charged monthly.")
     b = B.default_branch(p)
     assert b.is_default and b.supporting_passage == "p0"
-    assert b.outcome == "A 3% fee applies to international payments"
+    assert b.outcome == "a 3% fee applies to international payments"
 
 
 def test_reader_membership():

@@ -11,6 +11,105 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-10-30 - The pipeline runs end to end, live, as a product: the Studio and the engine server
+
+**What exists now that did not.** Nothing ran one query from retrieval to a
+verified answer. `run_pipeline.py` stopped at A4, B1–B3 were separate classes,
+and every B1 experiment borrowed the default branch from gold. `service/` closes
+that:
+
+- `orchestrator.run_query` chains A1 → A2 → A3 → A4 → B1 → B2 → B3 →
+  faithfulness, then baselines on the same input, reader verdicts and gold
+  scoring. It reports every step as an event `{run_id, seq, t_ms, stage, kind,
+  title, payload}`.
+- A tracing LLM client (an `LLMClient` subclass installed with `set_client`)
+  attributes every model call to the stage that made it, with tokens, latency,
+  cost and cache status.
+- A FastAPI server streams runs over server-sent events and stores every event
+  in SQLite, so history, replay, comparison and export cost nothing extra.
+- Collections (text, URL, txt/md/pdf/html, chunked into passages), a conflict
+  audit over a collection, batch evaluation, a Python client.
+- The site's `#/studio` is the client. Without a server it runs the verified
+  browser engines and replays recorded server runs (`site/public/data/runs/`,
+  written by `python -m service.record`).
+
+**Two pieces of glue, both reported, never silent.**
+
+- **The default branch** is assembled from A4's default side
+  (`service/branches.py`). B1 only ever extracts exceptions. Offline, the rule
+  descriptor's outcome is the passage's first 80 characters, which cut answers
+  mid-word ("… made in a f"), so a clipped outcome is replaced by the passage's
+  own first sentence.
+- **A detector miss** either stops the run (as-run) or continues under an
+  `override` policy, badged everywhere downstream. On a benchmark record the
+  override uses the gold type and pair ("oracle: gold label"). This exists
+  because stage 1 finds almost nothing (below), and without it the demo could
+  never show composition.
+
+**The first live evaluation of the whole chain.** Dev split, 25 instances,
+as-run (no override), DeBERTa NLI, Contriever, Groq for stage 2, descriptors
+and B1. 221 s, 20 LLM calls, $0.00 (free tier).
+
+| | |
+|---|---|
+| Stage-1 detector (DeBERTa) | TP 2, FP 1, FN 13, TN 9: precision 0.67, recall 0.13 (offline heuristic: 1 of 15) |
+| Routing | 22 pass-through, 2 composed, 1 prior work |
+| Preservation, branch-bearing (n = 12) | ScopeCompose 0.29 · selection 0.38 · concatenation 0.67 |
+| Faithful answers | 24 of 25 |
+
+- **As it runs, the pipeline preserves less than selection.** It is the bench's
+  finding, now measured live and end to end: the detector is the bottleneck,
+  and a missed conflict is answered with the general rule alone.
+- **The one unfaithful answer is the most informative row.** `wp1_fin_exp_034`
+  was detected and composed, but live B1 returned a garbled condition ("for the
+  8.00 per day overdraft fee does not apply"). The faithfulness check rejected
+  it, which is the check doing its job on a real B1 output for the first time.
+- On `wp1_fin_imp_003`, live A4 (LLM descriptors) calls the pair opposed where
+  gold says refinement, so it selects. The recording says so on its label.
+
+**The audit's ranking needed a better signal than stage 1.** Ranking candidate
+pairs by the stage-1 score put a separate cash-withdrawal fee above the
+Premium Plus waiver of the card fee. A "contrast" term was added: one passage
+negates and the other does not, over shared, stem-normalised content (fee ≈
+charge). On the test policy text the two genuine rule/exception pairs are now
+high risk and the two lookalikes medium.
+
+**Visibility is now measured, not judged by eye.** `site/tools/contrast.mjs`
+screenshots each act twice, once with every glyph transparent, and computes the
+WCAG ratio of each text run against what is actually behind it (`?still`
+freezes the world). It found:
+
+- the amber brand on the paper header (1.48:1);
+- the truth table's unlit cells (2.29:1);
+- the corpus explorer's tags on paper (1.88:1);
+- inactive relation tabs over the scope volumes;
+- the composed-answer captions over the glass sphere;
+- the phone drag hint.
+
+All are fixed. The final run: 2,386 text runs, three viewports, every one at
+or above 4.5:1 (body) and 3:1 (large). Two bugs in the tool itself were caught
+on the way: it measured text hidden by overflow and by a closed `<details>`.
+
+**Also finished.** The lab views animate like the story (figures decode,
+score bars grow, the architecture draws itself). That first shifted the
+diagram's boxes up into their labels, because a GSAP transform replaced the SVG
+`translate()`, so the boxes now fade only. `site/tools/studio_smoke.mjs` drives
+every Studio tab against a real engine server (16 checks).
+
+**Gates.**
+
+| Gate | Result |
+|---|---|
+| pytest | 539 (20 new) |
+| vitest | 73 |
+| Build, `check_dist` (now covering nested data files), size budgets | pass (Studio chunk 32.8 KB gzip, lazy) |
+| Smoke | pass, including a no-server Studio section |
+| Studio smoke | pass |
+| Contrast | pass |
+| Engine replay | pass |
+
+**Still not deployed.** Same reason as before: the supervisor's call.
+
 ### 2026-10-22 - The site rebuilt as a 3D scroll story; the engines untouched and now guarded four ways
 
 `site/` was a dependency-free single page. It is now a Vite + TypeScript +

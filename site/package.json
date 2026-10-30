@@ -16,7 +16,9 @@
     "check:dist": "node tools/check_dist.mjs",
     "size": "node tools/size.mjs",
     "smoke": "node tools/smoke.mjs",
-    "ci": "npm run typecheck && npm test && npm run build && npm run check:dist && npm run size"
+    "ci": "npm run typecheck && npm test && npm run build && npm run check:dist && npm run size",
+    "smoke:studio": "node tools/studio_smoke.mjs",
+    "contrast": "node tools/contrast.mjs"
   },
   "dependencies": {
     "@fontsource-variable/hubot-sans": "^5.3.0",

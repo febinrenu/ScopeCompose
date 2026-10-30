@@ -4,6 +4,7 @@
 import { STAGES } from "../demo/stations";
 import { CONTRACT_VERSION } from "../data/facts";
 import { esc } from "../ui/dom";
+import { drawDiagram, introduce } from "./motion";
 
 export function renderArchitecture(host: HTMLElement) {
   const W = 1180, nodeW = 150, nodeH = 112, y = 70;
@@ -47,6 +48,9 @@ export function renderArchitecture(host: HTMLElement) {
       <div><h4>What runs in this browser</h4><p>The scope algebra, four-way relation, routing, stage-1 detector (with its offline heuristic NLI), composition operator, renderer, faithfulness check, textual judge, statistics and the retrieval baselines — JavaScript ports verified against the Python on every build.</p><code>site/public/engine/*.js · site/tools/verify_engines.js</code></div>
     </div>
   </div>`;
+  introduce(host);
+  const svg = host.querySelector<SVGSVGElement>("svg");
+  if (svg) drawDiagram(svg);
 }
 
 function wrap(s: string, n: number): string[] {

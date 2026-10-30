@@ -7,6 +7,7 @@ import { BYO_PRESETS } from "../data/examples";
 import { runChain } from "../engine/pipeline";
 import type { Branch } from "../engine/types";
 import { $, esc } from "../ui/dom";
+import { introduce } from "./motion";
 
 type Key = keyof typeof BYO_PRESETS;
 
@@ -92,4 +93,5 @@ export function renderByo(host: HTMLElement) {
   for (const id of ["byoQ", "dOut", "dDesc", "dAttr", "dVal", "eOut", "eDesc", "eAttr", "eVal"]) $("#" + id, host)!.addEventListener("input", run);
   $<HTMLSelectElement>("#byoPreset", host)!.addEventListener("change", e => load((e.target as HTMLSelectElement).value as Key));
   load("fee");
+  introduce(host);
 }

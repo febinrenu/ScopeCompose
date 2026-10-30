@@ -402,6 +402,13 @@ own recordings.
 
 Weight: the Studio is its own lazy chunk (32.8 KB gzip JS + 5.6 KB CSS), budgeted in `npm run size`.
 
+Two more checks, run on demand (they need the real GPU or the engine server, so they are not in CI):
+
+```bash
+npm run contrast        # every text run on every act, 3 viewports: WCAG ratio against what is behind it
+npm run smoke:studio    # starts python -m service and drives every Studio tab against it
+```
+
 ## Deploying
 
 CI (`.github/workflows/static.yml`) has three jobs:

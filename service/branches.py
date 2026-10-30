@@ -42,8 +42,18 @@ def usable_outcome(descriptor) -> str | None:
     return out if re.search(r"[.!?;:)]$|\w{3,}$", out) and len(out) < 80 else None
 
 
+def _as_clause(sentence: str) -> str:
+    """A sentence taken from a passage reads mid-answer ("By default, as of April ...").
+    Lower-case its first letter unless it starts an acronym or a name-like token."""
+    words = sentence.split(" ", 1)
+    w = words[0]
+    if w == "A" or (len(w) > 1 and w[0].isupper() and w[1:].islower()):
+        return w[0].lower() + sentence[1:]
+    return sentence
+
+
 def default_branch(base: Passage, outcome: str | None = None, *, branch_id: str = "b0") -> Branch:
-    out = (outcome or "").strip() or first_sentence(base.text)
+    out = (outcome or "").strip() or _as_clause(first_sentence(base.text))
     return Branch(
         branch_id=branch_id,
         condition=None,
