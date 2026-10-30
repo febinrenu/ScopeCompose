@@ -248,3 +248,51 @@ def test_renderers_show_what_a_decision_needs():
 def test_shortcuts_are_only_offered_when_unambiguous():
     assert unique_shortcuts(REJECT_REASONS) == {"s": "same_outcome", "u": "unclear"}
     assert "n" not in unique_shortcuts(REJECT_REASONS)
+
+
+# --------------------------------------------------------------------------- #
+# VACS labelling
+# --------------------------------------------------------------------------- #
+
+
+def vitem(i):
+    return Item(f"v{i:03d}", "vacs", {"item_id": f"v{i:03d}", "text_a": f"passage A {i}", "text_b": f"passage B {i}",
+                                       "doc_a": "da", "doc_b": "db"})
+
+
+def test_vacs_labels_are_the_verdicts_and_are_offered_as_choices(tmp_path):
+    seen = []
+
+    class Spy(Script):
+        def choose(self, prompt, options):
+            seen.append(options)
+            return super().choose(prompt, options)
+
+    st = ReviewStore(tmp_path, "vacs", "alice")
+    s = review([vitem(1), vitem(2), vitem(3)], st, Spy(["equivalent", "distinct", "skip"]))
+    assert seen[0] == ("equivalent", "a_broader", "b_broader", "distinct", "skip", "quit")
+    assert (s.shown, s.accepted, s.skipped) == (3, 2, 1)
+    assert labels(st) == {"v001": "equivalent", "v002": "distinct"}, "a skip is missing data, not a label"
+
+
+def test_vacs_agreement_is_kappa_over_the_three_way_labels_and_refuses_the_same_annotator(tmp_path):
+    def run(name, ls):
+        st = ReviewStore(tmp_path, "vacs", name)
+        review([vitem(i) for i in range(len(ls))], st, Script(ls))
+        return st
+
+    a = run("alice", ["equivalent", "distinct", "a_broader", "distinct", "equivalent", "b_broader"])
+    b = run("bob", ["equivalent", "distinct", "a_broader", "equivalent", "equivalent", "b_broader"])
+    k = agreement(a, b)
+    assert k.n == 6 and k.observed_agreement == pytest.approx(5 / 6) and k.axis == "vacs:accept_reject"
+    with pytest.raises(AgreementError, match="INDEPENDENT"):
+        agreement(a, ReviewStore(tmp_path, "vacs", "alice"))
+
+
+def test_vacs_items_load_by_item_id_and_render_both_passages(tmp_path):
+    p = tmp_path / "v.jsonl"
+    p.write_text(json.dumps(vitem(1).payload) + "\n", encoding="utf-8")
+    (item,) = load_items("vacs", p)
+    from benchmark.review import render_vacs
+
+    assert item.item_id == "v001" and "passage A 1" in render_vacs(item) and "SAME decision" in render_vacs(item)

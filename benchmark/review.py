@@ -10,6 +10,9 @@ people -- so the interface is built to make a decision cost seconds, not minutes
     A model-proposed gold branch structure for an accepted pair. Accept, or correct it.
 ``personas``
     A model-proposed persona set (``benchmark.personas``). Accept, or correct a statement.
+``vacs``
+    Two passages: do they govern the same decision? ``equivalent``, one ``a_broader`` / ``b_broader``
+    than the other, or ``distinct``. The label is the verdict.
 
 Properties that matter for the paper, not just for convenience:
 
@@ -41,8 +44,16 @@ from typing import Callable, Iterable, Protocol
 
 from benchmark.annotation.agreement import KappaResult, cohen_kappa
 
-KINDS = ("candidates", "branches", "personas")
+KINDS = ("candidates", "branches", "personas", "vacs")
 VERDICTS = ("accept", "edit", "reject", "skip")
+#: VACS labels are three-way alignment judgements, stored in the verdict itself.
+VACS_LABELS = ("equivalent", "a_broader", "b_broader", "distinct")
+OPTIONS = {
+    "candidates": ("accept", "reject", "skip", "quit"),
+    "branches": ("accept", "edit", "reject", "skip", "quit"),
+    "personas": ("accept", "edit", "reject", "skip", "quit"),
+    "vacs": (*VACS_LABELS, "skip", "quit"),
+}
 REJECT_REASONS = ("not_an_exception", "same_outcome", "not_cross_document", "unclear")
 DEFAULT_DIR = Path(__file__).parent / "data" / "review"
 
@@ -88,7 +99,7 @@ def load_items(kind: str, path: Path) -> list[Item]:
             seen.setdefault(iid, Item(iid, kind, p))
         return sorted(seen.values(), key=lambda i: -float(i.payload.get("confidence", 0)))
     rows = [json.loads(l) for l in text.splitlines() if l.strip()]
-    key = "instance_id"
+    key = "item_id" if kind == "vacs" else "instance_id"
     return [Item(r[key], kind, r) for r in rows]
 
 
@@ -207,7 +218,19 @@ def render_personas(item: Item) -> str:
     return "\n".join(lines)
 
 
-RENDER = {"candidates": render_candidate, "branches": render_branches, "personas": render_personas}
+def render_vacs(item: Item) -> str:
+    p = item.payload
+    return "\n".join([
+        "-" * 72,
+        f"A ({p.get('doc_a', '?')}):", f"  {p['text_a']}",
+        f"B ({p.get('doc_b', '?')}):", f"  {p['text_b']}",
+        "Do A and B govern the SAME decision? equivalent / a_broader (A is the more general statement) / "
+        "b_broader / distinct",
+    ])
+
+
+RENDER = {"candidates": render_candidate, "branches": render_branches, "personas": render_personas,
+          "vacs": render_vacs}
 
 
 def edit_item(item: Item, prompter: Prompter) -> dict:
@@ -271,9 +294,7 @@ def review(
             break
         prompter.show(RENDER[store.kind](item))
         t0 = clock()
-        options = ("accept", "edit", "reject", "skip", "quit") if store.kind != "candidates" \
-            else ("accept", "reject", "skip", "quit")
-        v = prompter.choose("verdict", options)
+        v = prompter.choose("verdict", OPTIONS[store.kind])
         if v == "quit":
             s.quit_early = True
             break
@@ -286,7 +307,8 @@ def review(
         store.append(d)
         s.shown += 1
         s.seconds += d.seconds
-        counter = {"accept": "accepted", "edit": "edited", "reject": "rejected", "skip": "skipped"}[v]
+        counter = {"accept": "accepted", "edit": "edited", "reject": "rejected", "skip": "skipped"}.get(
+            v, "accepted")        # a VACS label is a decision, counted as one
         setattr(s, counter, getattr(s, counter) + 1)
     return s
 
@@ -297,9 +319,14 @@ def review(
 
 
 def labels(store: ReviewStore) -> dict[str, str]:
-    """item -> accept/reject. ``edit`` counts as accept; ``skip`` is missing data, not a label."""
+    """item -> label. accept/reject for the verification kinds (``edit`` counts as accept); the alignment
+    label itself for VACS. ``skip`` is missing data, never a label."""
     out = {}
     for iid, d in store.load().items():
+        if store.kind == "vacs":
+            if d.verdict in VACS_LABELS:
+                out[iid] = d.verdict
+            continue
         if d.verdict in ("accept", "edit"):
             out[iid] = "accept"
         elif d.verdict == "reject":
