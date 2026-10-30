@@ -87,8 +87,13 @@ READER_USER = (
     "What outcome does the answer give for this person?"
 )
 
-#: Hashed into the pre-registration: the reader prompt is part of the metric.
-READER_PROMPT_SHA = hashlib.sha256((READER_SYSTEM + READER_USER).encode("utf-8")).hexdigest()
+#: How the reader's outcome becomes an NLI hypothesis. The persona is already in the *premise*, so the
+#: hypothesis is the bare statement; wrapping it ("The outcome for this person: ...") scored correct default
+#: decisions at 0.2 and made the entailment condition reject the gold answer (docs/v7_decisions.md D7.2).
+ENTAILMENT_HYPOTHESIS = "{outcome}."
+
+#: Hashed into the pre-registration: the reader prompt and the entailment hypothesis are part of the metric.
+READER_PROMPT_SHA = hashlib.sha256((READER_SYSTEM + READER_USER + ENTAILMENT_HYPOTHESIS).encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -182,6 +187,24 @@ def evidence_is_verbatim(evidence: str, answer: str) -> bool:
     return bool(ev) and _squash(ev) in _squash(answer)
 
 
+def containing_sentence(evidence: str, answer: str) -> str:
+    """The sentence of ``answer`` that contains the quoted ``evidence`` (the evidence itself if none does)."""
+    ev = _squash(evidence.strip().strip("\"'\u201c\u201d\u2018\u2019").rstrip(".\u2026 ").strip())
+    for sentence in re.split(r"(?<=[.!?])\s+", answer):
+        if ev and ev in _squash(sentence):
+            return sentence
+    return evidence
+
+
+def is_evidence_hedged(evidence: str, answer: str) -> bool:
+    """Condition 3. The span is hedged, or the *sentence it was quoted from* is.
+
+    A reader can quote only the tail of a hedged sentence ("no fee applies." out of "Premium cardholders may
+    be eligible for the following: no fee applies.") and so drop the hedge from the span it shows. The
+    qualification belongs to the sentence, so the sentence is checked too."""
+    return not determines_outcome(evidence) or not determines_outcome(containing_sentence(evidence, answer))
+
+
 class NLIScorerLike(Protocol):
     def score_batch(self, pairs): ...
 
@@ -189,9 +212,15 @@ class NLIScorerLike(Protocol):
 def evidence_entails(
     evidence: str, persona: str, outcome: str, nli: NLIScorerLike, *, threshold: float
 ) -> tuple[bool, float]:
-    """Condition 2: (evidence + persona) entails "the outcome is <outcome>"."""
+    """Condition 2: (evidence + persona) entails the outcome.
+
+    Scoring passes the *gold* outcome: this is the machine form of the question the human audit asks ("does
+    the answer establish <gold outcome> for this person?"), and it keeps the reader's own paraphrase ("2% fee
+    is incurred") from adding noise to a check about the evidence. A reader outcome that differs from gold
+    fails condition 4 regardless."""
     premise = f"{evidence.strip()} {persona.strip()}"
-    hypothesis = f"The outcome for this person: {outcome.strip()}."
+    stated = outcome.strip().rstrip(".").strip()
+    hypothesis = ENTAILMENT_HYPOTHESIS.format(outcome=stated[:1].upper() + stated[1:])
     (score,) = nli.score_batch([(premise, hypothesis)])
     return score.entailment >= threshold, float(score.entailment)
 
@@ -254,11 +283,11 @@ def score_persona(
     if not evidence_is_verbatim(out.evidence, answer):
         failed = Failed.NOT_VERBATIM
     else:
-        ok, entail_score = evidence_entails(out.evidence, persona.statement, out.outcome, nli,
+        ok, entail_score = evidence_entails(out.evidence, persona.statement, branch.outcome, nli,
                                             threshold=threshold)
         if not ok:
             failed = Failed.NOT_ENTAILED
-        elif not determines_outcome(out.evidence):
+        elif is_evidence_hedged(out.evidence, answer):
             failed = Failed.HEDGED
     if failed is None and not matches_gold:
         failed = Failed.WRONG

@@ -130,7 +130,7 @@ def test_condition_2_uses_evidence_plus_persona_as_premise_and_the_outcome_as_hy
     premise, hypothesis = nli.calls[0]
     assert inst.personas[1].statement in premise
     assert _sentences(inst)[1] in premise
-    assert inst.branch_for_persona("u_exception").outcome in hypothesis
+    assert inst.branch_for_persona("u_exception").outcome.lower() in hypothesis.lower()
 
 
 def test_condition_3_hedged_evidence_never_determines(inst):
@@ -325,3 +325,90 @@ def test_instance_without_personas_is_refused(inst):
     bare = inst.model_copy(update={"personas": [], "persona_pairs": []})
     with pytest.raises(ValueError, match="no personas"):
         score_instance(bare, "x", lambda **k: ReaderOutput(NOT_DETERMINED, ""), ConstNLI(0.9))
+
+
+# --------------------------------------------------------------------------- #
+# The entailment hypothesis (regression: a wrapped hypothesis made the gold answer fail)
+# --------------------------------------------------------------------------- #
+
+
+def test_the_entailment_hypothesis_is_the_bare_outcome_and_the_persona_is_in_the_premise():
+    from detection.nli import NLIScores
+    from metrics.case_accuracy import ENTAILMENT_HYPOTHESIS, READER_SYSTEM, READER_USER, evidence_entails
+
+    seen = []
+
+    class Spy:
+        def score_batch(self, pairs):
+            seen.extend(pairs)
+            return [NLIScores(0.9, 0.05, 0.05) for _ in pairs]
+
+    ok, score = evidence_entails("Fees normally apply", "I hold a standard card.", "2.75% fee is incurred.", Spy(),
+                                 threshold=0.5)
+    assert ok and score == 0.9
+    (premise, hypothesis), = seen
+    assert premise == "Fees normally apply I hold a standard card."
+    assert hypothesis == "2.75% fee is incurred.", "capitalised, one full stop, no 'for this person' wrapper"
+    assert "this person" not in hypothesis.lower()
+    assert ENTAILMENT_HYPOTHESIS == "{outcome}."
+    import hashlib
+
+    from metrics.case_accuracy import READER_PROMPT_SHA
+
+    assert READER_PROMPT_SHA == hashlib.sha256((READER_SYSTEM + READER_USER + ENTAILMENT_HYPOTHESIS).encode()).hexdigest()
+
+
+def test_a_hedge_dropped_from_the_quoted_span_still_counts_because_the_sentence_is_hedged():
+    """Found by running the validity battery with the real reader: it quoted only 'no fee applies.' from
+    'Premium-tier cardholders may be eligible for the following: no fee applies.' and passed strict."""
+    from detection.nli import NLIScores
+    from metrics.case_accuracy import Failed, containing_sentence, is_evidence_hedged
+
+    class Yes:
+        def score_batch(self, pairs):
+            return [NLIScores(0.99, 0.0, 0.0) for _ in pairs]
+
+    inst = next(i for i in generate(60, seed=0) if i.personas and i.gold_scoped_answer)
+    exc = next(p for p in inst.personas if inst.branch_for_persona(p.persona_id).is_default is False)
+    outcome = inst.branch_for_persona(exc.persona_id).outcome
+    hedged = f"A fee applies. Some cardholders may be eligible for the following: {outcome}."
+
+    def quotes_tail(*, query, answer, persona):
+        return ReaderOutput(outcome, f"{outcome}.")
+
+    assert containing_sentence(f"{outcome}.", hedged) == f"Some cardholders may be eligible for the following: {outcome}."
+    assert is_evidence_hedged(f"{outcome}.", hedged) is True
+    v = score_persona(inst, exc, hedged, quotes_tail, Yes())
+    assert not v.strict_correct and v.failed is Failed.HEDGED and v.lenient_correct
+    plain = f"A fee applies. Cardholders on the premium tier pay nothing: {outcome}."
+    assert is_evidence_hedged(f"{outcome}.", plain) is False
+    assert score_persona(inst, exc, plain, quotes_tail, Yes()).strict_correct
+
+
+def test_the_quoted_span_is_never_replaced_by_a_sentence_that_is_not_there():
+    from metrics.case_accuracy import containing_sentence
+
+    assert containing_sentence("not in the answer", "One sentence. Another sentence.") == "not in the answer"
+    assert containing_sentence('"One sentence."', "One sentence. Another sentence.") == "One sentence."
+
+
+def test_entailment_is_scored_against_the_gold_outcome_not_the_readers_paraphrase():
+    """The reader's '2% fee is incurred' scored 0.32 against the evidence; the gold outcome is what the human
+    audit asks about, so it is what the hypothesis states."""
+    from detection.nli import NLIScores
+
+    seen = []
+
+    class Spy:
+        def score_batch(self, pairs):
+            seen.extend(h for _, h in pairs)
+            return [NLIScores(0.99, 0.0, 0.0) for _ in pairs]
+
+    inst = next(i for i in generate(60, seed=0) if i.personas and i.gold_scoped_answer)
+    p = inst.personas[0]
+    gold = inst.branch_for_persona(p.persona_id).outcome
+    answer = inst.gold_scoped_answer
+    sentence = answer.split(". ")[0]
+
+    score_persona(inst, p, answer, lambda **k: ReaderOutput("some paraphrase of the outcome", sentence), Spy())
+    assert seen and seen[-1] == gold[:1].upper() + gold[1:] + "."

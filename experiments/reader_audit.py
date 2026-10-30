@@ -40,9 +40,10 @@ from metrics.case_accuracy import (
     Reader,
     evidence_entails,
     evidence_is_verbatim,
+    is_evidence_hedged,
 )
 from metrics.stats import Interval, wilson
-from metrics.values import determines_outcome, values_match
+from metrics.values import values_match
 
 PRECISION_BAR = 0.95
 RECALL_BAR = 0.85
@@ -80,10 +81,10 @@ def explain(inst: GoldInstance, persona_id: str, system: str, answer: str, reade
     ent: float | None = None
     if determined:
         verbatim = evidence_is_verbatim(out.evidence, answer)
-        hedged = not determines_outcome(out.evidence)
+        hedged = is_evidence_hedged(out.evidence, answer)
         matches = values_match(gold, out.outcome)
         if verbatim:
-            _, ent = evidence_entails(out.evidence, persona.statement, out.outcome, nli, threshold=0.0)
+            _, ent = evidence_entails(out.evidence, persona.statement, gold, nli, threshold=0.0)
     return Decision(f"{inst.instance_id}|{persona_id}|{system}", inst.instance_id, persona_id, system,
                     inst.query, answer, persona.statement, gold, out.outcome, out.evidence,
                     determined, verbatim, hedged, matches, ent)

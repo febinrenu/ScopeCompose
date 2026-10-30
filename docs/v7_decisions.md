@@ -232,3 +232,29 @@ A default outcome may also be stated with an explicit "all/every/any".
 S1 yield update: the retrieval miner ranked cross-document chunk pairs locally and verified the best few per
 pairing; 110 candidates produced 3 verified proposals. S1 will not reach 60 by mining alone; the narrowing
 rule stands.
+
+### D7.2 Three defects in CCA-strict found by running V1 with the real reader (fixed before any real run)
+
+The offline battery passed with a stand-in reader. The first run with the real local reader and the real NLI
+model (four mock dev instances) failed three ways, which is what V1 is for:
+
+1. **Gold scored 0.00 strict (1.00 lenient).** The reader and the other conditions were right; the entailment
+   hypothesis ("The outcome for this person: X.") scored a correct default decision at 0.20 because the wrapper
+   is unnatural to an NLI model. The persona already sits in the premise, so the hypothesis is now the bare
+   statement ("A 2.75% fee applies."). Tried on ten cases (five correct, five wrong-evidence): the bare form
+   separated all ten (correct >= 0.71, wrong 0.00); the wrapped form missed two correct decisions.
+2. **Gold still scored 0.75.** The hypothesis used the reader's own paraphrase ("2% fee is incurred", 0.32).
+   Scoring now states the **gold** outcome. That is also the exact question the human audit asks, so the
+   machine check and the audit measure the same thing. A reader outcome that differs from gold fails condition 4
+   regardless, so this cannot make a wrong answer pass.
+3. **The modality-hedged output passed strict (0.25 against a ceiling of 0.10).** The reader quoted only
+   "no fee applies." from "Premium-tier cardholders may be eligible for the following: no fee applies.", so the
+   hedge sat outside the quoted span. Condition 3 now also checks the sentence the span was quoted from.
+
+After the fixes: gold 1.00, selection 0.00, unattached hedge 0.00, modality hedge 0.00, null 0.00, padded gold
+1.00, and every V1 criterion passes. This is four templated mock instances; it shows the metric is wired
+correctly, not that it is valid. V1 on real dev instances and V2 against the human audit are still to come.
+`READER_PROMPT_SHA` now includes the hypothesis template, so the freeze hashes it. `V1_CRITERIA_SHA` is unchanged.
+
+Environment note: a stray `six.py` in the shared Temp folder shadows the real `six` for any script run from
+there (it broke a pandas import); scratch scripts are run from the session scratchpad instead.
