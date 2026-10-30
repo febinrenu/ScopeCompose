@@ -32,6 +32,11 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 - README section 6 gains a Phase 6 status table. Retrieval-miner output committed.
 
 **Decisions / findings** (reasoning in `docs/v7_decisions.md`, D7.1)
+- **Running V1 with the real reader found three defects in CCA-strict** (D7.2): a wrapped NLI hypothesis scored
+  correct default decisions at 0.2 (gold scored 0.00 strict); the hypothesis used the reader's paraphrase instead
+  of the gold outcome the audit asks about; and a reader quoting only the tail of a hedged sentence passed strict.
+  All fixed and regression-tested; with them every V1 criterion passes with the real reader and NLI on four
+  mock dev instances (templated data: wiring is right, validity is not yet shown). Suite: 1,915 tests, green.
 - The end-to-end test found a real bug: the attachment pattern missed "for signature-tier cardholders", so the
   mock gold answer scored 0.79 against itself. The restricting-phrase test is now structural, not a word list.
 - Real-corpus release check found passages that differ from their documents only in typography (curly quotes,
