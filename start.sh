@@ -4,6 +4,7 @@
 #  (start.bat is the Windows twin; they do the same things).
 #
 #    ./start.sh          build the site and open it   (http://localhost:4173, and on your network)
+#    ./start.sh studio   the site + the engine server, opened on the live Studio (#/studio)
 #    ./start.sh dev      live-reloading dev server    (http://localhost:5173, and on your network)
 #    ./start.sh verify   check the browser engines against the recorded Python
 #
@@ -108,10 +109,51 @@ case "$MODE" in
     links "$PORT"
     exec node node_modules/vite/bin/vite.js --port "$PORT" --strictPort --host "$HOST" $OPEN
     ;;
+  studio)
+    # Python for the engine server: the repo's .venv, created on first use
+    PY="$ROOT/.venv/bin/python"
+    if [ ! -x "$PY" ]; then
+      BASEPY=""
+      for c in python3 python; do
+        if command -v "$c" >/dev/null 2>&1 && "$c" -c "import sys;sys.exit(0 if sys.version_info>=(3,11) else 1)" 2>/dev/null; then BASEPY="$c"; break; fi
+      done
+      if [ -z "$BASEPY" ]; then
+        echo "[!] Python 3.11+ was not found, so the studio will use the browser's engines only."
+        echo "    Install it from https://www.python.org and run ./start.sh studio again for the engine server."
+        exec "$0" run
+      fi
+      echo "[..] Creating a Python environment for the engine server (first run only)..."
+      "$BASEPY" -m venv "$ROOT/.venv" || fail "Could not create $ROOT/.venv"
+    fi
+    if ! "$PY" -c "import fastapi, uvicorn, multipart, rank_bm25, pypdf, yaml, dotenv, numpy, pydantic" 2>/dev/null; then
+      echo "[..] Installing the engine server's packages (a few megabytes; first run only)..."
+      "$PY" -m pip install --disable-pip-version-check -q -r "$ROOT/requirements-service.txt" || fail "Could not install the engine server's packages."
+    fi
+    echo "[ok] Python engine environment ready"
+    echo "[..] Building the site..."
+    node node_modules/vite/bin/vite.js build --logLevel error || fail "The build failed - see the messages above."
+    echo "[ok] Built to site/dist"
+    LANFLAG=""; [ "$HOST" = "0.0.0.0" ] && LANFLAG="--lan"
+    ENGINE_PID=""
+    if [ "$(node tools/free_port.mjs 8008 "$HOST")" = "8008" ]; then
+      (cd "$ROOT" && "$PY" -m service --port 8008 $LANFLAG) &
+      ENGINE_PID=$!
+      trap '[ -n "$ENGINE_PID" ] && kill "$ENGINE_PID" 2>/dev/null' EXIT INT TERM
+      echo "[..] Engine server starting: http://localhost:8008  (API docs: /docs)"
+    else
+      echo "[!] Port 8008 is in use: assuming an engine server is already running there."
+    fi
+    pick_port 4173
+    links "$PORT"
+    echo "  Studio:   http://localhost:$PORT/#/studio     API docs: http://localhost:8008/docs"
+    echo
+    [ -n "$OPEN" ] && OPEN="--open /#/studio"
+    node node_modules/vite/bin/vite.js preview --port "$PORT" --strictPort --host "$HOST" $OPEN
+    ;;
   verify)
     exec node tools/verify_engines.js
     ;;
   *)
-    fail "Unknown option \"$MODE\". Use: ./start.sh  |  ./start.sh dev  |  ./start.sh verify"
+    fail "Unknown option \"$MODE\". Use: ./start.sh  |  ./start.sh studio  |  ./start.sh dev  |  ./start.sh verify"
     ;;
 esac

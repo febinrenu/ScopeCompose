@@ -34,7 +34,13 @@ check("3D chunk (Three.js + world, lazy)", gz(join(dist, "assets", scene)), 200 
 // post-processing loads in parallel with the world, tiers 2-3 only
 if (post) check("post chunk (bloom, DoF, lens; tiers 2-3)", gz(join(dist, "assets", post)), 90 * 1024);
 check("3D at tier 3 (world + post, lazy)", gz(join(dist, "assets", scene)) + (post ? gz(join(dist, "assets", post)) : 0), 270 * 1024);
-check("CSS", css.reduce((s, f) => s + gz(join(dist, "assets", f)), 0), 15 * 1024);
+// the studio (#/studio) is its own lazy chunk, with its own stylesheet
+const studioJs = js.filter(f => /^(studio|eval|docs|runs|apidocs)-/.test(f));
+const studioCss = css.filter(f => f.startsWith("studio-"));
+if (!studioJs.length) { console.error("no studio-*.js chunk: the studio is no longer split out"); process.exit(1); }
+check("studio JS (lazy, #/studio)", studioJs.reduce((s, f) => s + gz(join(dist, "assets", f)), 0), 60 * 1024);
+check("CSS (site)", css.filter(f => !studioCss.includes(f)).reduce((s, f) => s + gz(join(dist, "assets", f)), 0), 15 * 1024);
+check("CSS (studio, lazy)", studioCss.reduce((s, f) => s + gz(join(dist, "assets", f)), 0), 10 * 1024);
 
 let failed = false;
 for (const r of rows) {

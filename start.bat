@@ -6,6 +6,7 @@ rem ==========================================================================
 rem  ScopeCompose - one-click launcher for Windows.
 rem
 rem    start.bat          build the site and open it   (http://localhost:4173, and on your network)
+rem    start.bat studio   the site + the engine server, opened on the live Studio (#/studio)
 rem    start.bat dev      live-reloading dev server    (http://localhost:5173, and on your network)
 rem    start.bat verify   check the browser engines against the recorded Python
 rem
@@ -71,7 +72,8 @@ if "%SC_LOCAL_ONLY%"=="1" set "HOST=localhost"
 if /i "%MODE%"=="dev" goto :dev
 if /i "%MODE%"=="verify" goto :verify
 if /i "%MODE%"=="run" goto :run
-echo [x] Unknown option "%MODE%". Use: start.bat  ^|  start.bat dev  ^|  start.bat verify
+if /i "%MODE%"=="studio" goto :studio
+echo [x] Unknown option "%MODE%". Use: start.bat  ^|  start.bat studio  ^|  start.bat dev  ^|  start.bat verify
 goto :fail
 
 rem ---- 3a. Build and serve the production site -------------------------------
@@ -103,6 +105,73 @@ call :port 5173 || goto :fail
 call :links %PORT%
 call node node_modules\vite\bin\vite.js --port %PORT% --strictPort --host %HOST% %OPEN%
 goto :end
+
+rem ---- 3d. Studio: the engine server + the site, opened on #/studio ---------------
+:studio
+call :python || goto :studio_noserver
+echo [..] Building the site...
+call node node_modules\vite\bin\vite.js build --logLevel error
+if errorlevel 1 (
+  echo [x] The build failed - see the messages above.
+  goto :fail
+)
+echo [ok] Built to site\dist
+set "LANFLAG="
+if "%HOST%"=="0.0.0.0" set "LANFLAG=--lan"
+set "FREE8008="
+for /f "delims=" %%p in ('node tools\free_port.mjs 8008 %HOST%') do set "FREE8008=%%p"
+if "%FREE8008%"=="8008" goto :studio_start
+echo [!] Port 8008 is in use: assuming an engine server is already running there.
+goto :studio_site
+:studio_start
+echo [..] Starting the engine server in its own window: http://localhost:8008  ^(API docs: /docs^)
+start "ScopeCompose engine server" /min /d "%ROOT%." "%PY%" -m service --port 8008 %LANFLAG%
+:studio_site
+call :port 4173 || goto :fail
+call :links %PORT%
+echo   Studio:   http://localhost:%PORT%/#/studio     API docs: http://localhost:8008/docs
+echo   Close the "ScopeCompose engine server" window to stop the engine.
+echo.
+if defined OPEN set "OPEN=--open /#/studio"
+call node node_modules\vite\bin\vite.js preview --port %PORT% --strictPort --host %HOST% %OPEN%
+goto :end
+
+:studio_noserver
+echo [!] Without Python the studio runs on the browser's engines only (benchmark records,
+echo     recorded runs). Install Python 3.11+ from https://www.python.org and run this again
+echo     for the engine server: your own documents, retrieval, the audit, history and the API.
+goto :run
+
+rem ---- Python for the engine server: the repo's .venv, created on first use ---------
+:python
+set "PY=%ROOT%.venv\Scripts\python.exe"
+if exist "%PY%" goto :python_deps
+set "BASEPY="
+where py >nul 2>nul && py -3 -c "import sys;sys.exit(0 if sys.version_info>=(3,11) else 1)" >nul 2>nul && set "BASEPY=py -3"
+if not defined BASEPY (
+  where python >nul 2>nul && python -c "import sys;sys.exit(0 if sys.version_info>=(3,11) else 1)" >nul 2>nul && set "BASEPY=python"
+)
+if not defined BASEPY (
+  echo [!] Python 3.11 or newer was not found.
+  exit /b 1
+)
+echo [..] Creating a Python environment for the engine server ^(first run only^)...
+%BASEPY% -m venv "%ROOT%.venv"
+if errorlevel 1 exit /b 1
+:python_deps
+"%PY%" -c "import fastapi, uvicorn, multipart, rank_bm25, pypdf, yaml, dotenv, numpy, pydantic" >nul 2>nul
+if not errorlevel 1 (
+  echo [ok] Python engine environment ready
+  exit /b 0
+)
+echo [..] Installing the engine server's packages ^(a few megabytes; first run only^)...
+"%PY%" -m pip install --disable-pip-version-check -q -r "%ROOT%requirements-service.txt"
+if errorlevel 1 (
+  echo [!] Could not install the engine server's packages.
+  exit /b 1
+)
+echo [ok] Python engine environment ready
+exit /b 0
 
 rem ---- 3c. Full engine verification -----------------------------------------------
 :verify

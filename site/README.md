@@ -330,6 +330,7 @@ was reverted. Building actors only as their act approaches is the next lever.
 | `#/bench` | five resolvers on one metric, the detector trace, retrieval loss, the order-invariance prover |
 | `#/byo` | type two branches and run the composition operator on them |
 | `#/architecture` | the system without the cinema: one accessible SVG and the module map |
+| `#/studio` | the Studio: the pipeline, running live (below) |
 
 Old anchors (`#relations`, `#claims`, `#corpus`, …) land on the act that now holds that content.
 
@@ -351,6 +352,55 @@ Three framing rules travel with these numbers. They are typed fields on the reso
 - **The as-it-runs column is scored at the routing step,** exactly as `run_decisive` scores the
   pipeline arm, so it never reads gold branch text.
 - **Concatenation scoring above gold is a defect in the metric,** shown with answer length beside it.
+
+## The Studio (`#/studio`)
+
+The pipeline, running. Start everything with `start.bat studio` (or `./start.sh studio`). That
+starts the Python engine server (`service/`, port 8008) and opens the Studio.
+
+| Tab | What it does |
+|---|---|
+| Console | Ask a question over a benchmark record, your own documents, or pasted passages. Fourteen stages light up as the server reports them; click any to inspect exactly what it computed. |
+| Evaluate | Run the pipeline over a benchmark split while detector precision/recall, preservation per system, routing and the relation confusion matrix fill in. Export CSV or JSON. |
+| Documents & audit | Collections of documents (paste text, fetch a URL, or drop .txt/.md/.pdf/.html), chunked into passages. The audit ranks passage pairs that read as a rule and an exception to it. |
+| History | Every server run with every event: open it in the console, watch it again, compare two, export the events (JSON) or a standalone report (HTML), and see LLM spend by step. |
+| API | The REST API with copyable curl, Python SDK and JavaScript, and a live "try it". Swagger is at `/docs`. |
+
+What the Console's stage inspector shows for each stage:
+
+- **Retrieval:** the BM25, dense and fused rankings.
+- **Detection:** the NLI split, the score against the 0.35–0.75 band, and all 17 pair features.
+- **Scope:** descriptors, set relation and the four-way relation, against gold.
+- **Extraction:** the contrastive questions, and each candidate against the grounding gate.
+- **Composition:** the branches kept.
+- **Answer:** with its citations.
+- **Faithfulness:** a checklist.
+- **Baselines:** on the same input.
+- **Reader:** who each answer is right for.
+- **Score:** preservation against gold.
+
+The dock has the log, a latency waterfall, every LLM call (model, tokens, latency, cache, prompt
+and reply), the QueryRecord as each stage fills it, and the raw events.
+
+**Three sources, one event stream.** All three emit `{run_id, seq, t_ms, stage, kind, title,
+payload}`, folded by one reducer (`src/studio/model.ts`). That reducer is tested on the server's
+own recordings.
+
+- **The engine server** streams a run live over server-sent events.
+- **Without a server,** the browser's verified engines run benchmark records. Hybrid retrieval,
+  the LLM stages and B1 extraction say they need the server; they are never simulated.
+- **Recordings** of real server runs (`public/data/runs/`, written by `python -m service.record`)
+  play back on the static site.
+
+**Honesty, in the Studio:**
+
+- **Overrides are always badged.** When stage 1 misses a conflict, the default policy continues
+  under an override badge ("oracle: gold label" on benchmark records). As-run answers with the
+  general rule alone, which is the failure the project measures.
+- **Gold branches are labelled as oracle input.**
+- **Every number comes from the run's own events.**
+
+Weight: the Studio is its own lazy chunk (32.8 KB gzip JS + 5.6 KB CSS), budgeted in `npm run size`.
 
 ## Deploying
 

@@ -26,8 +26,10 @@ if (!existsSync(dist)) { console.error("no dist/ — run `npm run build` first")
 
 // 1. byte identity
 for (const sub of ["engine", "data"]) {
-  for (const f of readdirSync(join(site, "public", sub))) {
-    const a = join(site, "public", sub, f), b = join(dist, sub, f);
+  // nested too: data/runs/ holds the studio's recorded runs, which ship as recorded
+  for (const a of walk(join(site, "public", sub))) {
+    const f = relative(join(site, "public", sub), a).replace(/\\/g, "/");
+    const b = join(dist, sub, f);
     if (!existsSync(b)) fails.push(`missing from dist: ${sub}/${f}`);
     else if (sha(a) !== sha(b)) fails.push(`bytes differ: ${sub}/${f}`);
   }

@@ -108,13 +108,16 @@ class ScopePipeline:
         return self.analyse_borderline_factual and pair.type is ConflictType.FACTUAL
 
     def analyse_record(
-        self, record: QueryRecord
+        self, record: QueryRecord, *, descriptors: dict[str, ClaimDescriptor] | None = None
     ) -> tuple[QueryRecord, ScopeStats, dict[tuple[str, str], ScopeDecision]]:
+        """``descriptors`` may be passed in when the caller already extracted
+        them (to report them as they happen); otherwise they are extracted here."""
         stats = ScopeStats()
         if not any(self._should_analyse(p) for p in record.conflict_pairs):
             return record, stats, {}
 
-        descriptors = self.describe(record)
+        if descriptors is None:
+            descriptors = self.describe(record)
         stats.rule_based_descriptors = sum(
             1 for d in descriptors.values() if d.source == "rules"
         )

@@ -1,0 +1,30 @@
+[
+ {
+  "id": "fee-live",
+  "title": "Monthly fee, live: DeBERTa, Contriever and the LLM stages",
+  "note": "live · real models, every LLM call shown · A4 called it opposed (gold: refinement), so it selected",
+  "file": "fee-live.json",
+  "mode": "live"
+ },
+ {
+  "id": "fee-override",
+  "title": "Monthly fee: the detector misses, override continues",
+  "note": "offline · gold labels after a detector miss · refinement · composed",
+  "file": "fee-override.json",
+  "mode": "offline"
+ },
+ {
+  "id": "fee-as-run",
+  "title": "Monthly fee, as-run: the branch is silently dropped",
+  "note": "offline · the failure the project measures · pass through",
+  "file": "fee-as-run.json",
+  "mode": "offline"
+ },
+ {
+  "id": "card-passages",
+  "title": "Your own passages: a card fee and its carve-out",
+  "note": "offline · pasted passages · refinement · composed",
+  "file": "card-passages.json",
+  "mode": "offline"
+ }
+]

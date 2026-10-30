@@ -167,6 +167,38 @@ try {
     await ctx.close();
   }
 
+  console.log("studio, with no engine server");
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    // point the studio at a port nothing listens on, so a server running on this machine cannot change the result
+    await ctx.addInitScript(() => { try { localStorage.setItem("sc.server", "http://127.0.0.1:9"); } catch {} });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on("pageerror", e => errors.push(e.message));
+    page.on("console", m => { if (m.type() === "error" && !/127\.0\.0\.1:9|ERR_CONNECTION_REFUSED|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+    await page.goto(BASE + "?q=off#/studio", { waitUntil: "networkidle" });
+    await page.waitForSelector(".sc .srv[data-state='off']", { timeout: 15000 });
+    expect(true, "studio: says plainly that no engine server is connected");
+    await page.click("[data-k=run]");
+    await page.waitForFunction(() => /done/.test(document.querySelector(".sc-counters .st")?.textContent || ""), null, { timeout: 30000 });
+    const st = await page.evaluate(() => ({
+      nodes: [...document.querySelectorAll(".pg-node")].map(n => n.getAttribute("data-s")),
+      answer: document.querySelector(".res blockquote")?.textContent || "",
+    }));
+    expect(st.nodes.length === 14 && st.nodes.every(s => /done|skipped|warn/.test(s || "")), `studio: a browser run completes all 14 stages (${st.nodes.join(",")})`);
+    expect(/12\.00 monthly fee/.test(st.answer) && /Graduate Scheme/.test(st.answer), "studio: the browser run composes both branches");
+    await page.click(".sc-rec [data-rec]");
+    await page.waitForFunction(() => /done/.test(document.querySelector(".sc-counters .st")?.textContent || ""), null, { timeout: 60000 });
+    expect(await page.evaluate(() => document.querySelectorAll(".dock-bar [data-tab=llm] .n")[0]?.textContent !== undefined), "studio: a recorded engine-server run replays");
+    await page.goto(BASE + "?q=off#/studio/eval", { waitUntil: "networkidle" });
+    await page.fill("[data-k=limit]", "6");
+    await page.click("[data-k=go]");
+    await page.waitForFunction(() => /done/.test(document.querySelector("[data-k=prog]")?.textContent || ""), null, { timeout: 60000 });
+    expect(await page.locator("[data-k=rows] tr").count() === 6, "studio: a browser evaluation fills six rows");
+    expect(errors.length === 0, "studio: no console errors" + (errors.length ? ": " + errors.slice(0, 3).join(" | ") : ""));
+    await ctx.close();
+  }
+
   console.log("viewports");
   for (const [w, h] of [[1440, 900], [1024, 768], [390, 844]]) {
     const { page, ctx, errors } = await open("?q=low", { width: w, height: h });

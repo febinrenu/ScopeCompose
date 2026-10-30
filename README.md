@@ -461,6 +461,29 @@ fails on any disagreement, and CI also checks the build ships those engine files
 byte-identical. Publishing is disabled in CI pending supervisor sign-off. See
 `site/README.md`.
 
+### The Studio and the engine server
+
+`service/` runs the whole pipeline on one query, end to end, and reports every
+step as it happens: retrieval, detection, A3/A4, B1 extraction with its
+grounding gate, composition, generation, verification, baselines on the same
+input, and gold scoring. It is a local API (FastAPI) and the engine behind the
+site's **Studio** (`#/studio`): a live console, your own document collections,
+a conflict audit, batch evaluation, run history with replay and export, and API
+docs.
+
+```bash
+start.bat studio                     # or ./start.sh studio: engine + site, opens the Studio
+python -m service                    # just the engine: http://localhost:8008, docs at /docs
+python -m service.record --live      # re-record the runs the static site replays
+```
+
+Offline mode needs only `requirements-service.txt` (no PyTorch). Live mode uses
+the full stack in `requirements.txt` and the LLM tiers in `config/models.yaml`.
+Two pieces exist only here: the default branch is assembled from A4's default
+side (B1 extracts exceptions only), and a detector miss can be continued under a
+labelled **override** policy so the rest of the pipeline can be shown. Both are
+reported in every run, never applied silently.
+
 ---
 
 ## 10. One honesty guardrail

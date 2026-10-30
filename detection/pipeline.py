@@ -99,8 +99,17 @@ class TwoStageDetector:
 
     def detect(self, record: QueryRecord) -> tuple[QueryRecord, DetectionStats]:
         """Run detection and return a record with ``conflict_pairs`` filled in."""
+        return self.detect_from_candidates(record, self.stage1.score_pairs(record.passages))
+
+    def detect_from_candidates(
+        self, record: QueryRecord, candidates: list[PairCandidate]
+    ) -> tuple[QueryRecord, DetectionStats]:
+        """Finish detection from stage-1 candidates already scored.
+
+        Split out of :meth:`detect` so a caller that reports stage 1 as it
+        happens (the live studio) does not have to score every pair twice.
+        """
         stats = DetectionStats()
-        candidates = self.stage1.score_pairs(record.passages)
         stats.pairs_total = len(candidates)
 
         escalate = [c for c in candidates if c.needs_escalation] if self.use_stage2 else []
