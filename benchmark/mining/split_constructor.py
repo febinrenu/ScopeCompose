@@ -131,6 +131,10 @@ def find_candidates(docs: list[dict]) -> list[SplitCandidate]:
     return out
 
 
+#: As in build_batch: ``BULK`` reproduces the pilot, ``EVAL`` is required for anything reaching a test set.
+SPLIT_TIER = "BULK"
+
+
 def split_sentence(cand: SplitCandidate, *, client=None) -> tuple[str, str] | None:
     """Rewrite one sentence as two standalone statements, or return None."""
     from api_budget.client import Tier, get_client
@@ -139,8 +143,8 @@ def split_sentence(cand: SplitCandidate, *, client=None) -> tuple[str, str] | No
     result = client.complete(
         messages=[{"role": "user", "content": f"Sentence: {cand.source}"}],
         system=_SPLIT_SYSTEM,
-        tier=Tier.BULK,
-        step="tier2_split",
+        tier=Tier(SPLIT_TIER),
+        step="tier2_split" if SPLIT_TIER == "BULK" else f"tier2_split_{SPLIT_TIER.lower()}",
         response_format={"type": "json_object"},
         temperature=0.0,
     )
@@ -256,9 +260,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--prefix", default="t2")
+    ap.add_argument("--tier", choices=["BULK", "EVAL"], default="BULK",
+                    help="EVAL for anything that can reach a test set (BULK is an evaluated model)")
     ap.add_argument("--survey", action="store_true",
                     help="count candidates without spending API calls")
     args = ap.parse_args(argv)
+    global SPLIT_TIER
+    SPLIT_TIER = args.tier
 
     docs = [json.loads(l) for l in args.docs.read_text(encoding="utf-8").splitlines()
             if l.strip()]

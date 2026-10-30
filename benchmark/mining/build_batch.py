@@ -73,6 +73,12 @@ Rules:
 Return JSON: {"query": "..."}"""
 
 
+#: The tier that writes queries. ``BULK`` (gpt-oss-20b) reproduces the pilot; anything that can reach a
+#: test set must run with ``--tier EVAL``, because an evaluated model may not take part in test
+#: construction (plan v4 ground rule 4). Set by the CLI.
+QUERY_TIER = "BULK"
+
+
 def write_query(rule: str, exception: str, *, client=None) -> str | None:
     """A neutral question both passages answer.
 
@@ -99,8 +105,8 @@ def write_query(rule: str, exception: str, *, client=None) -> str | None:
                    f"Passage 1: {rule}\n\nPassage 2: {exception}\n\n"
                    "Write the question."}],
         system=_QUERY_SYSTEM,
-        tier=Tier.BULK,
-        step="build_batch_query",
+        tier=Tier(QUERY_TIER),
+        step="build_batch_query" if QUERY_TIER == "BULK" else f"build_batch_query_{QUERY_TIER.lower()}",
         response_format={"type": "json_object"},
         temperature=0.0,
     )
@@ -437,6 +443,8 @@ def main(argv: list[str] | None = None) -> int:
                          "these the batch is almost all conditional and kappa "
                          "is unstable -- see add_distractors.")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--tier", choices=["BULK", "EVAL"], default="BULK",
+                    help="EVAL for anything that can reach a test set (BULK is an evaluated model)")
     ap.add_argument("--exclude", type=Path, action="append", default=[],
                     help="an earlier batch whose pairs must not be reused. "
                          "Repeatable. Without it, rebuilding from the same "
@@ -444,6 +452,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-queries", action="store_true",
                     help="skip query generation; the batch will NOT be labellable")
     args = ap.parse_args(argv)
+    global QUERY_TIER
+    QUERY_TIER = args.tier
 
     raw = json.loads(args.proposals.read_text(encoding="utf-8"))
     proposals = raw.get("proposals", raw) if isinstance(raw, dict) else raw
