@@ -10,6 +10,9 @@ people -- so the interface is built to make a decision cost seconds, not minutes
     A model-proposed gold branch structure for an accepted pair. Accept, or correct it.
 ``personas``
     A model-proposed persona set (``benchmark.personas``). Accept, or correct a statement.
+``entailment``
+    The reader audit (gate V2): does this answer, by itself, establish the stated outcome for this
+    person? ``yes`` / ``no`` / ``unsure``. Blind to the system and to the reader's output.
 ``vacs``
     Two passages: do they govern the same decision? ``equivalent``, one ``a_broader`` / ``b_broader``
     than the other, or ``distinct``. The label is the verdict.
@@ -44,7 +47,7 @@ from typing import Callable, Iterable, Protocol
 
 from benchmark.annotation.agreement import KappaResult, cohen_kappa
 
-KINDS = ("candidates", "branches", "personas", "vacs")
+KINDS = ("candidates", "branches", "personas", "vacs", "entailment")
 VERDICTS = ("accept", "edit", "reject", "skip")
 #: VACS labels are three-way alignment judgements, stored in the verdict itself.
 VACS_LABELS = ("equivalent", "a_broader", "b_broader", "distinct")
@@ -53,6 +56,7 @@ OPTIONS = {
     "branches": ("accept", "edit", "reject", "skip", "quit"),
     "personas": ("accept", "edit", "reject", "skip", "quit"),
     "vacs": (*VACS_LABELS, "skip", "quit"),
+    "entailment": ("yes", "no", "unsure", "skip", "quit"),
 }
 REJECT_REASONS = ("not_an_exception", "same_outcome", "not_cross_document", "unclear")
 DEFAULT_DIR = Path(__file__).parent / "data" / "review"
@@ -99,7 +103,7 @@ def load_items(kind: str, path: Path) -> list[Item]:
             seen.setdefault(iid, Item(iid, kind, p))
         return sorted(seen.values(), key=lambda i: -float(i.payload.get("confidence", 0)))
     rows = [json.loads(l) for l in text.splitlines() if l.strip()]
-    key = "item_id" if kind == "vacs" else "instance_id"
+    key = "item_id" if kind in ("vacs", "entailment") else "instance_id"
     return [Item(r[key], kind, r) for r in rows]
 
 
@@ -229,8 +233,22 @@ def render_vacs(item: Item) -> str:
     ])
 
 
+def render_entailment(item: Item) -> str:
+    p = item.payload
+    return "\n".join([
+        "-" * 72,
+        f"QUESTION: {p.get('query', '')}",
+        "ANSWER:",
+        f"  {p['answer']}",
+        f"PERSON: {p['persona']}",
+        f"CLAIM:  for this person, {p['claim']}",
+        "Does the ANSWER, by itself, establish the CLAIM for this person? "
+        "(yes / no / unsure -- do not use outside knowledge)",
+    ])
+
+
 RENDER = {"candidates": render_candidate, "branches": render_branches, "personas": render_personas,
-          "vacs": render_vacs}
+          "vacs": render_vacs, "entailment": render_entailment}
 
 
 def edit_item(item: Item, prompter: Prompter) -> dict:
@@ -325,6 +343,10 @@ def labels(store: ReviewStore) -> dict[str, str]:
     for iid, d in store.load().items():
         if store.kind == "vacs":
             if d.verdict in VACS_LABELS:
+                out[iid] = d.verdict
+            continue
+        if store.kind == "entailment":
+            if d.verdict in ("yes", "no"):          # "unsure" is excluded from the truth, not guessed
                 out[iid] = d.verdict
             continue
         if d.verdict in ("accept", "edit"):
