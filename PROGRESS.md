@@ -11,6 +11,45 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-10-31 - v7/v8 build, day 1: contract v1.3.0, CCA, the validity battery, Propositions 2-3, signatures
+
+**Done** (every item has tests; 540 -> 1,439 collected; full suite green, exit 0)
+- `contract/` v1.3.0, purely additive: `Opposition`, `Persona`, `PersonaPair` (gold_changes is checked
+  against the branches, not trusted), `contract/frames.py` (`Signature`, `NormativeFrame`, `Modality`).
+  All 128 v1.2.0 records still validate. Schemas regenerated.
+- `benchmark/relabel_v7.py` (derives, never rewrites gold): **18 natural conditional conflicts = 14 S1 + 4 S2**.
+  `benchmark/strata.py`: S1-S5, stratified leak-free re-split with an incremental mode, and the narrowing
+  rule computed from the data. Re-split NOT applied to `corpus.jsonl` yet (dry run only).
+- `metrics/values.py` (74 value cases, 42 modality cases), `metrics/case_accuracy.py` (CCA-strict/lenient,
+  four named failure conditions), `metrics/validity.py` (8 outputs; V1 criteria fixed as constants + hash),
+  `metrics/counterfactual.py` (V2 sensitivity + system consistency), `metrics/coverage_confrag.py` (H-K).
+- `composition/partition.py`: Propositions 2-3, exact region satisfiability; checked against an
+  independent extensional oracle on 120 random frame sets; mutation-tested.
+- `qnfa/schema/{banking,immigration}.yaml`, `detection/signature.py`: `unify` (adds `OVERLAP`),
+  normalisation, fold into applicability. The proposal's three worked fee variables reproduce.
+- `baselines/conflictrag_topsis.py`: Entropy-TOPSIS (hand-verified), sufficiency margin, ablatable specificity.
+- `metrics/power_sim.py` (exact), `metrics/cluster.py` (cluster bootstrap, BCa, one-sided bound, sign-flip).
+- `benchmark/mining/govuk_search.py`: **476 distinct items, 218 pairings; 186 verified distinct** (vs 97 mined).
+- Tiers READER / EVAL / BACKBONE_PRIMARY / BACKBONE_LOCAL, pinned (`fallback: false`); Modelfiles pin `num_ctx`.
+- `docs/v7_decisions.md` records every decision below with its evidence.
+
+**Decisions** (full reasoning in `docs/v7_decisions.md`)
+- The 7-day plan's "19 natural conditionals" was wrong; the figure is 18. S1 starts at 14, so the narrowing rule is the expected outcome.
+- **B7 as released cannot run on Groq's free tier**: NormBench's stage-1 prompt is ~18-27k tokens against an 8k tokens/minute limit. B7 splits into B7-full (local only) and B7-compact (both backbones, "SG-DT-style").
+- `mcnemar` silently used chi-square at >= 25 discordant items; confirmatory tests must pass `force_exact=True`.
+- Mining that can reach a test set must use the EVAL tier (BULK is an evaluated detector).
+
+**Blocked / open**
+- Ollama pulls (llama3.1:8b, qwen2.5:7b) failed once with EOF and were restarted; reader and local backbone are not yet usable. No reported number may use a stand-in model.
+- The S1 mining run (60 of 218 pairings, EVAL tier) is in flight; human verification has not started.
+- Not yet built: `detection/frames.py` (LLM extraction), D5 detector, VACS, B0/B7/B8/O3 + registry, personas generator, `prereg/`, scheduler, claims ledger.
+- The v8 timeline needs ~135 annotation hours; this schedule has 25-40, so S1 will land below the floor of 60.
+
+**Next up**
+- Create `scopecompose-reader` / `scopecompose-qwen7b` once pulls finish; smoke-test the reader on 5 hand-made answers.
+- Verify the first batch of mined S1 candidates (`benchmark/data/llm_proposals_govuksearch_a.json`); queue the next 65 pairings (`--skip 60`).
+- `detection/frames.py` then D5 and VACS; `baselines/registry.py` with B0/B3; measure tokens per call for gate G1.
+
 ### 2026-10-30 - The pipeline runs end to end, live, as a product: the Studio and the engine server
 
 **What exists now that did not.** Nothing ran one query from retrieval to a
