@@ -128,3 +128,22 @@ An earlier docstring claimed "up to one point larger"; a test caught the oversta
 The first Llama pull ended in `max retries exceeded` at 13%; the task reported "completed" only
 because the shell wrapper exited 0. Re-run with an exit-status retry loop (`ollama pull` resumes).
 Lesson recorded: a background task's exit code is the wrapper's, not the command's.
+
+### D3.1 Entropy-TOPSIS on two passages is degenerate: margins are ~0 or ~1
+
+With two alternatives, entropy weighting puts essentially all weight on the criteria that
+discriminate, so closeness is either an exact tie or near-extreme. A typical rule/exception pair
+(authority favours the rule; recency and specificity favour the exception) comes out as a **tie
+(margin 0)**, so B3's sufficiency rule makes it *present both sources* rather than delete one.
+Ablating specificity flips the same pair to "select the newest" (margin 0.989). Consequence for the
+paper: whether B3 suppresses an exception is an empirical, per-pair outcome, not a given, and H1 may
+fail honestly if B3 mostly presents both. The pre-registered B3 uses the specificity criterion and
+the default delta; the no-specificity ablation is reported beside it. Found while fixing test
+fixtures that assumed a margin nobody had computed.
+
+### D3.2 B3 gets an oracle conflict signal
+
+B3's published detector is trained on other data and is not reproduced. A weak detector would let B3
+quietly degrade into B0. Given gold conflict groups B3 selects as often as it ever would, so any
+suppression measured is the upper bound for a selection-based resolver. B3 is reported as
+"ConflictRAG-style, with oracle detection".
