@@ -72,6 +72,62 @@ def _branch(bid: str, passage: str | None, *, is_default: bool, condition: str |
         return None
 
 
+def compose_pieces(pieces: list[Piece], tag: str = "c") -> tuple[list[Branch], dict]:
+    """Partition-compose one group of co-referential pieces into verbalisable branches.
+
+    Shared by O3 (pieces from extracted frames) and the oracle cascade (pieces from gold
+    branches), so a difference between the two can only come from what they were *given*, never
+    from how they were composed. Uncovered regions are not stated (no source speaks to them);
+    contested regions state both sources; untyped scopes are shown verbatim.
+    """
+    info: dict = {"frames": len(pieces), "regions": 0, "contested": 0, "indeterminate": 0,
+                  "overridden": 0, "discarded": 0}
+    try:
+        part = partition_compose(pieces)
+    except TooManyFrames:
+        # Too many to partition exhaustively: report each piece as its own statement.
+        out = [b for i, p in enumerate(pieces)
+               if (b := _branch(f"{tag}x{i}", p.passage_id, is_default=p.applicability.is_default,
+                                condition=p.applicability.descriptor, outcome=p.outcome,
+                                descriptor=p.applicability.descriptor))]
+        info["fallback"] = "too_many_frames"
+        return out, info
+
+    passage_of = {p.piece_id: p.passage_id for p in pieces}
+    outcome_of = {p.piece_id: p.outcome for p in pieces}
+    default_ids = {p.piece_id for p in pieces if p.applicability.is_default}
+    branches: list[Branch] = []
+    n = 0
+
+    def add(**kw):
+        nonlocal n
+        b = _branch(f"{tag}b{n}", **kw)
+        if b is not None:
+            branches.append(b)
+            n += 1
+
+    for r in sorted(part.regions, key=lambda r: (len(r.inside - default_ids) != 0, sorted(r.inside))):
+        if r.status == "uncovered":
+            continue
+        info["regions"] += 1
+        base = not (r.inside - default_ids)
+        if r.status == "assigned":
+            add(passage=passage_of[r.governing[0]], is_default=base, condition=r.description,
+                outcome=r.outcome or "", descriptor=r.description or "everyone")
+        else:
+            info["contested"] += 1
+            said = "; ".join(f"{passage_of[g]} states {outcome_of[g]}" for g in r.governing)
+            add(passage=None, is_default=False,
+                condition=f"the sources disagree{' for ' + r.description if r.description else ''}",
+                outcome=said, descriptor=r.description or "everyone")
+    for p in part.indeterminate:
+        info["indeterminate"] += 1
+        add(passage=p.passage_id, is_default=False, condition=p.applicability.descriptor,
+            outcome=p.outcome, descriptor=p.applicability.descriptor)
+    info["overridden"], info["discarded"] = len(part.overridden), len(part.discarded)
+    return branches, info
+
+
 class ScopeCompose:
     """O3: parse + frames + partition composition, repaired against the parse."""
 
@@ -92,52 +148,7 @@ class ScopeCompose:
         sigs = [f.signature for f in frames]
         apps = fold_component(sigs, [f.applicability for f in frames])
         pieces = [Piece(f"{tag}f{i}", apps[i], f.outcome, f.passage_id) for i, f in enumerate(frames)]
-        info: dict = {"frames": len(frames), "regions": 0, "contested": 0, "indeterminate": 0,
-                      "overridden": 0, "discarded": 0}
-        try:
-            part = partition_compose(pieces)
-        except TooManyFrames:
-            # Too many to partition exhaustively: report each frame as its own statement.
-            out = [b for i, f in enumerate(frames)
-                   if (b := _branch(f"{tag}x{i}", f.passage_id, is_default=f.applicability.is_default,
-                                    condition=f.applicability.descriptor, outcome=f.outcome,
-                                    descriptor=f.applicability.descriptor))]
-            info["fallback"] = "too_many_frames"
-            return out, info
-
-        passage_of = {p.piece_id: p.passage_id for p in pieces}
-        outcome_of = {p.piece_id: p.outcome for p in pieces}
-        default_ids = {p.piece_id for p in pieces if p.applicability.is_default}
-        branches: list[Branch] = []
-        n = 0
-
-        def add(**kw):
-            nonlocal n
-            b = _branch(f"{tag}b{n}", **kw)
-            if b is not None:
-                branches.append(b)
-                n += 1
-
-        for r in sorted(part.regions, key=lambda r: (len(r.inside - default_ids) != 0, sorted(r.inside))):
-            if r.status == "uncovered":
-                continue
-            info["regions"] += 1
-            base = not (r.inside - default_ids)
-            if r.status == "assigned":
-                add(passage=passage_of[r.governing[0]], is_default=base, condition=r.description,
-                    outcome=r.outcome or "", descriptor=r.description or "everyone")
-            else:
-                info["contested"] += 1
-                said = "; ".join(f"{passage_of[g]} states {outcome_of[g]}" for g in r.governing)
-                add(passage=None, is_default=False,
-                    condition=f"the sources disagree{' for ' + r.description if r.description else ''}",
-                    outcome=said, descriptor=r.description or "everyone")
-        for p in part.indeterminate:
-            info["indeterminate"] += 1
-            add(passage=p.passage_id, is_default=False, condition=p.applicability.descriptor,
-                outcome=p.outcome, descriptor=p.applicability.descriptor)
-        info["overridden"], info["discarded"] = len(part.overridden), len(part.discarded)
-        return branches, info
+        return compose_pieces(pieces, tag)
 
     def answer(self, query: str, passages: Sequence[Passage], *, conflicts=()) -> SystemAnswer:
         m = _Meter()
