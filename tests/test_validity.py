@@ -9,6 +9,7 @@ import pytest
 
 from contract.gold import GoldInstance
 from contract.mock import generate
+from contract.models import Passage
 from detection.nli import NLIScores
 from metrics.case_accuracy import (
     NOT_DETERMINED,
@@ -38,6 +39,15 @@ def _instances() -> list[GoldInstance]:
     out = [i for i in generate(120, seed=0) if i.personas and i.gold_scoped_answer]
     assert len(out) >= 5
     return out
+
+
+def _noisy_instances() -> list[GoldInstance]:
+    """Instances retrieved with distractors, as in the K-passage contexts: pasting every passage now pastes
+    sentences that say nothing about the answer."""
+    return [i.model_copy(update={"passages": [*i.passages,
+                                              Passage(id="x1", text="Our branches open at nine on weekdays."),
+                                              Passage(id="x2", text="Statements are issued once a month.")]})
+            for i in _instances()]
 
 
 class ConstNLI:
@@ -144,13 +154,15 @@ def _cca(points: float, n: int = 20):
     return aggregate(results)
 
 
-def _result(pr: dict[str, float], cca: dict[str, float]) -> BatteryResult:
-    return BatteryResult(n_instances=20, cca={k: _cca(v) for k, v in cca.items()}, legacy_pr=pr)
+def _result(pr: dict[str, float], cca: dict[str, float], scoped: dict[str, float] | None = None) -> BatteryResult:
+    return BatteryResult(n_instances=20, cca={k: _cca(v) for k, v in cca.items()}, legacy_pr=pr,
+                         scoped=scoped or {})
 
 
 GOOD_CCA = {"gold": 1.0, "selection": 0.0, "concat_gold": 0.5, "concat_k": 0.5, "padded_gold": 1.0,
             "unattached_hedge": 0.0, "modality_hedge": 0.0, "null": 0.0}
 GAMEABLE_PR = {o: 0.5 for o in OUTPUTS} | {"gold": 0.7, "concat_gold": 0.85, "concat_k": 0.9}
+GOOD_SCOPED = {o: 0.3 for o in OUTPUTS} | {"gold": 1.0, "concat_gold": 0.8, "concat_k": 0.4, "padded_gold": 0.5}
 
 
 def test_a_well_behaved_metric_passes_v1():
@@ -188,9 +200,33 @@ def test_cca_gold_must_not_lose_to_concatenation():
 
 def test_an_unevaluated_criterion_is_reported_and_never_counted_as_a_pass():
     r = _result(GAMEABLE_PR, GOOD_CCA)
-    sp = next(c for c in r.criteria() if c.name.startswith("scoped_precision"))
-    assert sp.passed is None and "not implemented" in sp.detail
+    sps = [c for c in r.criteria() if c.name.startswith("scoped_precision")]
+    assert len(sps) == 3 and all(c.passed is None and "not computed" in c.detail for c in sps)
+    assert r.v1_passed, "an unevaluated criterion is reported, not counted"
     assert "n/a" in r.render() and "unevaluated criteria are not counted" in r.render()
+
+
+def test_the_scoped_criteria_are_evaluated_when_scores_are_present():
+    r = _result(GAMEABLE_PR, GOOD_CCA, GOOD_SCOPED)
+    sps = {c.name: c.passed for c in r.criteria() if c.name.startswith("scoped_precision")}
+    assert sps == {"scoped_precision/gold>concat_k": True, "scoped_precision/gold>=concat_gold": True,
+                   "scoped_precision/gold>padded_gold": True}
+    assert r.v1_passed
+
+
+@pytest.mark.parametrize("override,failing", [
+    ({"concat_k": 1.0}, "scoped_precision/gold>concat_k"),            # strict: a tie fails
+    ({"concat_gold": 1.1}, "scoped_precision/gold>=concat_gold"),
+    ({"padded_gold": 1.0}, "scoped_precision/gold>padded_gold")])
+def test_each_scoped_criterion_can_fail_on_its_own(override, failing):
+    r = _result(GAMEABLE_PR, GOOD_CCA, GOOD_SCOPED | override)
+    assert [c.name for c in r.criteria() if c.passed is False] == [failing]
+    assert not r.v1_passed
+
+
+def test_the_gold_vs_grounding_passages_criterion_tolerates_a_tie():
+    r = _result(GAMEABLE_PR, GOOD_CCA, GOOD_SCOPED | {"concat_gold": 1.0})
+    assert r.v1_passed
 
 
 def test_criteria_are_hashed_and_the_hash_covers_thresholds():
@@ -214,6 +250,16 @@ def test_end_to_end_a_careful_reader_passes_v1_on_mock_instances():
     assert cca["modality_hedge"] <= CCA_MODALITY_HEDGE_MAX
     assert cca["padded_gold"] == cca["gold"], "length alone must not change the score"
     assert res.v1_passed, res.render()
+
+
+def test_end_to_end_scoped_precision_separates_gold_from_pasting_and_padding():
+    res = run_battery(_noisy_instances(), honest_reader, ConstNLI())
+    assert res.scoped["gold"] == 1.0
+    assert res.scoped["concat_k"] < res.scoped["gold"] and res.scoped["padded_gold"] < res.scoped["gold"]
+    assert res.scoped["unattached_hedge"] < res.scoped["gold"]
+    evaluated = [c for c in res.criteria() if c.name.startswith("scoped_precision")]
+    assert all(c.passed is True for c in evaluated), res.render()
+    assert "scoped prec." in res.render()
 
 
 def test_end_to_end_the_legacy_metric_cannot_tell_concatenation_from_gold():

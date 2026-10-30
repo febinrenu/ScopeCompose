@@ -212,3 +212,23 @@ from two-passage pilots. The headline must not imply "full-context LLMs cannot d
 `prereg/preregistration.md` already allows "H1 holds, B0 does not fail"; this note is why that row is likely.
 Verbaliser grammar is model-limited: the shared verbaliser cannot repair a model's malformed condition text,
 and CCA's reader sees it as written, identically for every structured system.
+
+### D7.1 Scoped precision joins the validity battery (changed before any real run)
+
+`metrics/scoped.py` labels each claim in an answer aligned / misattached / unsupported / extraneous against
+the gold branches, deterministically (the same value matcher as CCA plus an attachment test); an optional
+EVAL-tier judge may only rescue a claim the matcher called extraneous (gate V3 validates it against human
+labels). `scoped_precision / aligned over all claims` is the missing precision half of Preservation Rate.
+
+The V1 scoped criterion was a placeholder ("not evaluated"). It is now three criteria:
+`gold > concat_k`, `gold >= concat_gold`, `gold > padded_gold`. `V1_CRITERIA_SHA` changes accordingly. This is
+the only edit to V1 and it predates every real run and the pre-registration freeze.
+
+Found by the end-to-end test rather than by inspection: the first attachment pattern missed "for
+signature-tier cardholders", so the mock gold answer scored 0.79 against itself. The restricting-phrase test is
+now structural (a group noun after "for", any `X-tier`, "who ...", "if/unless/when") instead of a word list.
+A default outcome may also be stated with an explicit "all/every/any".
+
+S1 yield update: the retrieval miner ranked cross-document chunk pairs locally and verified the best few per
+pairing; 110 candidates produced 3 verified proposals. S1 will not reach 60 by mining alone; the narrowing
+rule stands.

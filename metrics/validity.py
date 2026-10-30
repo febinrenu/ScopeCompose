@@ -35,9 +35,11 @@ Each metric has its own, because each is gamed differently:
   assertion.
 * **CCA-all (strict)** -- gold >= concatenation; unattached hedge <= 0.05;
   modality hedge <= 0.10; null <= 0.05.
-* **scoped precision** -- gold > concatenation. Not implemented in this module
-  and reported as such: a criterion that cannot be evaluated is never silently
-  passed.
+* **scoped precision** (``metrics.scoped``) -- gold > every-passage concatenation,
+  gold >= the grounding passages pasted, and gold > gold-plus-filler: pasting
+  passages or padding adds claims that say nothing about the answer. When a
+  result carries no scoped scores the criteria are reported as not evaluated; a
+  criterion that cannot be evaluated is never silently passed.
 
 The numbers below are constants so the pre-registration can hash them. Editing
 a threshold after seeing a result is the failure this file exists to prevent;
@@ -62,6 +64,8 @@ from metrics.case_accuracy import (
     score_instance,
 )
 from metrics.preservation import judge_branches
+from metrics.scoped import aggregate as scoped_aggregate
+from metrics.scoped import score as scoped_score
 
 OUTPUTS = (
     "gold", "selection", "concat_gold", "concat_k", "padded_gold",
@@ -139,7 +143,9 @@ V1_CRITERIA: dict[str, str] = {
     f"cca/unattached_hedge<={CCA_UNATTACHED_HEDGE_MAX}": "CCA-all strict of unattached_hedge",
     f"cca/modality_hedge<={CCA_MODALITY_HEDGE_MAX}": "CCA-all strict of modality_hedge",
     f"cca/null<={CCA_NULL_MAX}": "CCA-all strict of null",
-    "scoped_precision/gold>concat": "NOT EVALUATED: scoped precision is not implemented in this module",
+    "scoped_precision/gold>concat_k": "scoped precision of gold > concat_k (pasting every passage adds claims about nothing)",
+    "scoped_precision/gold>=concat_gold": "scoped precision of gold >= concat_gold",
+    "scoped_precision/gold>padded_gold": "scoped precision of gold > padded_gold (length without content costs precision)",
 }
 
 #: Hashed into the pre-registration. Changing a criterion changes this.
@@ -163,6 +169,8 @@ class BatteryResult:
     cca: dict[str, CCAScores] = field(default_factory=dict)
     legacy_pr: dict[str, float] = field(default_factory=dict)
     per_instance: dict[str, list[InstanceCCA]] = field(default_factory=dict)
+    scoped: dict[str, float] = field(default_factory=dict)
+    """Micro-averaged scoped precision per output; empty when it was not computed."""
     nli_threshold: float = 0.5
     nli_threshold_tuned: bool = False
 
@@ -173,7 +181,13 @@ class BatteryResult:
         for name, desc in V1_CRITERIA.items():
             kind, rest = name.split("/", 1)
             if kind == "scoped_precision":
-                out.append(Criterion(name, desc, None, "scoped precision not implemented"))
+                if not self.scoped:
+                    out.append(Criterion(name, desc, None, "scoped precision was not computed"))
+                    continue
+                strict = ">=" not in rest
+                left, right = rest.split(">" if strict else ">=")
+                a, b = self.scoped[left], self.scoped[right]
+                out.append(Criterion(name, desc, a > b if strict else a >= b, f"{left}={a:.3f} vs {right}={b:.3f}"))
             elif kind == "legacy_pr":
                 other = rest.split(">=")[0]
                 ok = pr[other] >= pr["gold"]
@@ -198,13 +212,14 @@ class BatteryResult:
                  + ("" if self.nli_threshold_tuned
                     else f"  (NLI threshold {self.nli_threshold} is UNTUNED)"),
                  "=" * 72,
-                 f"  {'output':<18}{'legacy PR':>11}{'CCA strict':>13}{'CCA lenient':>13}",
-                 "  " + "-" * 53]
+                 f"  {'output':<18}{'legacy PR':>11}{'CCA strict':>13}{'CCA lenient':>13}{'scoped prec.':>14}",
+                 "  " + "-" * 67]
         for o in OUTPUTS:
             c = self.cca.get(o)
             lines.append(f"  {o:<18}{self.legacy_pr.get(o, float('nan')):>11.3f}"
                          f"{(c.cca_all.point if c else float('nan')):>13.3f}"
-                         f"{(c.cca_all_lenient.point if c else float('nan')):>13.3f}")
+                         f"{(c.cca_all_lenient.point if c else float('nan')):>13.3f}"
+                         f"{self.scoped.get(o, float('nan')):>14.3f}")
         lines += ["", "V1 criteria (fixed before the first run)", "-" * 72]
         for c in self.criteria():
             mark = "n/a " if c.passed is None else ("PASS" if c.passed else "FAIL")
@@ -252,4 +267,5 @@ def run_battery(
         result.per_instance[name] = per
         result.cca[name] = aggregate(per, threshold=threshold, threshold_tuned=threshold_tuned)
         result.legacy_pr[name] = legacy_pr(instances, answers)
+        result.scoped[name] = scoped_aggregate([scoped_score(i, answers[i.instance_id]) for i in instances]).precision
     return result

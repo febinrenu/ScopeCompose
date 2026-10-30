@@ -1,0 +1,59 @@
+{
+ "pairings": 67,
+ "candidates_attempted": 110,
+ "candidates_failed": 1,
+ "llm_cross_document": 3,
+ "proposals": [
+  {
+   "provider": "govsearch-immigration-health-surcharge-141",
+   "rule": "Most people need to pay the immigration health surcharge (IHS) as part of their online immigration application.",
+   "exception": "If your course of study is 6 months or less, you do not need to pay the IHS.",
+   "rule_doc": "A",
+   "exception_doc": "B",
+   "why": "students with courses of 6 months or less",
+   "confidence": 0.95,
+   "cross_document": true,
+   "rule_doc_id": "healthcare-immigration-application#overview",
+   "exception_doc_id": "guidance/immigration-health-surcharge-for-eu-students-in-the-uk",
+   "rule_content_id": "b3fb8ff7-ac2e-4440-8c0f-227eb038c436",
+   "exception_content_id": "5e3226d8-3329-46f9-b62c-dd4485834fcf",
+   "rule_chunk": "healthcare-immigration-application#overview#c0",
+   "exception_chunk": "guidance/immigration-health-surcharge-for-eu-students-in-the-uk#c0",
+   "score": 1.405405
+  },
+  {
+   "provider": "govsearch-immigration-health-surcharge-148",
+   "rule": "Most people need to pay the immigration health surcharge (IHS) as part of their online immigration application.",
+   "exception": "Some people are exempt from paying the surcharge, including people who: are seeking asylum or applying for humanitarian protection (or their dependants) are identified as a victim of human trafficking (or their dependants) are applying for indefinite leave to remain",
+   "rule_doc": "A",
+   "exception_doc": "B",
+   "why": "people seeking asylum, victims of trafficking, or applying for ILR",
+   "confidence": 0.95,
+   "cross_document": true,
+   "rule_doc_id": "healthcare-immigration-application#overview",
+   "exception_doc_id": "guidance/nhs-entitlements-migrant-health-guide",
+   "rule_content_id": "b3fb8ff7-ac2e-4440-8c0f-227eb038c436",
+   "exception_content_id": "602374e2-7631-11e4-a3cb-005056011aef",
+   "rule_chunk": "healthcare-immigration-application#overview#c0",
+   "exception_chunk": "guidance/nhs-entitlements-migrant-health-guide#c14",
+   "score": 1.36
+  },
+  {
+   "provider": "govsearch-immigration-health-surcharge-152",
+   "rule": "Most people need to pay the immigration health surcharge (IHS) as part of their online immigration application.",
+   "exception": "You do not need to pay the immigration health surcharge or biometric enrolment fee.",
+   "rule_doc": "A",
+   "exception_doc": "B",
+   "why": "children joining a parent who is their sponsor",
+   "confidence": 0.95,
+   "cross_document": true,
+   "rule_doc_id": "healthcare-immigration-application#overview",
+   "exception_doc_id": "guidance/apply-for-a-visa-under-the-ukraine-sponsorship-scheme",
+   "rule_content_id": "b3fb8ff7-ac2e-4440-8c0f-227eb038c436",
+   "exception_content_id": "54e90118-583c-4eb1-b8d6-6976ff178b81",
+   "rule_chunk": "healthcare-immigration-application#overview#c0",
+   "exception_chunk": "guidance/apply-for-a-visa-under-the-ukraine-sponsorship-scheme#c7",
+   "score": 1.214286
+  }
+ ]
+}
