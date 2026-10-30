@@ -1,0 +1,10 @@
+{
+  "G1":       {"status": "open", "what": "measured tokens per call fit the quota (or the cut order applies); reasoning setting frozen"},
+  "G2":       {"status": "open", "what": "V1 criteria met on the validity battery"},
+  "G4":       {"status": "open", "what": "QNFA beats variable-string cosine on VACS and reaches the dev F1 floor"},
+  "G-YIELD":  {"status": "open", "what": "S1 yield counted; narrowing rule applied if S1 test is under 60"},
+  "G-FREEZE": {"status": "open", "what": "no test answer exists before the prereg-v1 tag"},
+  "G7":       {"status": "open", "what": "V2: reader precision >= 0.95, recall >= 0.85, counterfactual and null criteria"},
+  "G8":       {"status": "open", "what": "V3: claim judge >= 0.80"},
+  "G-OPT":    {"status": "open", "what": "every Essential cell complete"}
+}
