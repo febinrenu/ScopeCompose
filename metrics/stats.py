@@ -295,7 +295,8 @@ def _binom_two_sided(b: int, c: int) -> float:
     return min(1.0, 2 * tail)
 
 
-def mcnemar(correct_a: Sequence[bool], correct_b: Sequence[bool]) -> McNemarResult:
+def mcnemar(correct_a: Sequence[bool], correct_b: Sequence[bool], *,
+            force_exact: bool = False) -> McNemarResult:
     """McNemar's test for two systems evaluated on the same items.
 
     Uses the EXACT binomial test when there are fewer than 25 discordant
@@ -303,6 +304,13 @@ def mcnemar(correct_a: Sequence[bool], correct_b: Sequence[bool]) -> McNemarResu
     that. The exact test matters here: on a few hundred instances the number of
     items where the two systems disagree is often single digits, and the
     chi-square approximation is unreliable at that size.
+
+    ``force_exact=True`` uses the exact test at any size. **Every pre-registered
+    confirmatory comparison must pass it**: the analysis plan (proposal v8
+    section 10) and the power calculation (``metrics.power_sim``) are both for
+    the exact test, and the approximation gives a different p-value (at 20 vs 5
+    discordant items: 0.0051 against the exact 0.0041). The default is
+    unchanged so earlier reported numbers still reproduce.
     """
     if len(correct_a) != len(correct_b):
         raise ValueError(
@@ -315,7 +323,7 @@ def mcnemar(correct_a: Sequence[bool], correct_b: Sequence[bool]) -> McNemarResu
     both_right = sum(1 for a, bb in zip(correct_a, correct_b) if a and bb)
     both_wrong = sum(1 for a, bb in zip(correct_a, correct_b) if not a and not bb)
 
-    if b + c < 25:
+    if force_exact or b + c < 25:
         return McNemarResult(b, c, both_right, both_wrong,
                              _binom_two_sided(b, c), "exact binomial")
 
