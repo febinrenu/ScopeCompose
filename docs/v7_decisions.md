@@ -156,3 +156,25 @@ then chose one default and rendered a *different decision's* outcome as that rul
 percentage fee). That is the misattachment the design exists to prevent, and a loose `or` assertion in
 the first test hid it. Found by printing the actual output. Fixed by verbalising per component, with
 hedged frames and parse-only repairs rendered in their own sections; the test now asserts the exact text.
+
+### D4.1 Branch provenance lives in `annotation.notes`, not `annotator_a`
+
+`annotator_a` / `annotator_b` record who labelled the conflict *type and relation*. A first draft of
+`preannotate.apply_edits` stamped the branch reviewer into `annotator_a`, which would have destroyed
+that provenance. Branch provenance is now a `branches=model-proposed` / `branches=reviewed:<name>` token
+in `notes`, and the type/relation annotators are never touched. Found by a test asserting the marker.
+
+### D4.2 Reference answers are derived, so they are reference answers, not "human-written"
+
+The gold scoped answer is rendered from the verified branches by the same verbaliser every structured
+system uses; the selection answer is the default branch. They can never contradict the branches they
+summarise (an edit re-derives both). The paper calls them reference answers. The validity battery's
+"gold" output is therefore what a correct structured system would produce -- a fair upper reference.
+
+### D4.3 Yield of the mining routes (measured)
+
+Whole-document proposer, 67 usable gov.uk pairings: **8 candidates** (7 distinct), and 24 further
+pairings added none: ~0.12 per pairing against the hand-mined pilot's 0.34, before human verification.
+S1 therefore cannot reach the floor of 60 from this route. A retrieval-based miner (chunk pairs ranked
+locally, verified by the evaluation model, quotes required verbatim) was built as the alternative; its
+yield is recorded when its run completes.
