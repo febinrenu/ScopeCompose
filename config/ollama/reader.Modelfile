@@ -1,0 +1,13 @@
+# READER: the evaluation-only model that reads one system answer plus one persona
+# and says which outcome holds for that person (case-complete accuracy).
+#
+# Ollama's OpenAI-compatible endpoint ignores num_ctx, so the context length is
+# pinned HERE, in a derived model, and logged by name. A reader whose context
+# silently truncated the answer would score a system down for text it never saw.
+#
+#   ollama create scopecompose-reader -f config/ollama/reader.Modelfile
+FROM llama3.1:8b-instruct-q4_K_M
+PARAMETER num_ctx 8192
+PARAMETER temperature 0
+PARAMETER seed 0
+PARAMETER top_k 1

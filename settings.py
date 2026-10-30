@@ -191,6 +191,11 @@ class TierSpec:
     and count against both ``max_tokens`` and the daily cap, so on a capped
     free tier this is a budget control, not just a quality dial.
     """
+    allow_fallback: bool = True
+    """False pins the tier to its model. A rate limit then raises instead of
+    silently handing the call to another model. Required for every tier whose
+    output is a reported, pre-registered number: a cell answered by a different
+    model than the one named in the paper is a different number."""
 
     @property
     def resolved(self) -> bool:
@@ -253,6 +258,7 @@ def models() -> ModelsConfig:
             max_tokens=int(t.get("max_tokens", 1024)),
             prefer=list(t.get("prefer") or []),
             reasoning_effort=t.get("reasoning_effort"),
+            allow_fallback=bool(t.get("fallback", True)),
         )
 
     fb = raw.get("fallback") or {}

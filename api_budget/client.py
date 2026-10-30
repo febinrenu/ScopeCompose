@@ -61,6 +61,27 @@ class Tier(str, Enum):
     SECOND_BACKBONE = "SECOND_BACKBONE"
     """Robustness ablation. Must be a different model family from JUDGE."""
 
+    # -- v7 tiers: evaluated systems vs evaluation-only models ---------------- #
+    # A model that is EVALUATED as a system must never also score, screen or
+    # annotate the data it is evaluated on. Keeping the two groups in separate
+    # tiers makes that separation checkable instead of a convention.
+
+    BACKBONE_PRIMARY = "BACKBONE_PRIMARY"
+    """Evaluated: the primary backbone of the confirmatory cells. Pinned (no
+    fallback), reasoning setting frozen at gate G1."""
+
+    BACKBONE_LOCAL = "BACKBONE_LOCAL"
+    """Evaluated: the second, local backbone. Free and unlimited; runs the full
+    matrix and doubles as the no-API reproduction path."""
+
+    READER = "READER"
+    """Evaluation-only: reads one system answer plus one persona and says what
+    outcome holds for that person (case-complete accuracy). Local, pinned."""
+
+    EVAL = "EVAL"
+    """Evaluation-only: mining verifier, context screener, branch pre-annotator
+    and claim judge. Never evaluated as a system. Pinned."""
+
 
 class TierNotConfigured(RuntimeError):
     """A tier has no model assigned yet."""
@@ -255,6 +276,7 @@ class LLMClient:
             and cfg.fallback.enabled
             and cfg.fallback.model
             and self.backend_override is None
+            and self._tier_allows_fallback(tier_name)
         ):
             try:
                 fb_backend = self._backend(cfg.fallback.provider)
@@ -278,6 +300,18 @@ class LLMClient:
             f"{step}: all {self.max_retries} attempts against {provider}/{model} failed "
             f"({last_exc})"
         ) from last_exc
+
+    @staticmethod
+    def _tier_allows_fallback(tier_name: str) -> bool:
+        """A tier configured with ``fallback: false`` is never substituted.
+
+        Unknown tier names (an explicit ``model=``/``provider=`` call) keep the
+        legacy behaviour.
+        """
+        try:
+            return settings.models().tier(tier_name).allow_fallback
+        except KeyError:
+            return True
 
     def _finish(self, *, key, step, tier_name, provider, resp, started, fell_back,
                 use_cache, request) -> CompletionResult:

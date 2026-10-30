@@ -105,6 +105,60 @@ tiers:
     temperature: 0.0
     max_tokens: 4096
 
+  # -------------------------------------------------------------------------
+  # v7 tiers (proposal v8 section 8.2)
+  # -------------------------------------------------------------------------
+  # Two groups, kept in separate tiers so the separation is checkable:
+  #   EVALUATED          BACKBONE_PRIMARY, BACKBONE_LOCAL
+  #   EVALUATION-ONLY    READER, EVAL
+  # An evaluated model never scores, screens, verifies or annotates the data it
+  # is evaluated on. `fallback: false` pins a tier: a rate limit raises rather
+  # than silently handing the call to another model, because a cell answered by
+  # a different model than the paper names is a different number.
+
+  BACKBONE_PRIMARY:
+    # The confirmatory cells (B0/B3 on S1; B7/O3 on S1 conditionals). Shares
+    # gpt-oss-120b's 200K/day with JUDGE and LONG_CONTEXT, so nothing else is
+    # scheduled on the 120b while these run. Reasoning effort is a budget
+    # control here and is FROZEN at gate G1 from the measured tokens per call.
+    provider: groq
+    model: openai/gpt-oss-120b
+    temperature: 0.0
+    max_tokens: 8192
+    reasoning_effort: low
+    fallback: false
+
+  BACKBONE_LOCAL:
+    # Free and unlimited; runs the full matrix and is the no-API reproduction
+    # path. A derived Ollama model so num_ctx is pinned and nameable:
+    #   ollama create scopecompose-qwen7b -f config/ollama/backbone7b.Modelfile
+    provider: ollama
+    model: scopecompose-qwen7b
+    temperature: 0.0
+    max_tokens: 2048
+    fallback: false
+
+  READER:
+    # Case-complete accuracy reader. Local, non-evaluated, pre-registered. NO
+    # FALLBACK: a different reader is a different metric.
+    #   ollama create scopecompose-reader -f config/ollama/reader.Modelfile
+    provider: ollama
+    model: scopecompose-reader
+    temperature: 0.0
+    max_tokens: 512
+    fallback: false
+
+  EVAL:
+    # Mining verifier, context screener, branch pre-annotator, claim judge.
+    # Never evaluated as a system. Verified live on 2026-10-31 via
+    # scripts/discover_models.py. Shares qwen's 200K/day with SECOND_BACKBONE,
+    # which this plan does not run on Groq.
+    provider: groq
+    model: qwen/qwen3.8-27b
+    temperature: 0.0
+    max_tokens: 2048
+    fallback: false
+
 # ---------------------------------------------------------------------------
 # Real Groq free-tier limits, as data
 # ---------------------------------------------------------------------------
