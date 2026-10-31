@@ -270,3 +270,57 @@ def test_candidates_already_in_the_corpus_are_not_shown_again(tmp_path):
     f2.write_text(json.dumps([fresh, same_doc]), encoding="utf-8")
     out = collect_candidates([f1, f2], [inst])
     assert [c["rule"] for c in out] == [fresh["rule"]], "known pair, duplicate and same-document pair are dropped"
+
+
+# --------------------------------------------------------------------------- #
+# Accepted candidates -> build_batch
+# --------------------------------------------------------------------------- #
+
+
+def _proposals():
+    return [{"rule": f"Most people pay a {n} pound fee.", "exception": f"If you are under {n} there is no fee.",
+             "confidence": 0.9 - n / 100, "why": "narrows", "cross_document": True, "rule_doc_id": f"d{n}"}
+            for n in (5, 6, 7, 8)]
+
+
+def test_only_accepted_candidates_pass_and_the_models_opinion_is_dropped():
+    from benchmark.human_loop import accepted_candidates
+    from benchmark.review import item_id_for
+
+    props = _proposals()
+    ids = [item_id_for(p["rule"], p["exception"]) for p in props]
+    primary = {ids[0]: dec(ids[0], "accept", kind="candidates"), ids[1]: dec(ids[1], "reject", kind="candidates"),
+               ids[2]: dec(ids[2], "skip", kind="candidates")}
+    out, rep = accepted_candidates(props, primary)
+    assert [p["rule"] for p in out] == [props[0]["rule"]]
+    assert rep.rejected == [ids[1]] and set(rep.undecided) == {ids[2], ids[3]}
+    assert "why" not in out[0] and "confidence" not in out[0] and out[0]["rule_doc_id"] == "d5"
+
+
+def test_a_second_annotator_must_also_accept_a_candidate():
+    from benchmark.human_loop import accepted_candidates
+    from benchmark.review import item_id_for
+
+    props = _proposals()[:2]
+    ids = [item_id_for(p["rule"], p["exception"]) for p in props]
+    primary = {i: dec(i, "accept", kind="candidates") for i in ids}
+    second = {ids[0]: dec(ids[0], "accept", kind="candidates", who="bob"),
+              ids[1]: dec(ids[1], "reject", kind="candidates", who="bob")}
+    out, rep = accepted_candidates(props, primary, second=second)
+    assert [p["rule"] for p in out] == [props[0]["rule"]] and rep.disputed == [ids[1]]
+
+
+def test_the_cli_writes_a_proposals_file_that_the_review_loader_reads_back(tmp_path, capsys):
+    from benchmark.review import item_id_for, load_items
+
+    props = _proposals()
+    items = tmp_path / "cands.json"
+    items.write_text(json.dumps({"proposals": props}), encoding="utf-8")
+    first = props[0]
+    ReviewStore(tmp_path / "rv", "candidates", "ann").append(
+        dec(item_id_for(first["rule"], first["exception"]), "accept", kind="candidates"))
+    out = tmp_path / "accepted.json"
+    assert main(["accepted-candidates", "--items", str(items), "--annotator", "ann", "--review-dir",
+                 str(tmp_path / "rv"), "--out", str(out)]) == 0
+    assert "1 accepted candidates" in capsys.readouterr().out
+    assert [i.payload["rule"] for i in load_items("candidates", out)] == [first["rule"]]

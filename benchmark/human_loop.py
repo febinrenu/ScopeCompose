@@ -9,6 +9,7 @@ module is the part between them that was missing, so a verdict changes the data:
     apply-personas     reviewers' verdicts -> instances with personas and counterfactual pairs
     merge              replace instances in a corpus by id, to a *new* file
     collect-candidates mined rule/exception proposals not yet in the corpus -> one file for ``--kind candidates``
+    accepted-candidates the candidates a person accepted -> a proposals file for ``mining.build_batch``
 
 Rules that keep a label honest:
 
@@ -206,6 +207,26 @@ def collect_candidates(proposal_files: Iterable[Path], corpus: Sequence[GoldInst
     return sorted(seen.values(), key=lambda p: -float(p.get("confidence", 0)))
 
 
+def accepted_candidates(proposals: Sequence[dict], primary: Mapping[str, Decision], *,
+                        second: Mapping[str, Decision] | None = None) -> tuple[list[dict], Report]:
+    """The candidates a person accepted, in the proposals format ``mining.build_batch`` reads.
+
+    Candidate ids are those of ``benchmark.review`` (a hash of the two sentences). The proposer's own
+    ``why`` and ``confidence`` are dropped: ``build_batch`` drops them again, and an annotator who later sees
+    what the model thought is no longer an independent observer."""
+    from benchmark.review import item_id_for
+
+    report = Report()
+    out: list[dict] = []
+    for p in proposals:
+        iid = item_id_for(p["rule"], p["exception"])
+        if _gate(iid, primary, second, report) is None:
+            continue
+        report.applied.append(iid)
+        out.append({k: v for k, v in p.items() if k not in ("why", "confidence", "score")})
+    return out, report
+
+
 def merge(base: Sequence[GoldInstance], updates: Iterable[GoldInstance]) -> list[GoldInstance]:
     """``base`` with each updated instance replacing the one of the same id, order preserved."""
     new = {u.instance_id: u for u in updates}
@@ -255,6 +276,12 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--proposals", type=Path, nargs="+", required=True)
     c.add_argument("--data", type=Path, required=True)
     c.add_argument("--out", type=Path, required=True)
+    a = sub.add_parser("accepted-candidates")
+    a.add_argument("--items", type=Path, required=True, help="the candidates file that was reviewed")
+    a.add_argument("--annotator", required=True)
+    a.add_argument("--second", default=None)
+    a.add_argument("--review-dir", type=Path, default=DEFAULT_DIR)
+    a.add_argument("--out", type=Path, required=True)
     m = sub.add_parser("merge")
     m.add_argument("--data", type=Path, required=True)
     m.add_argument("--updates", type=Path, required=True)
@@ -278,6 +305,20 @@ def main(argv: list[str] | None = None) -> int:
         args.out.write_text(json.dumps({"proposals": cands}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"{len(cands)} candidates not yet in the corpus -> {args.out}")
         print(f"review with: python -m benchmark.review --kind candidates review --items {args.out} --annotator <you>")
+        return 0
+
+    if args.cmd == "accepted-candidates":
+        data = json.loads(args.items.read_text(encoding="utf-8"))
+        accepted, report = accepted_candidates(
+            data["proposals"] if isinstance(data, dict) else data,
+            ReviewStore(args.review_dir, "candidates", args.annotator).load(),
+            second=ReviewStore(args.review_dir, "candidates", args.second).load() if args.second else None)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps({"proposals": accepted}, indent=1, ensure_ascii=False) + "\n",
+                            encoding="utf-8")
+        print(report.render())
+        print(f"{len(accepted)} accepted candidates -> {args.out}; build the batch with: "
+              "python -m benchmark.mining.build_batch --proposals <this file> --docs <docs> --out <batch>")
         return 0
 
     if args.cmd == "merge":

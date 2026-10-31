@@ -183,3 +183,25 @@ The first annotator's edits are the ones applied. A second annotator can only ho
 not decided it, or rejected it, the item is listed as disputed and not applied. An edited persona set is
 re-checked and refused (with the reason) if it breaks a rule, for example by stating the outcome. `merge` never
 overwrites its input. Apply branches before personas: personas are generated from reviewed branches.
+
+## From an accepted candidate to a corpus instance
+
+A candidate that two people accept is not yet an instance. The remaining steps use tools that already exist:
+
+```
+# 1. accepted candidates (the model's opinion is dropped)
+python -m benchmark.human_loop accepted-candidates --items benchmark/data/review_items/candidates.json \
+    --annotator <you> --second <other> --out <accepted.json>
+# 2. an unlabelled batch of passages and queries
+python -m benchmark.mining.build_batch --proposals <accepted.json> --docs <docs.jsonl> --out <batch.jsonl>
+# 3. independent type and relation labels, one annotator each, then agreement
+python -m benchmark.annotation.cli annotate --annotator <you> --batch <batch.jsonl>
+python -m benchmark.annotation.cli agreement --a <you> --b <other>
+# 4. gold for the labels both annotators agree on (disagreements go to discussion, not to a coin flip)
+python -m benchmark.annotation.cli build-gold --a <you> --b <other> --batch <batch.jsonl> --out <gold.jsonl>
+```
+
+Branches, personas and the K = 6 contexts are added afterwards with `propose-branches`, `propose-personas` and
+`python -m benchmark.contexts`, then re-split with `python -m benchmark.strata --resplit --incremental --apply`.
+The 45 real-text splits in `benchmark/data/tier2_batch.jsonl` (stratum S3, mechanism diagnostic only) are already
+an unlabelled batch: they go straight to step 3.
