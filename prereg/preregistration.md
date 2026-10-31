@@ -33,7 +33,15 @@ most 0.05), H-C and H-F where run.
 Fixed in code before any run (`metrics/validity.py`, `metrics/counterfactual.py`; hashed in the manifest).
 
 * **V1** -- legacy containment PR: concatenation >= gold (a replication of the pilot); CCA-all strict: gold >=
-  concatenation, unattached hedge <= 0.05, modality hedge <= 0.10, null <= 0.05.
+  concatenation, unattached hedge <= 0.05, modality hedge <= 0.10, null <= 0.05; scoped precision: gold >
+  every-passage concatenation, gold >= the grounding passages pasted, gold > gold plus filler.
+
+CCA-strict is defined by four conditions, all required: (1) the reader's evidence is a verbatim span of the
+answer; (2) an NLI model, given the evidence and the person's statement as premise, entails the **gold** outcome
+for that person at the pre-registered threshold (the same question the human audit asks); (3) neither the span nor
+the sentence it was quoted from is hedged; (4) the reader's outcome matches the gold outcome. The definitions of
+(2) and (3) were corrected after the first run of V1 with the real reader and before any pre-registered run
+(`docs/v7_decisions.md`, D7.2); the corrected reader prompt and entailment hypothesis are hashed in the manifest.
 * **V2** -- reader sensitivity: irrelevant flips change the reader's output in <= 5% of pairs, relevant flips in
   >= 90%; against the human entailment audit, determination precision >= 0.95 and recall >= 0.85.
 * **V3** -- claim judge >= 0.80 on human-labelled claims; otherwise scoped precision is reported on the human
