@@ -189,3 +189,86 @@ def eval_screener(client=None) -> Screener:
             return True        # an unreadable verdict is flagged for a person, not waved through
 
     return screen
+
+
+# --------------------------------------------------------------------------- #
+# Driver: expand a corpus to K-passage contexts
+# --------------------------------------------------------------------------- #
+
+
+def expand_corpus(instances: Sequence[GoldInstance], docs: Sequence[dict], *, k: int = DEFAULT_K, seed: int = 0,
+                  screener: Screener | None = None) -> tuple[list[GoldInstance], dict]:
+    """Every instance whose gold passages come from known documents, expanded to ``k`` passages.
+
+    Negatives come from documents on the **same website** as a gold document, ranked by BM25 against the
+    query (a ``provider`` here is one search topic and holds two or three documents, too few to fill a
+    context; the website is the unit a real retriever would draw from). An instance whose gold passages are
+    not traceable to a document in ``docs`` (authored or synthetic text) is left as it is and counted, never
+    silently expanded from an unrelated pool; so is one whose pool cannot supply ``k`` passages. Returns the
+    full corpus in its original order and a report."""
+    from urllib.parse import urlparse
+
+    def site(d: dict) -> str | None:
+        return urlparse(d.get("url") or "").netloc.lower() or d.get("provider")
+
+    provider_of = {d["doc_id"]: site(d) for d in docs}
+    out: list[GoldInstance] = []
+    report: dict = {"k": k, "expanded": [], "untraceable": [], "short": [], "flagged": {}}
+    for inst in instances:
+        gold_docs = {p.document_id for p in inst.passages if p.document_id}
+        providers = {provider_of[g] for g in gold_docs if g in provider_of and provider_of[g]}
+        if not providers or not all(p.document_id in provider_of for p in inst.passages):
+            report["untraceable"].append(inst.instance_id)
+            out.append(inst)
+            continue
+        pool = [d for d in docs if site(d) in providers]
+        res = build_context(inst, pool, k=k, seed=seed, screener=screener)
+        if res.k < k:
+            report["short"].append(inst.instance_id)
+            out.append(inst)
+            continue
+        report["expanded"].append(inst.instance_id)
+        if res.flagged:
+            report["flagged"][inst.instance_id] = res.flagged
+        out.append(res.instance)
+    return out, report
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    from pathlib import Path
+
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--data", type=Path, required=True)
+    ap.add_argument("--docs", type=Path, nargs="+", required=True, help="document JSONL files (doc_id, provider, text)")
+    ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--k", type=int, default=DEFAULT_K)
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--screen", action="store_true", help="flag negatives that bear on the answer (EVAL tier, uses quota)")
+    args = ap.parse_args(argv)
+    if args.out.resolve() == args.data.resolve():
+        print("error: --out must differ from --data")
+        return 2
+
+    docs: dict[str, dict] = {}
+    for path in args.docs:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                d = json.loads(line)
+                docs.setdefault(d["doc_id"], d)
+    insts = [GoldInstance.model_validate(json.loads(l)) for l in args.data.read_text(encoding="utf-8").splitlines()
+             if l.strip()]
+    out, report = expand_corpus(insts, list(docs.values()), k=args.k, seed=args.seed,
+                                screener=eval_screener() if args.screen else None)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text("".join(json.dumps(i.model_dump(mode="json"), ensure_ascii=False) + "\n" for i in out),
+                        encoding="utf-8")
+    args.out.with_suffix(".report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(f"{len(report['expanded'])} expanded to K={args.k}; {len(report['untraceable'])} not traceable to a "
+          f"document (left as is); {len(report['short'])} short; {len(report['flagged'])} with flagged negatives "
+          f"to adjudicate -> {args.out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
