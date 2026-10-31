@@ -87,7 +87,14 @@ a conclusion ("they are exempt").
 passage does not support the outcome. Pick `unclear` if it cannot be repaired from the screen.
 
 Traps: outcomes must be **value-bearing** (a figure, a yes/no, a period), because case-complete accuracy
-matches them as values; "a fee may apply" is not an outcome. A condition naming two things ("premium and
+matches them as values; "a fee may apply" is not an outcome.
+
+Write each outcome as a short, plain statement a reader could repeat in different words. The matcher treats
+these as the same outcome, so they are safe: "a 3% fee applies" / "3% fee is incurred"; "no fee applies" / "the
+fee is waived"; "work is allowed" / "work is permitted"; "you do not need to pay the surcharge" / "the surcharge
+is not payable". It cannot compare outcomes that carry a qualifier or that are not statements: prefer "work is
+allowed" to "work in most jobs is allowed", and "work is not permitted" to "no employment". When the exception
+changes only a figure or a period, put the figure in the outcome ("the period is four years"). A condition naming two things ("premium and
 over 65") is one branch with one conjunctive condition, not two branches.
 
 ## 3. `personas`: statements that put a person in a branch

@@ -156,6 +156,9 @@ _PARAPHRASES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\b(?:free of charge|fee[- ]free|charge[- ]free|without (?:a |any )?(?:fee|charge)|isn't charged|aren't charged|pays? nothing|nothing to pay)\b"), "no fee applies"),
     (re.compile(r"\b(?:not|never)\s+(?:be\s+)?charged\b"), "no fee applies"),
     (re.compile(r"\b(?:not|never)\s+(?:pay|incur|owe)\s+(?:a\s+|any\s+|the\s+)?(?:fee|charge|cost)s?\b"), "no fee applies"),
+    # -- payment due ("the surcharge is not payable" = "you do not need to pay the surcharge") ------ #
+    (re.compile(r"\b(?:(?:is|are) not payable|(?:do|does|will|would) not (?:need to |have to )?pay|(?:don't|doesn't|won't) (?:need to |have to )?pay|no payment (?:is )?(?:due|needed|required))\b"), "no payment due"),
+    (re.compile(r"\b(?:(?:is|are) payable|(?:must|need to|needs to|have to|has to|will|should) pay|payment (?:is )?(?:due|needed|required))\b"), "payment due"),
     # -- eligibility ------------------------------------------------------- #
     (re.compile(r"\b(?:ineligible|not eligible|not entitled|(?:do|does|will|would) not qualify|(?:don't|doesn't|won't) qualify|cannot qualify|can't qualify|not qualif\w+)\b"), "is ineligible"),
     (re.compile(r"\b(?:eligible|entitled|qualif(?:y|ies|ied))\b"), "is eligible"),

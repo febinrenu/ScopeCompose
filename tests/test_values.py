@@ -229,3 +229,26 @@ def test_one_hedge_anywhere_in_a_span_wins():
 def test_hedged_modality_matches_the_frame_contract():
     assert not Modality.HEDGED.determines_outcome
     assert Modality.PERMISSION.determines_outcome
+
+
+# --------------------------------------------------------------------------- #
+# Payment due (found on real gov.uk outcomes: the health surcharge)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("gold,predicted", [
+    ("you do not need to pay the surcharge", "the surcharge is not payable"),
+    ("the surcharge is payable", "you must pay the surcharge"),
+    ("you need to pay the surcharge", "the surcharge is payable"),
+    ("the applicant will not pay the surcharge", "no payment is due for the surcharge")])
+def test_payment_due_paraphrases_match(gold, predicted):
+    assert values_match(gold, predicted)
+
+
+@pytest.mark.parametrize("gold,predicted", [
+    ("you must pay the surcharge", "you do not need to pay the surcharge"),
+    ("the surcharge is not payable", "the surcharge is payable"),
+    ("you will pay 5 pounds", "you will pay 7 pounds"),
+    ("you must pay the surcharge", "the surcharge is waived for you")])
+def test_payment_due_opposites_and_different_figures_do_not_match(gold, predicted):
+    assert not values_match(gold, predicted)

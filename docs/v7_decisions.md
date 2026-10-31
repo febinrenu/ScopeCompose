@@ -310,3 +310,25 @@ Also added: `python -m benchmark.contexts` expands a corpus to K passages. Negat
 as a gold document, ranked by BM25 against the query: a "provider" here is one search topic with two or three
 documents, too few to fill a context (the first attempt reached K = 6 for 19 instances; same-site reaches it for 70).
 Instances whose gold text cannot be traced to a document (the 54 synthetic splits) are left as they are and counted.
+
+### D7.5 Rehearsal of the post-annotation pipeline on scratch copies
+
+To find integration faults before the humans finish, the whole chain was run on scratch copies with the unreviewed
+model proposals accepted as stand-in verdicts: apply-branches, merge, persona proposals for the new branches,
+apply-personas, merge, grouped stratified re-split, K = 6 expansion, four local-backbone cells on S1 dev
+(B0, B3, B7c, O3), and `make_results`. Every step ran; the output is correctly labelled "exploratory (below
+floor)". None of these numbers is a result: the branches and personas are unreviewed model text.
+
+What it showed:
+
+- The persona validator caught two bad proposals at apply time (an exception identical to the default; an irrelevant
+  variant that dropped too much of the default) and refused them instead of attaching them.
+- The strata re-split moves S1 into dev and test only, as designed (S1 14 -> 5 dev, 9 test).
+- Real outcomes phrased "permitted" against "work in most jobs is allowed", and "the surcharge is not payable"
+  against "you do not need to pay the surcharge", failed to match. The second class is common in the gov.uk data
+  (the immigration health surcharge), so a payment-due rule was added to the paraphrase classes
+  (equivalents match; "must pay" against "do not need to pay" does not; differing figures still veto). The first is
+  a gold-outcome quality problem, not a matcher problem: the review guide now tells annotators to write plain,
+  qualifier-free outcomes and gives examples of what compares safely.
+- Every remaining failure in the sample was a real answer problem (a system hedging, or stating only the default),
+  which is what CCA is supposed to count.
