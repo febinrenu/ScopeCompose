@@ -8,6 +8,7 @@ module is the part between them that was missing, so a verdict changes the data:
     propose-personas   instances with branches but no personas   -> proposals + structural checks -> items
     apply-personas     reviewers' verdicts -> instances with personas and counterfactual pairs
     merge              replace instances in a corpus by id, to a *new* file
+    collect-candidates mined rule/exception proposals not yet in the corpus -> one file for ``--kind candidates``
 
 Rules that keep a label honest:
 
@@ -181,6 +182,30 @@ def apply_personas(instances_by_id: Mapping[str, GoldInstance], items: Sequence[
     return out, report
 
 
+def collect_candidates(proposal_files: Iterable[Path], corpus: Sequence[GoldInstance]) -> list[dict]:
+    """Cross-document proposals not already in the corpus, deduplicated, highest confidence first.
+
+    A proposal is *already in* the corpus when both its sentences appear in the passages of some instance
+    (compared on their first 60 characters, whitespace-collapsed), so a reviewer is never asked about a pair
+    that has already been adjudicated."""
+    from benchmark.review import item_id_for
+
+    def flat(t: str) -> str:
+        return " ".join(t.split())
+
+    text = flat(" ".join(p.text for i in corpus for p in i.passages))
+    seen: dict[str, dict] = {}
+    for f in proposal_files:
+        data = json.loads(Path(f).read_text(encoding="utf-8"))
+        for p in (data["proposals"] if isinstance(data, dict) else data):
+            if not p.get("cross_document", True):
+                continue
+            if flat(p["rule"])[:60] in text and flat(p["exception"])[:60] in text:
+                continue
+            seen.setdefault(item_id_for(p["rule"], p["exception"]), p)
+    return sorted(seen.values(), key=lambda p: -float(p.get("confidence", 0)))
+
+
 def merge(base: Sequence[GoldInstance], updates: Iterable[GoldInstance]) -> list[GoldInstance]:
     """``base`` with each updated instance replacing the one of the same id, order preserved."""
     new = {u.instance_id: u for u in updates}
@@ -226,6 +251,10 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--out", type=Path, required=True)
         if name == "apply-personas":
             p.add_argument("--data", type=Path, required=True)
+    c = sub.add_parser("collect-candidates")
+    c.add_argument("--proposals", type=Path, nargs="+", required=True)
+    c.add_argument("--data", type=Path, required=True)
+    c.add_argument("--out", type=Path, required=True)
     m = sub.add_parser("merge")
     m.add_argument("--data", type=Path, required=True)
     m.add_argument("--updates", type=Path, required=True)
@@ -241,6 +270,14 @@ def main(argv: list[str] | None = None) -> int:
         kind = "branches" if args.cmd == "propose-branches" else "personas"
         print(f"{len(items)} proposals written to {args.out}; {len(failures)} failed")
         print(f"review with: python -m benchmark.review --kind {kind} review --items {args.out} --annotator <you>")
+        return 0
+
+    if args.cmd == "collect-candidates":
+        cands = collect_candidates(args.proposals, _load(args.data))
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps({"proposals": cands}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(f"{len(cands)} candidates not yet in the corpus -> {args.out}")
+        print(f"review with: python -m benchmark.review --kind candidates review --items {args.out} --annotator <you>")
         return 0
 
     if args.cmd == "merge":

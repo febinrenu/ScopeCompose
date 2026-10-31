@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from api_budget import Tier, get_client
 from api_budget.client import LLMClient
 from contract.gold import GoldInstance, Persona, PersonaPair
+from metrics.values import values_match
 
 STEP = "personas_generate"
 STEP_REPAIR = "personas_repair"
@@ -62,7 +63,10 @@ Rules:
   made true. Change as little as possible: same wording, one fact swapped or added.
 - "irrelevant": the default sentence plus ONE extra fact that none of the conditions mention
   (for example the town they live in). Name that fact in "attribute".
-- Paraphrase the wording of the conditions. Never use field names, underscores or the word "branch"."""
+- Paraphrase the wording of the conditions. Never use field names, underscores or the word "branch".
+- Say only WHO the person is and WHAT they are doing. Never say what they pay, receive, must do, may do,
+  are covered for, or whether anything applies to them: that is the answer the test is looking for, and a
+  description that states it makes the test trivial."""
 
 
 def _words(text: str) -> list[str]:
@@ -93,12 +97,11 @@ class PersonaProposal:
 
 
 def user_prompt(inst: GoldInstance) -> str:
-    lines = [f"Question: {inst.query}", "", "Branches (the exception conditions):"]
+    """The question and the exception *conditions*. Outcomes are deliberately withheld: a model that is told
+    them writes them into the description (the first run did so for about half of all statements)."""
+    lines = [f"Question: {inst.query}", "", "Exception conditions:"]
     for b in inst.exception_branches:
-        lines.append(f"- id {b.branch_id}: condition: {b.condition}; outcome: {b.outcome}")
-    d = inst.default_branch
-    if d is not None:
-        lines.append(f"\nThe default (everyone else): outcome: {d.outcome}")
+        lines.append(f"- id {b.branch_id}: {b.condition}")
     return "\n".join(lines)
 
 
@@ -139,6 +142,12 @@ def validate(inst: GoldInstance, prop: PersonaProposal) -> list[str]:
             problems.append(f"{name}: leaks a field name or identifier")
         if not re.match(r"\s*(?:i|my|as)\b", s, re.IGNORECASE):
             problems.append(f"{name}: not first person")
+
+    outcomes = [b.outcome for b in inst.gold_branches]
+    for name, s in stmts.items():
+        stated = [o for o in outcomes if s and values_match(o, s)]
+        if stated:
+            problems.append(f"{name}: states an outcome ({stated[0]!r}); say who the person is, not what applies to them")
 
     want = {b.branch_id for b in inst.exception_branches}
     if set(prop.exceptions) != want:

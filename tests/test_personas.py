@@ -128,10 +128,11 @@ def test_the_unrelated_attribute_must_be_named():
 # --------------------------------------------------------------------------- #
 
 
-def test_the_prompt_lists_the_exception_conditions_and_the_default_outcome():
+def test_the_prompt_lists_the_exception_conditions_and_withholds_every_outcome():
     inst = _inst()
     p = user_prompt(inst)
-    assert inst.query in p and inst.exception_branches[0].condition in p and inst.default_branch.outcome in p
+    assert inst.query in p and inst.exception_branches[0].condition in p
+    assert all(b.outcome not in p for b in inst.gold_branches), "outcomes leak into the descriptions if shown"
     assert "id " + inst.exception_branches[0].branch_id in p
 
 
@@ -213,3 +214,13 @@ def test_a_relevant_pair_that_would_not_change_the_gold_is_refused_by_the_contra
         d, inst.exception_branches[0].model_copy(update={"outcome": d.outcome})]})
     with pytest.raises(ValidationError, match="agree in outcome"):
         with_personas(same, _prop(same))
+
+
+def test_a_statement_that_states_an_outcome_is_a_problem():
+    """The first live run produced 'I do not pay any fee when ...' and 'I pay a two-fifty fee ...': the answer."""
+    inst = _inst()
+    default_outcome = inst.default_branch.outcome
+    prop = _prop(inst, default=f"I hold an ordinary current account and {default_outcome} on my monthly payments.")
+    problems = validate(inst, prop)
+    assert any("states an outcome" in p and p.startswith("default") for p in problems), problems
+    assert not any("states an outcome" in p for p in validate(inst, _prop(inst)))

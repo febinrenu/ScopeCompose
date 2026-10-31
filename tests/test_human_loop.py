@@ -249,3 +249,24 @@ def test_the_cli_applies_reviewed_branches_and_merges_without_overwriting(tmp_pa
     merged = GoldInstance.model_validate(json.loads(out.read_text(encoding="utf-8")))
     assert merged.gold_branches and branch_provenance(merged) == "reviewed:ann"
     assert not GoldInstance.model_validate(json.loads(corpus.read_text(encoding="utf-8"))).gold_branches
+
+
+# --------------------------------------------------------------------------- #
+# Collecting candidates
+# --------------------------------------------------------------------------- #
+
+
+def test_candidates_already_in_the_corpus_are_not_shown_again(tmp_path):
+    from benchmark.human_loop import collect_candidates
+
+    inst = base()
+    rule, exc = inst.passages[0].text, inst.passages[1].text
+    known = {"rule": rule, "exception": exc, "confidence": 0.9, "cross_document": True}
+    fresh = {"rule": "Most people pay a 5 pound fee on applications.", "exception": "If you are under 18 there is no fee.",
+             "confidence": 0.6, "cross_document": True}
+    same_doc = dict(fresh, rule="Another rule sentence about permits.", cross_document=False)
+    f1, f2 = tmp_path / "a.json", tmp_path / "b.json"
+    f1.write_text(json.dumps({"proposals": [known, fresh]}), encoding="utf-8")
+    f2.write_text(json.dumps([fresh, same_doc]), encoding="utf-8")
+    out = collect_candidates([f1, f2], [inst])
+    assert [c["rule"] for c in out] == [fresh["rule"]], "known pair, duplicate and same-document pair are dropped"

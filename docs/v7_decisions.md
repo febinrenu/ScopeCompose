@@ -258,3 +258,25 @@ correctly, not that it is valid. V1 on real dev instances and V2 against the hum
 
 Environment note: a stray `six.py` in the shared Temp folder shadows the real `six` for any script run from
 there (it broke a pandas import); scratch scripts are run from the session scratchpad instead.
+
+### D7.3 Persona proposals leaked the answer (fixed before any persona was accepted)
+
+The first batch of model-proposed personas for the 35 instances with branches was inspected before anyone
+reviewed it. About half the statements stated the outcome they were meant to leave open ("I do not pay any fee
+when I take cash from a machine overseas"; "I pay a two-fifty fee ..."), which would let a reader answer from the
+persona and make case-complete accuracy trivial. Two causes, both fixed:
+
+- the prompt showed the model every branch's outcome, inviting it to write them in. Outcomes are now withheld
+  (the model sees the question and the exception conditions only) and the rules say to describe who the person is
+  and what they are doing, never what applies to them;
+- `validate` had no check for it. A statement that value-matches any branch outcome is now a problem, which
+  triggers the existing one-shot repair and is shown to the reviewer.
+
+After the change 0 of 67 statements in the regenerated proposals state an outcome (it was 32 of 69). The value
+matcher is deliberately strict here: a few correct statements may be flagged and cost a reviewer one edit, which is
+the safer error.
+
+Also added: `benchmark/human_loop.py`, the missing link between proposals, review verdicts and the corpus. Only a
+person's accept or edit applies a proposal; a second annotator can only hold an item back; edits are re-validated;
+nothing is overwritten. Review items for the real corpus (18 branch proposals, 35 persona proposals, 10
+unreviewed mined candidates) are in `benchmark/data/review_items/`.
