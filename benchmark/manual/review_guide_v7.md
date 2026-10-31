@@ -156,3 +156,23 @@ After both annotators finish a kind, run `agreement`. For every disagreement, di
 resolution; a case still undecided after discussion goes to the third reviewer, not to a coin flip.
 Report kappa separately per kind. Record how many hours each person spent (`status`), so "annotation hours"
 in the datasheet is a measurement.
+
+---
+
+## After reviewing: getting verdicts into the corpus
+
+Review items for the current corpus are ready in `benchmark/data/review_items/`
+(`candidates.json`, `branches.jsonl`, `personas.jsonl`). Only a person's `accept` or `edit` changes the data.
+
+```
+python -m benchmark.human_loop apply-branches --items benchmark/data/review_items/branches.jsonl \
+    --annotator <you> [--second <other>] --out benchmark/data/review_items/branches.applied.jsonl
+python -m benchmark.human_loop apply-personas --data benchmark/data/corpus.jsonl \
+    --items benchmark/data/review_items/personas.jsonl --annotator <you> --out <applied.jsonl>
+python -m benchmark.human_loop merge --data benchmark/data/corpus.jsonl --updates <applied.jsonl> --out <new corpus>
+```
+
+The first annotator's edits are the ones applied. A second annotator can only hold an item back: if they have
+not decided it, or rejected it, the item is listed as disputed and not applied. An edited persona set is
+re-checked and refused (with the reason) if it breaks a rule, for example by stating the outcome. `merge` never
+overwrites its input. Apply branches before personas: personas are generated from reviewed branches.

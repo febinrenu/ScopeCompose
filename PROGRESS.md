@@ -29,6 +29,10 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
   (listed as unrestorable; the build refuses them unless explicitly allowed). No quoted spans leaked.
 - `benchmark/datasheet_v7.py` generates strata, tiers, label provenance, agreement, annotation hours and release
   counts from the data. `benchmark/manual/review_guide_v7.md` covers the five human tasks.
+- `benchmark/human_loop.py` closes the loop between proposals, review verdicts and the corpus (propose, apply, merge,
+  collect-candidates). Review items for the real corpus are ready in `benchmark/data/review_items/`: 18 branch
+  proposals, 35 persona proposals, 10 unreviewed mined candidates. Inspecting the first persona batch showed about
+  half the statements stated the answer; prompt and validator fixed (D7.3), 0 of 67 statements leak now.
 - README section 6 gains a Phase 6 status table. Retrieval-miner output committed.
 
 **Decisions / findings** (reasoning in `docs/v7_decisions.md`, D7.1)
