@@ -11,6 +11,29 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-10-31 (late night) - the human loop, K = 6 contexts, first live G1, and a rehearsal of everything after annotation
+
+**Done** (1,953 tests collected, full suite green)
+- `benchmark/human_loop.py`: propose, apply reviewed verdicts, merge, collect-candidates. Only a person's accept or edit
+  changes the corpus; a second annotator can only hold an item back; nothing is overwritten. Review items for the real
+  corpus are ready in `benchmark/data/review_items/` (18 branch proposals, 35 persona proposals, 10 unreviewed candidates).
+- `python -m benchmark.contexts`: expands a corpus to K = 6 with same-site BM25 hard negatives (70 of 128 instances;
+  the 54 synthetic splits are not traceable to a document and are left as they are).
+- **First live G1**: B0 596, B3 509, B7c 1,078, O3 2,749 tokens per instance; the planned matrix is about 111K tokens,
+  0.6 days of quota. The gate stays open (3 instances, proposed branches, reasoning setting not frozen).
+- The client now waits out Groq's own "try again in Ns" hint; before, four short backoffs failed inside one minute.
+- A rehearsal of the whole post-annotation chain on scratch copies (accept-all stand-in verdicts) ran end to end:
+  apply, merge, re-split, K = 6, four local cells on S1 dev, make_results.
+
+**Decisions / findings** (D7.3-D7.5)
+- The first persona proposals stated the answer about half the time; prompt and validator fixed (0 of 67 now).
+- G1 required personas it never uses; fixed. A payment-due paraphrase class was added to the value matcher
+  (health-surcharge outcomes); annotators are told how to phrase outcomes so they compare safely.
+
+**Blocked / open**
+- Unchanged: humans have not started. Review the three item files, apply, merge; then re-split, G1 on the real
+  S1/dev set (freeze the reasoning setting), V1 on real dev data, the V2 audit, the freeze.
+
 ### 2026-10-31 (night) - scoped precision, the V1 and V2 drivers, the release bundle, the generated datasheet
 
 **Done** (1,911 tests collected, full suite green, exit 0)
