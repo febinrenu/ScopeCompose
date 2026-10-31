@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -118,6 +119,20 @@ class CompletionResult:
             raise ValueError(
                 f"expected JSON from {self.model} but got: {snippet!r}"
             ) from exc
+
+
+#: The longest a single retry will wait on a provider's own "try again in" hint.
+MAX_RETRY_AFTER = 75.0
+_RETRY_AFTER = re.compile(r"try again in\s+(?:(\d+)m)?\s*(\d+(?:\.\d+)?)\s*(ms|s)\b", re.IGNORECASE)
+
+
+def retry_after_seconds(message: str) -> float | None:
+    """Seconds a provider asks us to wait ("try again in 6.4575s", "360ms", "1m5.2s"), or ``None``."""
+    m = _RETRY_AFTER.search(message or "")
+    if not m:
+        return None
+    minutes, value, unit = m.groups()
+    return float(minutes or 0) * 60 + float(value) / (1000.0 if unit.lower() == "ms" else 1.0)
 
 
 class LLMClient:
@@ -260,7 +275,7 @@ class LLMClient:
             except RateLimitError as exc:
                 last_exc = exc
                 rate_limited += 1
-                self._sleep(attempt)
+                self._sleep(attempt, exc)
             except BackendError as exc:
                 last_exc = exc
                 if attempt == self.max_retries - 1:
@@ -337,12 +352,19 @@ class LLMClient:
             cached=False, fell_back=fell_back, latency_s=latency, cost_usd=cost,
         )
 
-    def _sleep(self, attempt: int) -> None:
-        """Exponential backoff with jitter.
+    def _sleep(self, attempt: int, exc: Exception | None = None) -> None:
+        """Back off before a retry.
 
-        Jitter matters on a free tier: without it, a batch of parallel workers
-        that all get 429'd retry in lockstep and trip the limit again.
+        A rate-limit error that says when to come back ("Please try again in 6.4s") is obeyed: Groq's
+        free tier limits tokens *per minute*, so exponential backoff of 1, 2 and 4 seconds exhausts every
+        retry inside the same window and a perfectly healthy run fails. Otherwise: exponential backoff with
+        jitter, which matters on a free tier because parallel workers that all got 429'd would otherwise
+        retry in lockstep and trip the limit again. ``base_backoff = 0`` disables waiting (tests).
         """
+        hint = retry_after_seconds(str(exc)) if exc is not None else None
+        if hint is not None and self.base_backoff > 0:
+            time.sleep(min(hint + 0.25 + 0.5 * self._rng.random(), MAX_RETRY_AFTER))
+            return
         delay = self.base_backoff * (2 ** attempt) * (0.5 + self._rng.random())
         time.sleep(min(delay, 30.0))
 

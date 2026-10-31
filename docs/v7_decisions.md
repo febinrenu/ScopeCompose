@@ -280,3 +280,33 @@ Also added: `benchmark/human_loop.py`, the missing link between proposals, revie
 person's accept or edit applies a proposal; a second annotator can only hold an item back; edits are re-validated;
 nothing is overwritten. Review items for the real corpus (18 branch proposals, 35 persona proposals, 10
 unreviewed mined candidates) are in `benchmark/data/review_items/`.
+
+### D7.4 First live G1 measurement, and two defects it exposed
+
+Measured on three instances with model-proposed branches, expanded to K = 6 contexts (same-site hard negatives),
+on the primary backbone (gpt-oss-120b, Groq). Mean tokens per instance, calls in brackets:
+
+| system | prompt | completion | total | estimate |
+|---|---:|---:|---:|---:|
+| B0 | 363 | 233 | 596 (1) | 1,500 |
+| B3 | 321 | 188 | 509 (1) | 1,500 |
+| B7c | 550 | 528 | 1,078 (1) | 4,000 |
+| O3 | 1,419 | 1,330 | 2,749 (2) | 7,500 |
+
+Projected for 18 S1 instances, 20 controls and B8: about 111K tokens, 0.6 days of a 200K/day quota against the 3.5
+days available, so the matrix fits with a wide margin. The plan's estimates were 2-7x too high. **G1 stays open**: the
+sample is three instances, the branches are model proposals, and the reasoning setting is not yet frozen.
+
+Defects found by running it:
+
+1. **The client gave up inside one rate-limit window.** Groq limits tokens *per minute* (8,000 for this model) and its
+   429 says when to come back ("Please try again in 6.4575s"). The client backed off 1, 2 and 4 seconds, used all
+   four attempts inside the same window and failed a healthy run. It now waits for the provider's own hint (plus a
+   small margin, capped at 75 s) and falls back to exponential backoff only when there is no hint.
+2. **G1 required personas it never uses**, so it could not run before personas were verified. It now needs gold
+   branches only (B3 uses the oracle groups) and fails clearly on an empty selection.
+
+Also added: `python -m benchmark.contexts` expands a corpus to K passages. Negatives are drawn from the same *website*
+as a gold document, ranked by BM25 against the query: a "provider" here is one search topic with two or three
+documents, too few to fill a context (the first attempt reached K = 6 for 19 instances; same-site reaches it for 70).
+Instances whose gold text cannot be traced to a document (the 54 synthetic splits) are left as they are and counted.

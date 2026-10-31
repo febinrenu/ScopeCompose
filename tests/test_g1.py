@@ -137,3 +137,22 @@ def test_the_gate_file_is_only_changed_when_asked_and_records_the_measurement(tm
     assert saved["G1"]["measured"]["O3"]["mean_total"] == 1500
     bad = fit_to_quota(measures(B0=50000, B3=50000, B7c=50000, O3=50000), n_s1=50, n_controls=0, persona_n=0)
     assert update_gate(gates, bad, measures(B0=50000, B3=50000, B7c=50000, O3=50000))["status"] == "fail"
+
+
+def test_g1_measures_on_instances_with_branches_and_does_not_need_personas():
+    from contract.mock import generate
+    from experiments.g1 import pick_instances
+
+    insts = generate(40, seed=0)
+    bare = [i.model_copy(update={"personas": [], "persona_pairs": []}) for i in insts if i.gold_branches]
+    assert len(pick_instances(bare, 3)) == 3
+    assert not any(i.gold_branches for i in insts if i not in pick_instances(insts, 100))
+
+
+def test_g1_with_nothing_to_measure_is_an_error():
+    import pytest
+
+    from experiments.g1 import pick_instances
+
+    with pytest.raises(ValueError, match="no instances with gold branches"):
+        pick_instances([], 3)

@@ -475,3 +475,45 @@ def test_models_config_defines_all_four_tiers():
 def test_unknown_tier_is_an_error():
     with pytest.raises(KeyError, match="unknown tier"):
         settings.models().tier("NOPE")
+
+
+# --------------------------------------------------------------------------- #
+# Retry-after: obey the provider's own hint
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("message,seconds", [
+    ("Rate limit reached ... Please try again in 6.4575s. Need more tokens?", 6.4575),
+    ("... Please try again in 360ms. Need", 0.36),
+    ("... try again in 1m5.2s ...", 65.2),
+    ("... Try again in 4.62s", 4.62)])
+def test_retry_after_is_parsed_from_the_providers_message(message, seconds):
+    from api_budget.client import retry_after_seconds
+
+    assert retry_after_seconds(message) == pytest.approx(seconds)
+
+
+def test_no_hint_means_no_retry_after():
+    from api_budget.client import retry_after_seconds
+
+    assert retry_after_seconds("some other failure") is None and retry_after_seconds("") is None
+
+
+def test_a_rate_limit_hint_is_waited_out_not_replaced_by_a_one_second_backoff(monkeypatch, tmp_path):
+    from api_budget.client import MAX_RETRY_AFTER, LLMClient
+
+    slept = []
+    monkeypatch.setattr("api_budget.client.time.sleep", slept.append)
+    c = LLMClient(cache=RequestCache(enabled=False), cost_log=CostLog(tmp_path / "l.jsonl"),
+                  backend_override=MockBackend(), base_backoff=1.0)
+    c._sleep(0, RateLimitError("Please try again in 6.4575s."))
+    assert 6.7 <= slept[-1] <= 7.3, "the hint plus a small margin, not 0.5-1.5 s"
+    c._sleep(0, RateLimitError("Please try again in 9m0s."))
+    assert slept[-1] == MAX_RETRY_AFTER
+    c._sleep(0, RateLimitError("no hint here"))
+    assert slept[-1] <= 1.5, "without a hint the exponential backoff applies"
+    quiet = LLMClient(cache=RequestCache(enabled=False), cost_log=CostLog(tmp_path / "l2.jsonl"),
+                      backend_override=MockBackend(), base_backoff=0.0)
+    n = len(slept)
+    quiet._sleep(0, RateLimitError("Please try again in 6s."))
+    assert slept[n:] == [0.0], "base_backoff=0 disables waiting for tests"

@@ -180,12 +180,23 @@ def update_gate(path: Path, proj: Projection, measures: Mapping[str, SystemMeasu
     return gates["G1"]
 
 
+def pick_instances(instances: Sequence[GoldInstance], limit: int) -> list[GoldInstance]:
+    """Instances to measure on: those with gold branches (B3 needs the oracle conflict groups).
+
+    Personas are not needed to count tokens, and requiring them would make G1 impossible before the
+    personas are verified. An empty selection is an error, not a zero-instance measurement."""
+    chosen = [i for i in instances if i.gold_branches][:limit]
+    if not chosen:
+        raise ValueError("no instances with gold branches to measure on")
+    return chosen
+
+
 def main(argv: list[str] | None = None) -> int:
     from api_budget import Tier
     from experiments.run_matrix import load_instances
 
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--data", type=Path, required=True, help="dev instances with personas")
+    ap.add_argument("--data", type=Path, required=True, help="instances with gold branches, ideally K=6 contexts")
     ap.add_argument("--tier", choices=("BACKBONE_PRIMARY", "BACKBONE_LOCAL"), default="BACKBONE_PRIMARY")
     ap.add_argument("--systems", nargs="+", default=["B0", "B3", "B7c", "O3"])
     ap.add_argument("--limit", type=int, default=5, help="instances to measure on (uses real quota)")
@@ -195,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--update-gate", action="store_true")
     args = ap.parse_args(argv)
 
-    insts = [i for i in load_instances(args.data) if i.personas][: args.limit]
+    insts = pick_instances(load_instances(args.data), args.limit)
     ms = measure(args.systems, insts, tier=Tier(args.tier))
     proj = fit_to_quota(ms, n_s1=args.n_s1, n_controls=args.n_controls, persona_n=args.personas)
     print(render(ms, proj))
