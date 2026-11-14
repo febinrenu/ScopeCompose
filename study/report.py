@@ -563,7 +563,7 @@ CONFIRM_TABLE = "\n".join([
     r"C$^\dagger$: those with a condition-only gold chunk; U: unconditional. C8 asks whether the lower bound "
     r"exceeds $-2$ points.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
-    r"\begin{tabular}{L{0.6cm}L{4.2cm}P{0.6cm}P{2.65cm}P{1.05cm}P{2.65cm}P{1.05cm}}",
+    r"\begin{tabular}{L{0.6cm}L{3.95cm}P{0.85cm}P{2.65cm}P{1.05cm}P{2.65cm}P{1.05cm}}",
     r"\toprule",
     r" & & & \multicolumn{2}{c}{\textbf{Qwen2.5-7B}} & \multicolumn{2}{c}{\textbf{Llama-3.1-8B}} \\",
     r"\textbf{ID} & \textbf{Comparison} & \textbf{Pop.} & diff.\ [95\% CI] & $p_{\mathrm{Holm}}$ "

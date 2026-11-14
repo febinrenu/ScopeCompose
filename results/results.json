@@ -1,4 +1,46 @@
 {
+ "confirmatory": {
+  "oss20b": {
+   "confirmatory": false,
+   "exploratory": {
+    "E1": {
+     "a": 0.0,
+     "a_system": "gold",
+     "b": 0.3333333333333333,
+     "b_system": "top8",
+     "complete": false,
+     "diff": -0.3333333333333333,
+     "high": 0.0,
+     "low": -0.6666666666666666,
+     "n": 2,
+     "p": 1.0,
+     "population": 150
+    }
+   },
+   "family": {},
+   "family_complete": false
+  },
+  "qwen27b": {
+   "confirmatory": false,
+   "exploratory": {
+    "E1": {
+     "a": 0.0,
+     "a_system": "gold",
+     "b": 0.0,
+     "b_system": "top8",
+     "complete": false,
+     "diff": 0.0,
+     "high": 0.0,
+     "low": 0.0,
+     "n": 1,
+     "p": 1.0,
+     "population": 150
+    }
+   },
+   "family": {},
+   "family_complete": false
+  }
+ },
  "dataset": {
   "chunk_words": 134.23330714846819,
   "chunk_words_100": 88.17285861713107,
@@ -20,6 +62,199 @@
   "ramdocs_questions": 500,
   "tuning": 209,
   "tuning_pages": 40
+ },
+ "end_to_end": {
+  "hosted": {
+   "oss20b": {
+    "gold": {
+     "all": {
+      "any_condition": 0.4661016949152542,
+      "cond_in_context": 1.0,
+      "cond_noticed": 0.3310580204778157,
+      "cond_precision": 0.3931034482758621,
+      "cond_recall": 0.1945392491467577,
+      "em": 0.4463276836158192,
+      "em_cond": 0.1400710871049854,
+      "f1": 0.5043318386144724,
+      "f1_cond": 0.1646582963881499,
+      "latency_s": 8.052889830508475,
+      "n": 118,
+      "no_answer": 0.05084745762711865,
+      "parse_ok": 1.0,
+      "tokens": 1748.0084745762713
+     },
+     "conditional": {
+      "any_condition": 0.4661016949152542,
+      "cond_in_context": 1.0,
+      "cond_noticed": 0.3310580204778157,
+      "cond_precision": 0.3931034482758621,
+      "cond_recall": 0.1945392491467577,
+      "em": 0.4463276836158192,
+      "em_cond": 0.1400710871049854,
+      "f1": 0.5043318386144724,
+      "f1_cond": 0.1646582963881499,
+      "latency_s": 8.052889830508475,
+      "n": 118,
+      "no_answer": 0.05084745762711865,
+      "parse_ok": 1.0,
+      "tokens": 1748.0084745762713
+     },
+     "opposite": {
+      "any_condition": 0.6,
+      "cond_in_context": 1.0,
+      "cond_noticed": 0.22058823529411764,
+      "cond_precision": 0.4117647058823529,
+      "cond_recall": 0.20588235294117646,
+      "em": 0.45,
+      "em_cond": 0.13225274725274724,
+      "f1": 0.45,
+      "f1_cond": 0.13225274725274724,
+      "latency_s": 8.3899,
+      "n": 20,
+      "no_answer": 0.05,
+      "parse_ok": 1.0,
+      "tokens": 1779.25
+     },
+     "unanswerable": {
+      "n": 0
+     },
+     "unconditional": {
+      "n": 0
+     }
+    },
+    "top8": {
+     "all": {
+      "any_condition": 0.5,
+      "cond_in_context": 0.16666666666666666,
+      "cond_noticed": 1.0,
+      "cond_precision": 0.5,
+      "cond_recall": 0.16666666666666666,
+      "em": 0.5,
+      "em_cond": 0.3333333333333333,
+      "f1": 0.5,
+      "f1_cond": 0.3333333333333333,
+      "latency_s": 101.47449999999999,
+      "n": 2,
+      "no_answer": 0.5,
+      "parse_ok": 1.0,
+      "tokens": 3137.0
+     },
+     "conditional": {
+      "any_condition": 0.5,
+      "cond_in_context": 0.16666666666666666,
+      "cond_noticed": 1.0,
+      "cond_precision": 0.5,
+      "cond_recall": 0.16666666666666666,
+      "em": 0.5,
+      "em_cond": 0.3333333333333333,
+      "f1": 0.5,
+      "f1_cond": 0.3333333333333333,
+      "latency_s": 101.47449999999999,
+      "n": 2,
+      "no_answer": 0.5,
+      "parse_ok": 1.0,
+      "tokens": 3137.0
+     },
+     "opposite": {
+      "n": 0
+     },
+     "unanswerable": {
+      "n": 0
+     },
+     "unconditional": {
+      "n": 0
+     }
+    }
+   },
+   "qwen27b": {
+    "gold": {
+     "all": {
+      "any_condition": 0.6666666666666666,
+      "cond_in_context": 1.0,
+      "cond_noticed": 0.72,
+      "cond_precision": 0.5454545454545454,
+      "cond_recall": 0.48,
+      "em": 0.2777777777777778,
+      "em_cond": 0.07729468599033816,
+      "f1": 0.34089423648247175,
+      "f1_cond": 0.13150591593686223,
+      "latency_s": 7.631,
+      "n": 9,
+      "no_answer": 0.0,
+      "parse_ok": 1.0,
+      "tokens": 1696.4444444444443
+     },
+     "conditional": {
+      "any_condition": 0.6666666666666666,
+      "cond_in_context": 1.0,
+      "cond_noticed": 0.72,
+      "cond_precision": 0.5454545454545454,
+      "cond_recall": 0.48,
+      "em": 0.2777777777777778,
+      "em_cond": 0.07729468599033816,
+      "f1": 0.34089423648247175,
+      "f1_cond": 0.13150591593686223,
+      "latency_s": 7.631,
+      "n": 9,
+      "no_answer": 0.0,
+      "parse_ok": 1.0,
+      "tokens": 1696.4444444444443
+     },
+     "opposite": {
+      "n": 0
+     },
+     "unanswerable": {
+      "n": 0
+     },
+     "unconditional": {
+      "n": 0
+     }
+    },
+    "top8": {
+     "all": {
+      "any_condition": 1.0,
+      "cond_in_context": 1.0,
+      "cond_noticed": 1.0,
+      "cond_precision": 0.0,
+      "cond_recall": 0.0,
+      "em": 1.0,
+      "em_cond": 0.0,
+      "f1": 1.0,
+      "f1_cond": 0.0,
+      "latency_s": 1.019,
+      "n": 1,
+      "no_answer": 0.0,
+      "parse_ok": 1.0,
+      "tokens": 3219.0
+     },
+     "conditional": {
+      "any_condition": 1.0,
+      "cond_in_context": 1.0,
+      "cond_noticed": 1.0,
+      "cond_precision": 0.0,
+      "cond_recall": 0.0,
+      "em": 1.0,
+      "em_cond": 0.0,
+      "f1": 1.0,
+      "f1_cond": 0.0,
+      "latency_s": 1.019,
+      "n": 1,
+      "no_answer": 0.0,
+      "parse_ok": 1.0,
+      "tokens": 3219.0
+     },
+     "opposite": {
+      "n": 0
+     },
+     "unanswerable": {
+      "n": 0
+     },
+     "unconditional": {
+      "n": 0
+     }
+    }
+   }
+  }
  },
  "operator_survival": {
   "cqa": {
