@@ -148,11 +148,13 @@ def oracle_conflicts(inst: GoldInstance) -> list[ConflictGroup]:
     ConflictRAG has no conditional class, so a rule-and-exception pair is typed
     ``factual`` (or ``temporal``), which is what makes selection its resolution.
     """
-    if inst.gold_conflict_type is ConflictType.NO_CONFLICT or len(inst.passages) < 2:
+    gold_ids = inst.gold_pair_ids()
+    if inst.gold_conflict_type is ConflictType.NO_CONFLICT or len(gold_ids) < 2:
         return []
     kind = {ConflictType.TEMPORAL: "temporal", ConflictType.OPINION: "opinion"}.get(
         inst.gold_conflict_type, "factual")
-    return [ConflictGroup(tuple(sorted(p.id for p in inst.passages[:2])), kind)]
+    # By id, not by position: an expanded context is shuffled (benchmark.contexts).
+    return [ConflictGroup(gold_ids, kind)]
 
 
 class ConflictRAGStyle:

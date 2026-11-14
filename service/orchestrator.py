@@ -441,7 +441,7 @@ def _run(req: RunRequest, tracer: Tracer, live: bool, store) -> dict[str, Any]:
             tracer.log("policy", "gold also says no conflict: nothing to override")
         else:
             if inst is not None:
-                a, b = inst.passages[0].id, inst.passages[1].id
+                a, b = inst.gold_pair_ids()
                 ctype, rel, kind = inst.gold_conflict_type, inst.gold_scope_relation, "gold"
                 decided = DecidedBy.GOLD
             else:

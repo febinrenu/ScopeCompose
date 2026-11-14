@@ -208,6 +208,10 @@ class FallbackSpec:
     provider: str
     model: str | None
     trigger_after_retries: int
+    #: Overflow models in the order to try them, as (provider, model). Built
+    #: from ``fallback.chain`` in models.yaml; the legacy single entry is used
+    #: only when no chain entry resolves.
+    chain: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -262,11 +266,23 @@ def models() -> ModelsConfig:
         )
 
     fb = raw.get("fallback") or {}
+
+    def _fb_model(entry: dict) -> str | None:
+        return os.environ.get(entry["model_env"]) if entry.get("model_env") else entry.get("model")
+
+    legacy_provider, legacy_model = fb.get("provider", "ollama"), _fb_model(fb)
+    chain = tuple(
+        (e.get("provider", legacy_provider), m)
+        for e in (fb.get("chain") or []) if isinstance(e, dict) and (m := _fb_model(e))
+    )
+    if not chain and legacy_model:
+        chain = ((legacy_provider, legacy_model),)
     fallback = FallbackSpec(
         enabled=bool(fb.get("enabled", False)),
-        provider=fb.get("provider", "ollama"),
-        model=os.environ.get(fb["model_env"]) if fb.get("model_env") else fb.get("model"),
+        provider=legacy_provider,
+        model=legacy_model,
         trigger_after_retries=int(fb.get("trigger_after_retries", 3)),
+        chain=chain,
     )
 
     return ModelsConfig(

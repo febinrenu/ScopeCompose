@@ -24,6 +24,7 @@ Annotation ownership:
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 from typing import Literal
 
@@ -41,6 +42,13 @@ from contract.models import (
     ScopeRelation,
     Separation,
 )
+
+#: Hard negatives added by ``benchmark.contexts.build_context`` are named n0, n1, ...
+_NEGATIVE_ID_RE = re.compile(r"^n\d+$")
+
+
+def _is_negative_id(passage_id: str) -> bool:
+    return bool(_NEGATIVE_ID_RE.match(passage_id))
 
 
 class Explicitness(str, Enum):
@@ -453,6 +461,19 @@ class GoldInstance(BaseModel):
                 )
         return self
 
+    # -- the labelled pair ---------------------------------------------------- #
+
+    def gold_pair_ids(self) -> tuple[str, ...]:
+        """Ids of the passages the gold label describes, wherever they sit.
+
+        ``benchmark.contexts.build_context`` adds hard negatives named ``n0, n1,
+        ...`` and then *shuffles*, so the labelled pair is not "the first two
+        passages" in an expanded context. Selecting by position there hands a
+        selection baseline two arbitrary passages, usually distractors.
+        """
+        core = sorted(p.id for p in self.passages if not _is_negative_id(p.id))
+        return tuple(core[:2])
+
     # -- projection ---------------------------------------------------------- #
 
     def to_query_record(self, *, include_gold_pairs: bool = True) -> QueryRecord:
@@ -469,14 +490,16 @@ class GoldInstance(BaseModel):
         from contract.models import ConflictPair, DecidedBy
 
         pairs: list[ConflictPair] = []
-        if include_gold_pairs and len(self.passages) >= 2:
+        gold_ids = self.gold_pair_ids()
+        if include_gold_pairs and len(gold_ids) == 2:
             # The gold label describes the relationship the instance was built
-            # around, which is the first two passages. Remaining passages are
-            # retrieval distractors and carry no gold pair label.
+            # around. Remaining passages are retrieval distractors and carry no
+            # gold pair label; the pair is found by id because an expanded
+            # context is shuffled.
             pairs.append(
                 ConflictPair(
-                    doc_i=self.passages[0].id,
-                    doc_j=self.passages[1].id,
+                    doc_i=gold_ids[0],
+                    doc_j=gold_ids[1],
                     is_conflict=self.gold_conflict_type is not ConflictType.NO_CONFLICT,
                     type=self.gold_conflict_type,
                     scope_relation=self.gold_scope_relation,

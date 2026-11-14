@@ -83,6 +83,25 @@ class Tier(str, Enum):
     """Evaluation-only: mining verifier, context screener, branch pre-annotator
     and claim judge. Never evaluated as a system. Pinned."""
 
+    # -- condition-loss study (November 2026) --------------------------------- #
+    # Every model the study evaluates, one tier each, all pinned. Scoring is
+    # the benchmark's own deterministic script, so no tier here ever grades.
+
+    STUDY_QWEN7B = "STUDY_QWEN7B"
+    """Local Qwen2.5-7B-Instruct (Q4_K_M). Runs the full matrix."""
+
+    STUDY_LLAMA8B = "STUDY_LLAMA8B"
+    """Local Llama-3.1-8B-Instruct (Q4_K_M). Runs the full matrix."""
+
+    STUDY_OSS20B = "STUDY_OSS20B"
+    """Hosted gpt-oss-20b. Replication on a subsample."""
+
+    STUDY_QWEN27B = "STUDY_QWEN27B"
+    """Hosted Qwen 27B. Replication on a subsample."""
+
+    STUDY_OSS120B = "STUDY_OSS120B"
+    """Hosted gpt-oss-120b. Replication on a subsample."""
+
 
 class TierNotConfigured(RuntimeError):
     """A tier has no model assigned yet."""
@@ -289,23 +308,35 @@ class LLMClient:
         if (
             rate_limited >= cfg.fallback.trigger_after_retries
             and cfg.fallback.enabled
-            and cfg.fallback.model
+            and cfg.fallback.chain
             and self.backend_override is None
             and self._tier_allows_fallback(tier_name)
         ):
-            try:
-                fb_backend = self._backend(cfg.fallback.provider)
-                resp = fb_backend.complete(
-                    model=cfg.fallback.model, messages=messages, temperature=temperature,
-                    max_tokens=max_tokens, system=system, response_format=response_format,
+            for fb_provider, fb_model in cfg.fallback.chain:
+                if (fb_provider, fb_model) == (provider, model):
+                    continue              # the model that just rate-limited is not its own overflow
+                # Cached under the FALLBACK model's key, never the primary's: a
+                # substituted answer stored under the primary key would come back
+                # on the next run as a clean cache hit with fell_back=False, and
+                # the substitution would vanish from the record.
+                fb_key = request_key(
+                    provider=fb_provider, model=fb_model, messages=messages,
+                    temperature=temperature, max_tokens=max_tokens,
+                    system=system, response_format=response_format,
                 )
-                return self._finish(
-                    key=key, step=step, tier_name=tier_name, provider=cfg.fallback.provider,
-                    resp=resp, started=started, fell_back=True, use_cache=use_cache,
-                    request={"messages": messages, "system": system, "temperature": temperature},
-                )
-            except (RateLimitError, BackendError) as exc:
-                last_exc = exc
+                try:
+                    fb_backend = self._backend(fb_provider)
+                    resp = fb_backend.complete(
+                        model=fb_model, messages=messages, temperature=temperature,
+                        max_tokens=max_tokens, system=system, response_format=response_format,
+                    )
+                    return self._finish(
+                        key=fb_key, step=step, tier_name=tier_name, provider=fb_provider,
+                        resp=resp, started=started, fell_back=True, use_cache=use_cache,
+                        request={"messages": messages, "system": system, "temperature": temperature},
+                    )
+                except (RateLimitError, BackendError) as exc:
+                    last_exc = exc
 
         self.cost_log.log(
             step=step, tier=tier_name, provider=provider, model=model,

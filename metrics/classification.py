@@ -114,15 +114,26 @@ def score_detection(
         if g is None:
             continue
         gold_pairs = {p.key: p.is_conflict for p in g.conflict_pairs}
+        seen: set = set()
         for pair in pred.conflict_pairs:
-            if pair.key not in gold_pairs:
+            if pair.key not in gold_pairs or pair.key in seen:
                 continue
+            seen.add(pair.key)
             truth = gold_pairs[pair.key]
             if pair.is_conflict and truth:
                 scores.tp += 1
             elif pair.is_conflict and not truth:
                 scores.fp += 1
             elif not pair.is_conflict and truth:
+                scores.fn += 1
+            else:
+                scores.tn += 1
+        # A gold pair the detector never emitted is a decision too: "no conflict".
+        # Skipping it let a detector that emits nothing for a hard pair keep its recall.
+        for key, truth in gold_pairs.items():
+            if key in seen:
+                continue
+            if truth:
                 scores.fn += 1
             else:
                 scores.tn += 1

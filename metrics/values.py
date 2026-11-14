@@ -86,7 +86,7 @@ def _cardinals_to_digits(text: str) -> str:
 def _normalise_figures(text: str) -> str:
     text = re.sub(r"(?<=\d),(?=\d{3}\b)", "", text)            # 1,270 -> 1270
     text = re.sub(r"\b(\d+(?:\.\d+)?)\s*(?:per\s*cent|percent|pct)\b", r"\1%", text)
-    text = re.sub(r"[£$€]\s*(\d)", r"\1 ", text)                # currency sign is not a figure
+    text = re.sub(r"[£$€]\s*(?=\d)", "", text)                  # currency sign is not a figure
     text = re.sub(r"\b\d+\.\d+\b", lambda m: _trim_decimal(m.group(0)), text)  # 2.50 -> 2.5, 28.0 -> 28
     return text
 
@@ -180,6 +180,13 @@ _SUBJECT_RE = re.compile(
     r"claimants?|students?|residents?|people|persons?)\b")
 
 
+_HELD_RE = re.compile("\x00(.)\x00")
+#: "are is ineligible" / "is is required": the canonical clause brings its own
+#: copula, so one the source already had is dropped. This is also what makes
+#: canonicalising an already-canonical outcome leave it unchanged.
+_COPULA_DUP_RE = re.compile(r"\b(?:is|are|was|were|be)\s+(is\s+(?:not\s+)?(?:ineligible|eligible|required|prohibited|permitted))\b")
+
+
 def canonicalise_outcome(text: str) -> str:
     """The comparison form of an outcome statement.
 
@@ -190,8 +197,22 @@ def canonicalise_outcome(text: str) -> str:
     t = strip_citations(text).lower().strip()
     t = _cardinals_to_digits(t)
     t = _normalise_figures(t)
+    # Each rewritten clause is parked behind a placeholder until every class has
+    # run. Substituting in place let a later class match inside an earlier
+    # class's output: "not required" became "is not required", and the
+    # obligation class then rewrote the "required" in it ("is not is required").
+    held: list[str] = []
+
+    def _hold(repl: str):
+        def sub(m: re.Match[str]) -> str:
+            held.append(repl)
+            return f" \x00{chr(0x2460 + len(held) - 1)}\x00 "   # no digit, no letter: nothing re-matches it
+        return sub
+
     for pattern, repl in _PARAPHRASES:
-        t = pattern.sub(repl, t)
+        t = pattern.sub(_hold(repl), t)
+    t = _HELD_RE.sub(lambda m: held[ord(m.group(1)) - 0x2460], t)
+    t = _COPULA_DUP_RE.sub(r"\1", t)
     t = _SUBJECT_RE.sub(" ", t)
     return " ".join(t.replace("-", " ").split())
 

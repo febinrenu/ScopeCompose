@@ -159,6 +159,52 @@ tiers:
     max_tokens: 2048
     fallback: false
 
+  # -------------------------------------------------------------------------
+  # Condition-loss study tiers (November 2026)
+  # -------------------------------------------------------------------------
+  # One tier per evaluated model, every one pinned. The two local models run
+  # the full matrix; the three hosted models replicate the direction of the
+  # main effects on a subsample, inside the free tier's per-model daily cap.
+  # Answers are short JSON, so max_tokens is small for the local models and
+  # carries reasoning headroom for the gpt-oss models (see the BULK note).
+
+  STUDY_QWEN7B:
+    provider: ollama
+    model: scopecompose-qwen7b          # qwen2.5:7b-instruct-q4_K_M, num_ctx 8192, seed 0
+    temperature: 0.0
+    max_tokens: 768
+    fallback: false
+
+  STUDY_LLAMA8B:
+    provider: ollama
+    model: scopecompose-reader          # llama3.1:8b-instruct-q4_K_M, num_ctx 8192, seed 0
+    temperature: 0.0
+    max_tokens: 768
+    fallback: false
+
+  STUDY_OSS20B:
+    provider: groq
+    model: openai/gpt-oss-20b
+    temperature: 0.0
+    max_tokens: 3072
+    reasoning_effort: low
+    fallback: false
+
+  STUDY_QWEN27B:
+    provider: groq
+    model: qwen/qwen3.8-27b
+    temperature: 0.0
+    max_tokens: 1024
+    fallback: false
+
+  STUDY_OSS120B:
+    provider: groq
+    model: openai/gpt-oss-120b
+    temperature: 0.0
+    max_tokens: 3072
+    reasoning_effort: low
+    fallback: false
+
 # ---------------------------------------------------------------------------
 # Real Groq free-tier limits, as data
 # ---------------------------------------------------------------------------
