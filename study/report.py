@@ -275,6 +275,37 @@ def ramdocs_results() -> dict:
     return out
 
 
+def qualifier_section() -> dict:
+    """The completion scorer on its own: the tuned threshold, pair-level recovery of missed condition
+    chunks on the evaluation questions, threshold-free AUC over every candidate pair, and the
+    out-of-distribution check on the project's own corpus (``study.ood``)."""
+    from study import qualifier
+
+    th = json.loads(qualifier.THRESHOLD_FILE.read_text(encoding="utf-8"))
+    ev = [q.id for q in cqa.eval_questions()]
+    env, idx, scores = systems.Env(), cqa.by_id(), qualifier.load_scores()
+    out: dict = {"threshold": th}
+    for kind in ("trained", "zeroshot"):
+        row = qualifier.intrinsic(kind, ev, th[kind])
+        pos, neg = [], []
+        for qid in ev:
+            s = scores[kind].get(qid, {})
+            for p in qualifier.candidate_pairs(idx[qid], env):
+                if p.candidate in s:
+                    (pos if p.label else neg).append(s[p.candidate])
+        neg_sorted = sorted(neg)
+        import bisect
+        wins = sum(bisect.bisect_left(neg_sorted, x) + 0.5 * (bisect.bisect_right(neg_sorted, x) - bisect.bisect_left(neg_sorted, x))
+                   for x in pos)
+        row.update({"auc": wins / (len(pos) * len(neg)) if pos and neg else float("nan"),
+                    "n_pos_pairs": len(pos), "n_neg_pairs": len(neg)})
+        out[kind] = row
+    ood = qualifier.MODELS / "ood.json"
+    if ood.exists():
+        out["ood"] = json.loads(ood.read_text(encoding="utf-8"))
+    return out
+
+
 SECTIONS: dict[str, Callable[[], dict]] = {
     "dataset": dataset,
     "separation": lambda: {f"{s}{w}": separation(w, s) for w, s in ((150, "fixed"), (100, "fixed"),
@@ -285,6 +316,7 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "end_to_end": end_to_end,
     "confirmatory": confirmatory,
     "ramdocs": ramdocs_results,
+    "qualifier": qualifier_section,
 }
 
 
