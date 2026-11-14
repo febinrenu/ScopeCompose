@@ -212,7 +212,7 @@ class LLMClient:
                 f"{spec.base_url!r}, api_key={'set' if spec.api_key else 'MISSING'}. "
                 f"Copy .env.example to .env and fill it in."
             )
-        backend = OpenAICompatibleBackend(provider_name, spec.base_url, spec.api_key)
+        backend = OpenAICompatibleBackend(provider_name, spec.base_url, spec.api_key, timeout=spec.timeout_s)
         self._backends[provider_name] = backend
         return backend
 

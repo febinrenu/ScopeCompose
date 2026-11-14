@@ -163,6 +163,7 @@ class ProviderSpec:
     name: str
     base_url: str | None
     api_key: str | None
+    timeout_s: float = 120.0          # per request; NVIDIA's free endpoint queues for minutes
 
     @property
     def configured(self) -> bool:
@@ -250,7 +251,8 @@ def models() -> ModelsConfig:
             api_key = os.environ.get(p["api_key_env"])
         else:
             api_key = p.get("api_key_literal")
-        providers[name] = ProviderSpec(name=name, base_url=base_url, api_key=api_key)
+        providers[name] = ProviderSpec(name=name, base_url=base_url, api_key=api_key,
+                                       timeout_s=float(p.get("timeout_s", 120.0)))
 
     tiers: dict[str, TierSpec] = {}
     for name, t in (raw.get("tiers") or {}).items():

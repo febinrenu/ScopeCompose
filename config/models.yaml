@@ -35,10 +35,12 @@ providers:
   nvidia:
     base_url_env: NVIDIA_BASE_URL
     api_key_env: NVIDIA_API_KEY
+    timeout_s: 600              # the free endpoint queues requests; Mistral-Large-4 often takes 2-5 minutes
 
   nvidia2:                      # a standby key, used when the first is limited or failing
     base_url_env: NVIDIA_BASE_URL
     api_key_env: NVIDIA_API_KEY_2
+    timeout_s: 600
 
   frontier:
     base_url_env: FRONTIER_BASE_URL
