@@ -231,6 +231,24 @@ tiers:
     max_tokens: 3072              # reasons before answering, like gpt-oss
     fallback: false
 
+  # Deviation 3: Mistral-Large-4 reasons past any workable token limit on NVIDIA's endpoint (55 of
+  # its first 86 answers were cut off empty), so the top rung is Nemotron-3-Ultra with thinking off.
+  STUDY_NEMOTRON:
+    provider: nvidia
+    model: nvidia/nemotron-3-ultra-550b-a55b
+    temperature: 0.0
+    max_tokens: 1024
+    reasoning_effort: "off"
+    fallback: false
+
+  STUDY_NEMOTRON_NV2:
+    provider: nvidia2
+    model: nvidia/nemotron-3-ultra-550b-a55b
+    temperature: 0.0
+    max_tokens: 1024
+    reasoning_effort: "off"
+    fallback: false
+
   # The same models through the standby NVIDIA key.
   STUDY_OSS20B_NV2:
     provider: nvidia2

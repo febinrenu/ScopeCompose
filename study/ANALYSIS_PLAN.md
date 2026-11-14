@@ -157,3 +157,11 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
    hosted results were replication of direction before this change and remain so. NVIDIA
    requests go through a primary key and, if it is limited or failing, a standby key
    (`served_by` says `nvidia` or `nvidia2`); both reach the same hosted model.
+3. **Third hosted rung (2026-11-15, before any hosted analysis).** Mistral-Large-4 reasons
+   before answering, and on NVIDIA's endpoint its reasoning used up the 3,072-token limit with
+   no answer on 55 of its first 86 questions; a low reasoning effort still used 2,959 tokens
+   on one of them, reasoning cannot be switched off, and longer limits drop the connection. Its
+   answers are not analysed. The rung is Nemotron-3-Ultra (`nvidia/nemotron-3-ultra-550b-a55b`,
+   550B mixture of experts, 55B active) with its reasoning mode off, chosen before any of its
+   answers were scored because it was the largest model the endpoint served that answered in
+   seconds and returned a parseable answer on the two questions tried.

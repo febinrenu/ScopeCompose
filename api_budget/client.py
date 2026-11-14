@@ -108,6 +108,10 @@ class Tier(str, Enum):
     STUDY_MISTRAL4 = "STUDY_MISTRAL4"
     """Hosted Mistral-Large-4 (NVIDIA). Replication on a subsample."""
 
+    STUDY_NEMOTRON = "STUDY_NEMOTRON"
+    STUDY_NEMOTRON_NV2 = "STUDY_NEMOTRON_NV2"
+    """Hosted Nemotron-3-Ultra (550B MoE, 55B active), thinking off, on either NVIDIA key."""
+
     STUDY_OSS20B_NV2 = "STUDY_OSS20B_NV2"
     STUDY_GEMMA31B_NV2 = "STUDY_GEMMA31B_NV2"
     STUDY_MISTRAL4_NV2 = "STUDY_MISTRAL4_NV2"

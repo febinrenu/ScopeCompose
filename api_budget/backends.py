@@ -139,7 +139,11 @@ class OpenAICompatibleBackend:
         }
         if response_format:
             kwargs["response_format"] = response_format
-        if reasoning_effort and supports_reasoning_effort(model):
+        if reasoning_effort == "off":
+            # Hybrid reasoning models (Nemotron 3 on NVIDIA's API) switch thinking off in their chat
+            # template; left on, the reasoning alone can exhaust the token limit with no answer.
+            kwargs["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
+        elif reasoning_effort and supports_reasoning_effort(model):
             # Supported by gpt-oss and qwen on Groq; allam-2-7b rejects it with
             # a 400. The guard matters on the overflow path, where a request
             # built for one model gets re-sent to another.

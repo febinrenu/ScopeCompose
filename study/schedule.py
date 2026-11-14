@@ -24,7 +24,7 @@ from study import ram
 from study.run import CellInterrupted, MODELS, run_cell
 
 LOCAL = ("qwen7b", "llama8b")
-HOSTED = ("oss20b", "gemma31b", "mistral4")
+HOSTED = ("oss20b", "gemma31b", "nemotron")
 
 #: Ordered so the confirmatory cells finish first (analysis plan, "Local matrix, trimmed").
 CQA_CONFIRMATORY = ("gold", "gold_nocondel", "gold_nocondchk", "goldpad8", "top8", "rr8to3", "nli", "crs", "qc")

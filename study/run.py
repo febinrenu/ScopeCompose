@@ -38,6 +38,7 @@ MODELS: dict[str, Tier] = {
     "oss120b": Tier.STUDY_OSS120B,
     "gemma31b": Tier.STUDY_GEMMA31B,
     "mistral4": Tier.STUDY_MISTRAL4,
+    "nemotron": Tier.STUDY_NEMOTRON,
 }
 
 #: Providers serving the same open weights, tried in order when one's quota is spent or it is
@@ -46,6 +47,7 @@ ROUTES: dict[str, tuple[Tier, ...]] = {
     "oss20b": (Tier.STUDY_OSS20B, Tier.STUDY_OSS20B_NV, Tier.STUDY_OSS20B_NV2),
     "gemma31b": (Tier.STUDY_GEMMA31B, Tier.STUDY_GEMMA31B_NV2),
     "mistral4": (Tier.STUDY_MISTRAL4, Tier.STUDY_MISTRAL4_NV2),
+    "nemotron": (Tier.STUDY_NEMOTRON, Tier.STUDY_NEMOTRON_NV2),
 }
 # Ollama's cloud (STUDY_*_OC tiers) also serves the gpt-oss weights but is paid-only on this
 # account (HTTP 402), so it is not in the routes.

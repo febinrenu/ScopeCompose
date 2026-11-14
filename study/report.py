@@ -205,7 +205,7 @@ def tuning() -> dict:
 # --------------------------------------------------------------------------- #
 
 LOCAL_MODELS = ("qwen7b", "llama8b")
-HOSTED_MODELS = ("oss20b", "gemma31b", "mistral4")
+HOSTED_MODELS = ("oss20b", "gemma31b", "nemotron")
 
 
 def end_to_end() -> dict:
@@ -604,7 +604,7 @@ HOSTED_TABLE = "\n".join([
     r"\begin{tabular}{L{3.6cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}}",
     r"\toprule",
     r" & \multicolumn{3}{c}{\textbf{gpt-oss-20b}} & \multicolumn{3}{c}{\textbf{Gemma-4-31B}} "
-    r"& \multicolumn{3}{c}{\textbf{Mistral-Large-4}} \\",
+    r"& \multicolumn{3}{c}{\textbf{Nemotron-3-Ultra}} \\",
     r"\textbf{System} & C & N & U & C & N & U & C & N & U \\",
     r"\midrule",
     "%ROWS%" + r"\bottomrule",
