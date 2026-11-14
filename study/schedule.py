@@ -80,7 +80,7 @@ def local(only: str | None) -> int:
 
 
 HOSTED_WAIT_S = 1200          # Groq's daily cap is a rolling window: tokens come back through the day
-HOSTED_WORKERS = 4            # requests in flight per model; NVIDIA's free endpoint queues each one for minutes
+HOSTED_WORKERS = 8            # requests in flight per model; NVIDIA's free endpoint queues each one for minutes
 
 
 def hosted(models: tuple[str, ...]) -> int:

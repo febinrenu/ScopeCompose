@@ -154,4 +154,6 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
    prompt, temperature 0 and no other change. The ladder becomes three model families
    instead of two. gpt-oss-120b had answered no hosted question; Qwen 27B had answered 9 of
    them, which are not analysed. Qwen 27B's tuning-set probe (Table 2) is unaffected. The
-   hosted results were replication of direction before this change and remain so.
+   hosted results were replication of direction before this change and remain so. NVIDIA
+   requests go through a primary key and, if it is limited or failing, a standby key
+   (`served_by` says `nvidia` or `nvidia2`); both reach the same hosted model.
