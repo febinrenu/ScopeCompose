@@ -25,14 +25,13 @@ from study.run import CellInterrupted, MODELS, run_cell
 LOCAL = ("qwen7b", "llama8b")
 HOSTED = ("oss20b", "qwen27b", "oss120b")
 
-#: Ordered so the confirmatory cells finish first.
+#: Ordered so the confirmatory cells finish first (analysis plan, "Local matrix, trimmed").
 CQA_CONFIRMATORY = ("gold", "gold_nocondel", "gold_nocondchk", "goldpad8", "top8", "rr8to3", "nli", "crs", "qc")
-CQA_EXPLORATORY = ("closed", "top3", "top5", "top12", "top20", "adj", "page", "qc0", "grade", "select")
+CQA_EXPLORATORY = ("closed", "top3", "adj", "page", "qc0", "select")
 RAM_SYSTEMS = ("full", "oracle", "rr3", "nli", "crs", "select", "grade")
 
-#: Hosted cells: (system, question set, strata kept). Short oracle contexts on the whole
-#: subsample; the 8-chunk systems on its conditional questions only, to fit the daily caps.
-HOSTED_CELLS = (("gold", None), ("gold_nocondchk", "conditional"), ("top8", "conditional"), ("qc", "conditional"))
+#: Hosted cells: (system, strata kept). See the analysis plan, "Hosted cells".
+HOSTED_CELLS = (("gold", None), ("top8", None), ("qc", None), ("gold_nocondchk", "conditional"))
 
 
 def unload_local() -> None:
@@ -40,8 +39,25 @@ def unload_local() -> None:
         subprocess.run(["ollama", "stop", tag], capture_output=True, check=False)
 
 
+def prepare_qualifier() -> None:
+    """Train the cross-fitted scorers, score every candidate, choose the threshold -- each step once."""
+    plan = qualifier.fold_plan()
+    unload_local()
+    for fold in plan:
+        if not (qualifier.MODELS / fold / "done.json").exists():
+            print(f"training qualifier fold {fold}", flush=True)
+            qualifier.train_fold(fold)
+    if not qualifier.SCORES.exists():
+        print("scoring qualifier candidates", flush=True)
+        qualifier.main(["score"])
+    if not qualifier.THRESHOLD_FILE.exists():
+        qualifier.main(["threshold"])
+
+
 def local(only: str | None) -> int:
     status = 0
+    if only in (None, "cqa"):
+        prepare_qualifier()
     for m in LOCAL:
         unload_local()
         if only in (None, "cqa"):

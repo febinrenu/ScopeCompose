@@ -37,6 +37,18 @@ class QScore:
     ok: bool
     tokens: int
     latency_s: float
+    cond_in_context: int = 0      # gold condition elements the generator was shown
+    cond_noticed: int = 0         # ... of which it cited anywhere (evidence or conditions)
+
+
+def _conditions_in_context(rec: dict, q: cqa.Question, words: int, strategy: str) -> set[str]:
+    from study.retrieve import chunk_index
+
+    idx = chunk_index(words, strategy)
+    shown = {el for cid in rec.get("chunks", []) for el in idx[cid].elements}
+    if rec.get("system") == "gold_nocondel":          # the oracle rung that deletes condition elements
+        shown -= set(q.conditions)
+    return shown & set(q.conditions)
 
 
 def score_cell(path: Path) -> dict[str, QScore]:
@@ -47,9 +59,11 @@ def score_cell(path: Path) -> dict[str, QScore]:
         pred = [(a, tuple(c)) for a, c in rec["answers"]]
         s = scoring.score(pred, q.reference())
         correct, n_pred, n_gold = scoring.condition_counts(pred, q.reference())
+        in_ctx = _conditions_in_context(rec, q, rec.get("words", cqa.DEFAULT_CHUNK_WORDS), rec.get("strategy", "fixed"))
+        cited = {c for _, cs in pred for c in cs} | set(rec.get("evidence", []))
         out[qid] = QScore(qid, q.kind, q.doc, s.em, s.em_cond, s.f1, s.f1_cond, len(pred), correct, n_pred, n_gold,
                           bool(rec.get("ok")), int(rec.get("prompt_tokens", 0)) + int(rec.get("completion_tokens", 0)),
-                          float(rec.get("latency_s", 0.0)))
+                          float(rec.get("latency_s", 0.0)), len(in_ctx), len(in_ctx & cited))
     return out
 
 
@@ -71,6 +85,9 @@ def summarise(scores: Sequence[QScore]) -> dict:
     out["cond_precision"] = correct / pred if pred else float("nan")
     out["cond_recall"] = correct / gold if gold else float("nan")
     out["any_condition"] = mean(s.cond_pred > 0 for s in scores)       # share of answers that cite any condition
+    shown = sum(s.cond_in_context for s in scores)
+    out["cond_in_context"] = shown / gold if gold else float("nan")    # gold conditions that reached the generator
+    out["cond_noticed"] = sum(s.cond_noticed for s in scores) / shown if shown else float("nan")
     out["no_answer"] = mean(s.n_answers == 0 for s in scores)
     out["parse_ok"] = mean(s.ok for s in scores)
     out["tokens"] = mean(s.tokens for s in scores)

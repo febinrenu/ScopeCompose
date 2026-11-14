@@ -162,7 +162,11 @@ def train_fold(fold: str, *, epochs: int = 2, batch: int = 8, accum: int = 4, lr
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     tok = AutoTokenizer.from_pretrained(BASE_MODEL)
-    model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, num_labels=2).to(device)
+    # Explicit float32 master weights. Transformers 5 otherwise loads the checkpoint's stored
+    # precision (float16 here), and AdamW on float16 weights turns every parameter into NaN
+    # within a few steps. Mixed precision is applied only inside autocast below.
+    model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, num_labels=2,
+                                                               dtype=torch.float32).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     steps = math.ceil(len(pairs) / (batch * accum)) * epochs
     sched = get_linear_schedule_with_warmup(opt, int(0.1 * steps), steps)
@@ -217,7 +221,7 @@ def score_fold(fold: str, plan: dict[str, list[str]]) -> dict[str, dict[str, flo
     path = MODELS / fold
     device = "cuda" if torch.cuda.is_available() else "cpu"
     tok = AutoTokenizer.from_pretrained(path)
-    model = AutoModelForSequenceClassification.from_pretrained(path).to(device).eval()
+    model = AutoModelForSequenceClassification.from_pretrained(path, dtype=torch.float32).to(device).eval()
     out: dict[str, dict[str, float]] = {}
     for qid in plan[fold]:
         q = idx[qid]

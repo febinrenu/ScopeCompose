@@ -36,7 +36,7 @@ Rules:
 1. Use only the numbered lines. If they do not contain the answer, reply {"answers": []}.
 2. "answer": for a yes/no question write exactly "yes" or "no". Otherwise copy the shortest phrase from the lines that answers the question - an amount, a date, a period, a name, a form, a place.
 3. "evidence": the numbers of the lines that state the answer.
-4. "conditions": usually []. List a line here only if it states a requirement that must also be true for the answer to hold AND the person's situation does not say whether it is true. A line that states or supports the answer goes in "evidence", not here. A requirement the situation already settles goes nowhere.
+4. "conditions": the lines stating a requirement that must be satisfied for the answer to be true and that the person's situation does not mention. Give [] if there is no such requirement. A line that only states the answer goes in "evidence", not here.
 5. Give one answer. Give two only when the answer really differs depending on something the situation leaves open - then list each answer with its own conditions."""
 
 SYSTEM_CLOSED_BOOK = """\

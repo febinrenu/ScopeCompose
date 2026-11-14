@@ -96,6 +96,46 @@ C8 is not in the Holm family (it is a one-sided bound, not a p-value).
 * Remedy claims are made only from C7/C8; if C7 is not significant, the paper
   reports that and does not claim the remedy works.
 
+## Decisions taken on the tuning set (2026-11-14, before any evaluation run)
+
+**Generator prompt.** Four wordings of the condition instruction were run with the `gold`
+context on the tuning set (205 questions; hosted models on a fixed 60-question sample,
+`study/probe.py`). F1c on conditional / unconditional questions:
+
+| Prompt | Instruction for "conditions" | Qwen-7B | Llama-8B | Qwen3.8-27B (probe) |
+|---|---|---|---|---|
+| v1 | lines stating unresolved requirements (no evidence field) | 12.5 / 6.2 | 14.0 / 12.0 | - |
+| v2 | "usually []", evidence field added | 7.6 / 42.1 | - | 12.7 / 82.2 |
+| v3 | "list every one of them" | 8.2 / 16.9 | - | - |
+| v4 | the benchmark's definition: a requirement that must be satisfied for the answer to be true and that the scenario does not mention | 9.8 / 31.0 | 12.6 / 55.1 | 13.8 / 62.2 |
+
+Under the official metric a stated condition scores zero whenever the gold has none, and
+77% of questions have none, so the wording that discourages conditions (v2) scores best
+overall. Choosing by overall score would select a generator that cannot lose a condition
+because it rarely states one, which biases every stage comparison towards no effect.
+**v4 is frozen**: it states the benchmark's own definition of a condition and steers in
+neither direction. All four tuning results are reported in the paper.
+
+**Gate G2 is triggered.** `gold` F1c on conditional tuning questions is below 15 for both
+local models (9.8 and 12.6). As specified, the generation-level stage comparisons (C1-C3,
+C7) are also run on the hosted models over the hosted subsample, and the local results
+are reported with the floor effect stated. Even Qwen3.8-27B recovers under 7% of gold
+condition elements from gold context, so the generation stage is reported as the
+dominant point of loss, with this caveat: the metric credits a condition only when the
+exact element is cited.
+
+**Added secondary metric (deterministic).** *Condition noticed*: the share of gold
+condition elements present in the context that the generator cites anywhere (as evidence
+or as a condition). It separates "the condition was in context and ignored" from "it was
+used but not marked as a condition".
+
+**Local matrix, trimmed.** `top5`, `top12`, `top20` (retrieval depth is analysed without
+generation) and per-passage `grade` on ConditionalQA (nine calls per question) are dropped
+from the local generation matrix. Everything in the confirmatory family is kept.
+
+**Hosted cells.** Per hosted model: `gold` and `top8` and `qc` on the 300-question
+subsample; `gold_nocondchk` on its 150 conditional questions.
+
 ## Deviations
 
 None yet.
