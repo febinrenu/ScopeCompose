@@ -1,0 +1,293 @@
+Instructions for Authors(very very important):
+
+The Manuscript must be written entirely in English.
+All the submitted research articles will be checked for plagiarism before the review process.
+Plagiarism acceptance level of less than 15% and single source should be less than 5% will be considered for the review process.
+To avoid plagiarism, proper and appropriate citation practises should be followed.
+All submitted articles are subjected to a double-blind review process.
+The authors are asked to submit the source file (MS .doc, .docx, Latex .zip files).
+Author details should be included in the manuscript (Such as Name, Affiliation and Corresponding Author Emailid).
+Please provide a 150-250 word abstract. There should be no undefined abbreviations or references in the abstract.
+Please provide four to six keywords that can be used for indexing.
+If there are any conflicts of interest/competing interests, they must be disclosed.
+Funding information, Ethical Statement and acknowledgement to be included before the reference section.
+References should follow APA format.
+After review, you will receive a notification for Revision / Rejection / Acceptance.
+Once the paper is accepted for publication, send the copyright form along with the final paper in the Journal template. Format (MsWord or LaTex).
+Maximum number of pages per article: 25
+Maximum number of references in an article: 25
+Submission to First Decision: 4-6 weeks
+
+Submission to Acceptance: 6-8 weeks
+
+Acceptance to Publication: 2 week
+
+
+
+Scope:
+Journal of Trends in Computer Science and Smart technology (TCSST) is an international forum for scientists, research scholars, and engineers involved in all the different aspects of computer science and technology to publish state-of-the-art and high quality research articles. This multidisciplinary journal will present readers with a diverse range of publications, which include independent/group research works, review articles that are of interest to the international research community.
+
+The aim of the journal is to update the researchers on the significant research breakthroughs in a wide range of topics by presenting novel experiments, approaches, and concepts that enhance understanding of diverse areas of computer science. This journal is particularly interested in (but not limited to) the following sub-fields: computer architectures, programming languages, computing algorithms, sentiment analysis, natural language processing, GUI/computer graphics, computer security, augmented/virtual reality, artificial intelligence, and also the research articles that report on different topical areas and research progress initiated by computer scientists across the globe.
+
+Emphasizes the emerging and interdisciplinary research progress on the computer science domain.
+Investigates the theory, algorithms and methods involved in computer engineering practices.
+Archives novel research and innovative applications in all the aspects of computer science.
+Promotes the research insight and understanding on the state-of-the-art computer technologies.
+
+
+
+
+Publication Ethics and Malpractice Statement
+Publisher’s Statement
+As an independent publisher, IRO Journals is committed to upholding the highest standards of ethical research and publication practices. This statement is based on the guidelines developed by the Committee on Publication Ethics (COPE) https://publicationethics.org/guidance/Guidelines Our mission is to publish original research articles that contribute significantly to scientific and technological advancements. We achieve this through fair and ethical procedures in the screening and peer-review process.
+
+Research Misconduct and Malpractice
+IRO Journals takes all allegations of scientific misconduct, fraudulent publication, or plagiarism very seriously. In such cases, we will work closely with the editors-in-chief to thoroughly investigate the situation. Based on the findings, we will take appropriate actions to rectify the issue, including:
+
+Prompt publication of an erratum to clarify any errors or inconsistencies.
+Retraction of the entire article in severe cases of misconduct.
+Ethical Treatment and Non-Discrimination
+IRO Journals is dedicated to create a fair and inclusive environment for all researchers. We do not encourage discrimination based on factors such as age, race, religion, gender, sexual orientation, or disability in our publication processes.
+
+Complaints and Appeals
+The final decision regarding manuscript acceptance or rejection are made by the editors. Authors who wish to appeal an editorial decision can directly contact the journal. For complaints concerning co-authors, reviewers, or editorial board members, please reach out to the Editor-in-Chief.
+
+Transparency and Communication
+IRO Journals strives for transparency throughout the editorial process. Authors will receive clear and timely communication regarding the status of their submissions. We also encourage open communication and collaboration among researchers, editors, and reviewers.
+
+We are committed to continuously reviewing and updating our publication ethics policies to ensure we adhere to the highest standards and best practices in academic publishing.
+
+Post-Publication Retractions and Corrections
+IRO Journals is committed to publishing accurate and reliable research. This policy ensures that errors are addressed promptly and transparently, maintaining the integrity of the scientific record.
+
+Author Responsibility
+Authors are responsible for promptly notifying the journal editor or publisher of any significant errors or inaccuracies discovered in their published work. They should cooperate with the editor to determine the appropriate course of action, which may involve retraction or correction.
+
+Post-Publication Corrections
+If authors (or) readers identify incorrect data or other errors in a published manuscript, they should contact the journal editor or publisher at journals@iroglobal.com.
+
+Common reasons for corrections include prominent errors in data, figures, or authorship changes.
+
+In case of corrections, Editors will consult the COPE post-publication critique https://publicationethics.org/sites/default/files/handling-post-publication-critiques-cope-flowchart.pdf to determine the appropriate action. For "early release" articles, corrections may be made directly to the online version. Published articles will receive a formal correction statement attached to the version of record.
+
+Post-Publication Retractions
+Retraction of a published manuscript is a serious but necessary step in cases of severe misconduct, such as:
+
+Manipulation of research data or figures.
+Failure to obtain copyright permission for reused material.
+Unreproducible data.
+Unethical research, review, or publishing practices.
+We strongly condemn the creation and use of fabricated data and rigorously screen manuscripts, if any such arise post-publication, the article will be retracted by following the the COPE flowchart on fabricated data in a published article https://publicationethics.org/resources/flowcharts/clone-what-do-if-you-suspect-fabricated-data
+
+IRO Journals follows COPE's retraction guidelines https://publicationethics.org/retraction-guidelines when considering retractions.
+
+The process involves:
+
+Initial Investigation: The journal's editor investigates the complaint.
+Editorial Discussion: The editor discusses the findings with the publisher to determine if retraction is warranted.
+Author Communication: All authors are notified of the concern, and transparent communication is maintained throughout the investigation.
+Retraction Notice: If retraction is necessary, a formal retraction notice will be published, clearly stating the reason for retraction.
+Peer Review Policy
+The peer review process of the journal is committed to ensuring that the journal publishes only high-quality, original, and ethically sound research manuscripts, adhering to the principles outlined in COPE's Core Practices https://publicationethics.org/core-practices.
+
+Peer Review Process
+The following processes are adopted in the peer-review process of the journal:
+
+Preliminary Manuscript Evaluation
+All submitted manuscripts undergo an initial evaluation to assess their relevance to the journal's scope, originality of research question, soundness of methodology, and clarity of writing. Manuscripts that do not meet these criteria may be rejected at this stage. All submitted manuscripts will be checked for plagiarism using the CrossCheck ithenticate tool. The articles that are selected form this stage will be further processed and passed on to at least 3 expert reviewers from the same domain.
+
+Double-Blinded Review Process
+IRO journals employ a double-blind peer review process, where reviewers' identities are concealed from the authors and vice versa. Reviewers are selected based on their expertise in the relevant field and potential conflicts of interest are declared and managed according to COPE's guidelines https://publicationethics.org/files/Peer%20review%20guidelines.pdf. Authors can expect feedback on the novelty, methodology, results, and overall quality of their manuscript.
+
+Conflicts in Peer Review Process
+IRO Journals is committed to ensuring a fair and unbiased peer review process. IRO Journals continuously monitors its review process to ensure adherence to ethical standards and best practices. This includes monitoring reviewer performance and maintaining a reviewer database that considers potential conflicts of interest. We take several steps to mitigate potential conflicts and biases:
+
+Reviewer Selection:
+When authors suggest reviewers, editors carefully assess potential conflicts of interest. This includes ensuring reviewers are not from the same institution, laboratory, or have close personal or professional connections with the authors. Author affiliations are also scrutinized to identify discrepancies, such as mismatched institutional email addresses.
+If authors suggest reviewers with whom they might have connections, those reviewers will be disqualified. Similarly, if a manuscript's topic suggests potential bias, reviewers will be selected from different research areas.
+Potential reviewers are requested to disclose any conflicts or biases before accepting a review assignment.
+If conflicts arise or are undisclosed, IRO Journals follows the COPE flowchart guidelines https://publicationethics.org/sites/default/files/conflict-of-interest-submitted-manuscript-article-cope-flowchart.pdf for handling such situations.
+For published articles with undisclosed conflicts, we refer to the COPE flowchart for published articles https://publicationethics.org/resources/flowcharts/what-do-if-reader-suspects-undisclosed-conflict-interest-coi-published-article
+Fraudulent Practices:
+Discovery of fraudulent peer review practices or author affiliation manipulation will result in the manuscript being rejected, with a clear explanation provided to the authors.
+Authors who suspect bias or conflicts affecting their manuscript's review can contact the Editor-in-Chief or editorial office to address their concerns and provide additional information.
+Authors are required to disclose any financial or other conflicts of interest that might influence their research findings or interpretations. This includes personal or professional relationships, funding sources (including grant numbers), and any other potential conflicts.
+If author(s) or readers(s) suspect a conflict of interest in any published work from IRO Journals, please contact the journal's editor or the publisher at journals@iroglobal.com
+
+Editorial Policy
+IRO Journals publishes four issues per year, providing state-of-the-art research updates on emerging scientific and technical challenges in the digital era. We aim to support aspiring researchers by guiding them through the publication process, while adhering to the highest ethical standards. IRO Journals is committed to maintaining the integrity of the research record. Authors are expected to follow ethical research practices as outlined in COPE's Core Practices https://publicationethics.org/core-practices.
+
+Editorial Decisions and Author Communication
+The final decision (accept, reject, revise) is made by the Editor-in-Chief, considering the reviewers' recommendations, the overall quality of the manuscript, and its alignment with the journal's aims and scope. This decision-making process adheres to the principles outlined in COPE's Best Practice Guidelines for Journal Editors https://publicationethics.org/files/Best_Practice.pdf. The Editor's decision is always communicated along with the reviewers' comments (excluding reviewer identities) to ensure transparency. This allows authors to understand the rationale behind the decision and provides valuable feedback for revisions. Revised manuscripts are subject to further review by the original reviewers or additional reviewers as needed.
+
+Confidentiality
+IRO Journals maintain strict confidentiality of all submitted manuscripts and reviewer identities throughout the peer review process.
+
+Final Announcement
+The final opinion of the Journal Editor will be sent along with the expert reviews and recommendations received. In any case, the Journal Editor will make the final decision on the acceptance and rejection of any submitted manuscript.
+
+Complaints and Considerations
+This section addresses reconsiderations of editorial decisions and appeals regarding publication ethics. All complaints and considerations are initially handled by the managing editors and editors responsible for submitted articles. Authors who wish to appeal an editorial decision are encouraged to consult COPE's guidelines on appeals to editors https://publicationethics.org/appeals for best practices.
+
+Technical Content Complaints (Rejections):
+The Managing Editor or Editor-in-Chief (EiC) will consider appeals on review comments and rejection decisions. This may involve analyzing the appropriateness of the rejection statement or seeking additional reviewer opinions.
+
+Submission Process Appeals:
+The Editor-in-Chief and Managing Editor will investigate appeals regarding article review times. Authors will receive a response with appropriate feedback, which will also be shared with the editors involved to improve submission handling procedures.
+
+Complaints Regarding Managing Editors:
+Complaints against managing editors can be directly communicated to the Editor-in-Chief or forwarded to [email address removed].
+
+Data Disclosure and Transparency:
+IRO Journals is committed to transparency in research data. Whenever possible, authors are encouraged to share the underlying data associated with their research, following the FAIR principles (Findable, Accessible, Interoperable, Reusable) https://www.goFAIR.org/. Data sharing allows for independent verification of research findings and facilitates further scientific progress.
+
+The specific data sharing policies of IRO Journals may vary depending on the research scope and data type. However, authors should always be transparent about the data and tools used in their research. This may involve providing details about data collection methods, storage locations, and access restrictions.
+
+Falsifying data or images, research findings, or reports constitutes a serious ethical breach, violating the core principles of research integrity.
+
+Editors and reviewers who suspect fabricated data sets in a submitted manuscript should to the COPE flowchart on fabricated data in a submitted manuscript https://publicationethics.org/resources/flowcharts/fabricated-data-in-submitted-manuscript to take necessary action.
+
+Funding Disclosure
+Authors are required to disclose all sources of funding, both financial and non-financial, that directly supported the research presented in their manuscript. This includes grants, contracts, equipment donations, or other forms of assistance. Transparency in funding helps readers understand potential conflicts of interest and assess the research's objectivity.
+
+Editorial Code of Conduct
+IRO Journals adheres to the high ethical standards outlined in the COPE Code of Conduct and Best Practice Guidelines for Journal Editors https://publicationethics.org/files/Best_Practice.pdf. These guidelines provide a framework for editors to handle potential conflicts of interest and ensure fair and unbiased editorial decisions.
+
+Plagiarism Policy
+IRO Journals maintains high standards of publication ethics and academic integrity. The journal adheres to strict guidelines and consider plagiarism in any form as a serious ethical violation of publishing standards. All submitted manuscripts must ensure that all the content is original and properly cite the sources from which the presented research ideas, data and text are derived.
+
+Plagiarism Identification:
+IRO Journals recognizes the following forms of plagiarism:
+
+Copying text, figures, tables, or data from previously published sources without citation.
+Paraphrasing or rephrasing another’s ideas without credit.
+Submitting another’s work as one’s own.
+Reusing significant portions of one’s own previously published work (self-plagiarism) without proper citation or acknowledgment.
+Originality Requirement:
+By submitting a manuscript to IRO Journals, authors confirm that:
+
+The manuscript is original, unpublished, and not under consideration elsewhere.
+All sources used in the manuscript have been properly cited.
+No part of the submission has been copied or reproduced from other sources without appropriate acknowledgment.
+Plagiarism Screening
+All submitted manuscripts are initially screened for plagiarism using the plagiarism detection software- iThenticate. Plagiarism checking will be done at different phases of submission: after submission and before the peer review process begins.
+
+IRO Journals recognizes that authors may unintentionally reproduce text or ideas without proper citation. However, it remains the responsibility of the author(s) to ensure proper referencing and paraphrasing. Manuscripts with unintentional plagiarism will be returned to authors for correction prior to review.
+
+Acceptable Similarity Limits
+The similarity index of submitted manuscripts is assessed based on the extent and nature of overlap detected:
+
+Extent of Plagiarism	Editorial Action
+< 15%	Manuscript will be sent for further processing after minor revision if required.
+15–20%	Manuscript will be returned to the author for revision.
+> 20%	Manuscript will be rejected without review.
+Note: Single source similarity should be <5%
+Self-Plagiarism
+Self-plagiarism refers to the reuse of significant portions of one’s own previously published material without acknowledgment. Authors must have at least 70% original content, failure to adhere may result in rejection.
+
+Handling Detected Plagiarism
+Before Publication
+
+If plagiarism is detected during peer review or pre-publication stages:
+The editorial office will notify the author(s) and request explanation or revision.
+Depending on the extent of plagiarism, the manuscript may be returned for correction or rejected outright.
+After Publication
+
+If plagiarism is detected after publication, IRO Journals will retract the article formally if the plagiarism is substantial.
+Plagiarism Actions:
+IRO Journals encourages readers, reviewers, and researchers to report any suspected plagiarism found in its publications. Reports should include specific details and supporting evidence and be sent to journals@iroglobal.com
+
+All reported cases will be investigated by following COPE (Committee on Publication Ethics) guidelines.
+
+Ethical Business Practices
+All commercially funded publications and advertisements are distinct from editorial choices. Any product or service identified as an advertising or sponsored by a sponsor in IRO publications is not endorsed by IRO Journals. Commercial or financial interests, as well as any particular relationship with advertising clients or sponsors will not compromise the editorial content.
+
+IRO journals retain the right to refuse any form of advertising that is detrimental to the IRO identity or is incompatible with the material available on the IRO publications network.
+
+Once an advert has been published online, it can be removed from the journal's website at any time based on the requisition of Editor(s)-in-Chief or Publisher.
+
+IRO Journals will not allow advertisements for contradictory items or services that are known to be hazardous for human population.
+
+Advertisements must be verifiable and not deceptive or misleading. Advertisements should clearly identify the advertiser as well as the product or service being promoted. Copy that is exaggerated or extravagantly written will not be permitted.
+
+IRO Journal will not permit any non-research related campaign to be targeted to a specific article(s) or on any page.
+
+All advertisements for ICT research-specific campaigns must promote proper and reasonable usage and must not be deceptive.
+
+Advertisements and editorial material must be distinguished properly. IRO journal does not publish “advertisement” content, and sponsored supplements must be explicitly labelled. If a supplement did not go through peer review or went through a different peer review procedure than the remainder of the journal, it should be mentioned explicitly.
+
+Editorial choices will not be affected by existing or future sponsors and advertisers, nor will marketing decisions be impacted. Advertisers and sponsors have no control or influence over the results of keyword or search topic conducted by users on the website.
+
+When you visit our website, we work with third-party advertising firms to show adverts and/or gather certain information. These companies may use cookies or web beacons to collect non-personally identifiable information [not including your name, address, email address, or telephone number] during your visit to this website in order to assist in displaying the advertisements on other websites that are also likely to be of interest to you.
+
+Advertising Policy
+All commercially funded publications and advertisements are distinct from editorial choices. Any product or service identified as an advertising or sponsored by a sponsor in IRO publications is not endorsed by IRO Journals. Commercial or financial interests, as well as any particular relationship with advertising clients or sponsors will not compromise the editorial content.
+IRO journals retain the right to refuse any form of advertising that is detrimental to the IRO identity or is incompatible with the material available on the IRO publications network.
+Once an advert has been published online, it can be removed from the journal's website at any time based on the requisition of Editor(s)-in-Chief or Publisher.
+IRO Journals will not allow advertisements for contradictory items or services that are known to be hazardous for human population.
+Advertisements must be verifiable and not deceptive or misleading. Advertisements should clearly identify the advertiser as well as the product or service being promoted. Copy that is exaggerated or extravagantly written will not be permitted.
+IRO Journal will not permit any non-research related campaign to be targeted to a specific article(s) or on any page.
+All advertisements for ICT research-specific campaigns must promote proper and reasonable usage and must not be deceptive.
+Advertisements and editorial material must be distinguished properly. IRO journal does not publish “advertisement” content, and sponsored supplements must be explicitly labelled. If a supplement did not go through peer review or went through a different peer review procedure than the remainder of the journal, it should be mentioned explicitly.
+Editorial choices will not be affected by existing or future sponsors and advertisers, nor will marketing decisions be impacted. Advertisers and sponsors have no control or influence over the results of keyword or search topic conducted by users on the website.
+When you visit our website, we work with third-party advertising firms to show adverts and/or gather certain information. These companies may use cookies or web beacons to collect non-personally identifiable information [not including your name, address, email address, or telephone number] during your visit to this website in order to assist in displaying the advertisements on other websites that are also likely to be of interest to you.
+Policy for Advertising Complaints
+
+Please direct any advertising-related concerns to: contact@iroglobal.com
+
+Advertising Standards Council of India
+
+The Advertising Standards Council of India (ASCI), established in 1985, is a self-regulatory voluntary organization of the advertising industry in India. It is a non-Government body. ASCI is committed to the cause of self-regulation in advertising, ensuring the protection of the interest of consumers. ASCI seeks to ensure that advertisements conform to its Code for Self-Regulation, which requires advertisements to be legal, decent, honest and truthful, and not hazardous or harmful while observing fairness in competition. ASCI looks into complaints across ALL MEDIA such as Print, TV, Radio, hoardings, SMS, Emailers, Internet/website, product packaging, brochures, promotional material and point of sale material etc.
+
+Revenue Sources
+IRO journals is self-funded. It is not backed by any government or agency. Currently, subscription is the only source of revenue. The subscription resource covers the operating expenses such as web presence, online version, pre-press preparations, and staff wages.
+
+The journal subscription is not mandatory for article processing and publication.
+
+The subscriber receives the publication updates on the articles after every issue.
+
+Direct Marketing
+The journal has started a range of direct marketing activities, including direct sales, telemarketing, database marketing, direct transaction and generating direct response to adverts via direct mail and different broadcasts and website. These activities help the journal to develop long-term relations with the clients.
+
+The primary direct marketing activities are:
+
+Catalogue Marketing
+Email Marketing
+Digital Marketing [Websites, Social Media presence]
+Ethical Statement
+For Authors
+IRO Journals adheres to COPE's guidelines on authorship https://publicationethics.org/authorship, which define authorship as limited to individuals who have made significant contributions to the conception, design, execution, or interpretation of the reported research.
+
+Authorship Criteria:
+All authors must have implicit and explicit consent for the submitted research article.
+Implicit consent: Agreement on the content by all authors before submission.
+Explicit consent: Approval from institutions where the research was conducted, if applicable.
+All authors should have made substantial contributions to the research (e.g., data analysis, interpretation, software development, results, and analysis).
+Authors are expected to revise the manuscript to improve its scholarly content and approve the final version before publication.
+They are also responsible for the published work's integrity and data accuracy.
+All authors must approve the final manuscript content and its submission for publication.
+Corresponding authors are responsible for ensuring that all co-authors are included and their contributions acknowledged.
+Changes to Author Order or Listing:
+Authorship changes after the initial submission are strongly discouraged. If such changes are detected without prior approval, the paper will be removed from the review process.
+
+Authorship Disputes
+COPE offers guidance for editors and reviewers on identifying potential authorship issues or manipulation within manuscripts https://publicationethics.org/sites/default/files/recognising-authorship-problems-cope-infographic.pdf. Their resources also include flowcharts https://publicationethics.org/resources/flowcharts/authorship-concerns-unpublished-data for handling concerns and disputes arising during peer review and after publication. If the authors, editor, and publisher cannot resolve an authorship dispute, the author's institution may be consulted for clarification.
+
+Author Affiliations
+All authors are required to list their affiliation as either the institution where the research was conducted or their current institutional affiliation. If you suspect potential affiliation manipulation, please contact the journal's Editor or the publisher at journals@iroglobal.com
+
+Artificial Intelligence Chatbots and Authorship
+IRO Journals, in accordance with COPE https://publicationethics.org/cope-position-statements/ai-author policies, does not permit AI chatbots like ChatGPT, Gemini or other Large Language Models (LLMs) to be listed as authors. This is because LLMs cannot make substantial original contributions to research or bear responsibility for published data. However, if any AI programs or tools were used in developing the manuscript, this should be clearly explained within the manuscript itself. This explanation should include the names of the programs/tools, how they were used, and identification of any content created by them. At the end, the used tool should be acknowledged.
+
+Research Ethics and Data Privacy
+Research must comply with ethical standards for data collection, privacy, artificial intelligence, and responsible research practices.
+
+Informed Consent: Human-derived data must be collected with informed consent while ensuring participant privacy and confidentiality.
+
+Data Privacy: Personal, sensitive, and confidential data must be securely handled, anonymized, and protected.
+
+Responsible AI: AI models and automated systems should be developed and evaluated with fairness, transparency, and safety.
+
+Transparency: Authors must disclose funding sources and any potential conflicts of interest.
+
+Rigorous Review: IRO Journals reviews manuscripts carefully to ensure ethical research practices.
