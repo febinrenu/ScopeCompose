@@ -200,6 +200,81 @@ def tuning() -> dict:
 # Assembly
 # --------------------------------------------------------------------------- #
 
+# --------------------------------------------------------------------------- #
+# Generation: end-to-end cells, the confirmatory family, RAMDocs
+# --------------------------------------------------------------------------- #
+
+LOCAL_MODELS = ("qwen7b", "llama8b")
+HOSTED_MODELS = ("oss20b", "qwen27b", "oss120b")
+
+
+def end_to_end() -> dict:
+    """Per question set, model and system: the official metrics by stratum, plus the rule-and-exception subset."""
+    from study.analysis import by_stratum, score_cell, summarise
+    from study.run import RUNS
+
+    opposite = {q.id for q in cqa.questions() if q.kind == "conditional" and q.opposite_outcomes}
+    out: dict = {}
+    for qset, models in (("eval", LOCAL_MODELS), ("hosted", HOSTED_MODELS)):
+        for m in models:
+            for path in sorted((RUNS / qset).glob(f"*__{m}.jsonl")):
+                scores = score_cell(path)
+                if not scores:
+                    continue
+                row = by_stratum(scores)
+                row["opposite"] = summarise([s for q, s in scores.items() if q in opposite])
+                out.setdefault(qset, {}).setdefault(m, {})[path.stem.split("__")[0]] = row
+    if not out:
+        raise FileNotFoundError("no evaluation or hosted cells yet")
+    return out
+
+
+def confirmatory() -> dict:
+    from study.confirm import confirmatory as run
+
+    return run()
+
+
+def ramdocs_results() -> dict:
+    """RAMDocs per model and system: strict accuracy, gold recall, wrong-answer rate, overall and with misinformation,
+    and each reducer's paired change in strict accuracy against full context (questions are independent here)."""
+    from study import ram, ramdocs, stats
+
+    misinfo = {q.id for q in ramdocs.questions() if q.has_misinfo}
+
+    def summ(rs: list[dict]) -> dict:
+        if not rs:
+            return {"n": 0}
+        return {"n": len(rs), "correct": st.fmean(r["correct"] for r in rs),
+                "gold_recall": st.fmean(r["gold_recall"] for r in rs), "any_wrong": st.fmean(r["any_wrong"] for r in rs),
+                "kept": st.fmean(len(r["kept"]) for r in rs),
+                "tokens": st.fmean(r["prompt_tokens"] + r["completion_tokens"] for r in rs),
+                "calls": st.fmean(r["calls"] for r in rs)}
+
+    out: dict = {}
+    for path in sorted(ram.RUNS.glob("*__*.jsonl")):
+        system, m = path.stem.split("__")
+        recs = ram.read_cell(path)
+        if recs:
+            out.setdefault(m, {})[system] = {"cells": recs}
+    if not out:
+        raise FileNotFoundError("no RAMDocs cells yet")
+    for m, systems_ in out.items():
+        full = systems_.get("full", {}).get("cells", {})
+        for system, d in systems_.items():
+            recs = d.pop("cells")
+            d["all"] = summ(list(recs.values()))
+            d["misinfo"] = summ([r for q, r in recs.items() if q in misinfo])
+            d["no_misinfo"] = summ([r for q, r in recs.items() if q not in misinfo])
+            if system != "full" and full:
+                for name, keep in (("vs_full", None), ("vs_full_misinfo", misinfo)):
+                    a = {q: float(r["correct"]) for q, r in recs.items() if keep is None or q in keep}
+                    b = {q: float(r["correct"]) for q, r in full.items() if keep is None or q in keep}
+                    if set(a) & set(b):
+                        d[name] = stats.paired(a, b, {q: i for i, q in enumerate(sorted(set(a) | set(b)))})
+    return out
+
+
 SECTIONS: dict[str, Callable[[], dict]] = {
     "dataset": dataset,
     "separation": lambda: {f"{s}{w}": separation(w, s) for w, s in ((150, "fixed"), (100, "fixed"),
@@ -207,6 +282,9 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "retrieval": retrieval_all,
     "operator_survival": operator_survival,
     "tuning": tuning,
+    "end_to_end": end_to_end,
+    "confirmatory": confirmatory,
+    "ramdocs": ramdocs_results,
 }
 
 
