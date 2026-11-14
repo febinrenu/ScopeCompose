@@ -69,3 +69,4 @@ study/runs/
 paper/*.log
 paper/*.aux
 paper/*.out
+paper/main.pdf
