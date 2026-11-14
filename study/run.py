@@ -1,0 +1,177 @@
+"""Run one cell: (system x model x question set).
+
+    python -m study.run --system top8 --model qwen7b --set eval
+    python -m study.run --system gold top8 --model qwen7b --set tuning --limit 60
+
+A cell file is one JSON line per question, appended as it is answered, so an
+interrupted cell resumes where it stopped and nothing is paid for twice. A file
+that already holds answers from a different model, prompt or chunking is
+refused: a cell never mixes them. Scoring is done later, from these files, by
+``study.analysis`` -- running and scoring are separate so a number can be
+recomputed without calling a model.
+"""
+
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import json
+import sys
+import time
+from pathlib import Path
+from typing import Iterable, Sequence
+
+import settings
+from api_budget import BackendError
+from api_budget.client import LLMClient, Tier, get_client
+from study import cqa, reader, systems
+
+RUNS = settings.REPO_ROOT / "study" / "runs"
+
+MODELS: dict[str, Tier] = {
+    "qwen7b": Tier.STUDY_QWEN7B,
+    "llama8b": Tier.STUDY_LLAMA8B,
+    "oss20b": Tier.STUDY_OSS20B,
+    "qwen27b": Tier.STUDY_QWEN27B,
+    "oss120b": Tier.STUDY_OSS120B,
+}
+
+
+class CellInterrupted(RuntimeError):
+    """The cell stopped early (provider errors or a token budget); rerun to resume."""
+
+
+class CellMismatch(RuntimeError):
+    """The cell file was produced under a different configuration."""
+
+
+def model_id(model_key: str) -> str:
+    return settings.models().tier(MODELS[model_key].value).model or ""
+
+
+def cell_path(system: str, model_key: str, qset: str, env: systems.Env) -> Path:
+    variant = "" if (env.words, env.strategy, env.ranker) == (cqa.DEFAULT_CHUNK_WORDS, "fixed", "hybrid") \
+        else f"__{env.strategy}{env.words}-{env.ranker}"
+    return RUNS / qset / f"{system}__{model_key}{variant}.jsonl"
+
+
+def read_cell(path: Path) -> dict[str, dict]:
+    done: dict[str, dict] = {}
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rec = json.loads(line)
+                done[rec["qid"]] = rec
+    return done
+
+
+def question_set(name: str) -> list[cqa.Question]:
+    if name == "tuning":       # minus the four questions shown to the generator as worked examples
+        return [q for q in cqa.tuning_questions() if q.id not in reader.DEMO_QUESTION_IDS]
+    if name == "eval":
+        return cqa.eval_questions()
+    raise ValueError(f"unknown question set {name!r}")
+
+
+def applicable(system: str, qs: Iterable[cqa.Question]) -> list[cqa.Question]:
+    """Oracle systems are defined on answerable questions only: an unanswerable one has no gold chunk."""
+    qs = list(qs)
+    return [q for q in qs if q.kind != "unanswerable"] if system in systems.ORACLE else qs
+
+
+def run_cell(system: str, model_key: str, qset: str, *, env: systems.Env | None = None,
+             client: LLMClient | None = None, questions: Sequence[cqa.Question] | None = None,
+             limit: int | None = None, token_budget: int | None = None, max_errors: int = 3,
+             progress: bool = False) -> dict:
+    client = client or get_client()
+    tier = MODELS[model_key]
+    env = dataclasses.replace(env or systems.Env(), client=client, tier=tier)
+    config = {"system": system, "model": model_id(model_key), "prompts": reader.prompts_sha(),
+              "words": env.words, "strategy": env.strategy, "ranker": env.ranker}
+    path = cell_path(system, model_key, qset, env)
+    done = read_cell(path)
+    for rec in done.values():
+        got = {k: rec.get(k) for k in config}
+        if got != config:
+            diff = {k: (got[k], config[k]) for k in config if got[k] != config[k]}
+            raise CellMismatch(f"{path.name} was produced under a different configuration: {diff}")
+
+    todo = applicable(system, questions if questions is not None else question_set(qset))
+    if limit is not None:
+        todo = todo[:limit]
+    summary = {"cell": path.stem, "total": len(todo), "skipped": 0, "ran": 0, "tokens": 0}
+    errors = spent = 0
+    started = time.time()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8", newline="\n") as fh:
+        for q in todo:
+            if q.id in done:
+                summary["skipped"] += 1
+                continue
+            if token_budget is not None and spent >= token_budget:
+                raise CellInterrupted(f"{path.stem}: token budget {token_budget} reached after {summary['ran']} new answers")
+            ctx = systems.build(system, q, env)
+            if system in systems.ORACLE and not ctx.chunks and not env.gold(q).all_chunks:
+                summary["undefined"] = summary.get("undefined", 0) + 1     # no annotated evidence: the rung does not exist
+                continue
+            evidence = None if ctx.chunks is None else reader.render_evidence(ctx.chunks, drop_elements=ctx.drop_elements)
+            try:
+                gen = reader.generate(client, tier, q, evidence, step=f"study_{system}")
+            except BackendError as exc:
+                errors += 1
+                if errors >= max_errors:
+                    raise CellInterrupted(f"{path.stem}: {errors} provider errors, last: {exc}") from exc
+                continue
+            # An operator that called the model reports what that cost; it is part of the system's price.
+            extra_p = int(ctx.trace.get("extra_prompt_tokens", 0))
+            extra_c = int(ctx.trace.get("extra_completion_tokens", 0))
+            rec = {"qid": q.id, **config, "chunks": ctx.chunk_ids, "n_lines": evidence.n_lines if evidence else 0,
+                   "answers": [[a, list(c)] for a, c in gen.parsed.answers], "evidence": list(gen.parsed.evidence), "ok": gen.parsed.ok,
+                   "bad_citations": gen.parsed.bad_citations, "text": gen.text,
+                   "prompt_tokens": gen.prompt_tokens + extra_p, "completion_tokens": gen.completion_tokens + extra_c,
+                   "calls": 1 + int(ctx.trace.get("extra_calls", 0)),
+                   "latency_s": round(gen.latency_s, 3), "trace": ctx.trace}
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            fh.flush()
+            spent += rec["prompt_tokens"] + rec["completion_tokens"]
+            summary["ran"] += 1
+            summary["tokens"] = spent
+            if progress and summary["ran"] % 50 == 0:
+                rate = (time.time() - started) / summary["ran"]
+                left = len(todo) - summary["skipped"] - summary["ran"]
+                print(f"  {path.stem}: {summary['ran']} answered, {left} left, {rate:.1f}s each", file=sys.stderr, flush=True)
+    if errors:
+        raise CellInterrupted(f"{path.stem}: finished with {errors} question(s) skipped after provider errors; rerun")
+    summary["seconds"] = round(time.time() - started, 1)
+    return summary
+
+
+def main(argv: list[str] | None = None) -> int:
+    from study import operators, qualifier  # noqa: F401  (register the operator and remedy systems)
+
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--system", nargs="+", required=True)
+    ap.add_argument("--model", nargs="+", required=True, choices=sorted(MODELS))
+    ap.add_argument("--set", dest="qset", default="eval", choices=("tuning", "eval"))
+    ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--token-budget", type=int, default=None)
+    ap.add_argument("--words", type=int, default=cqa.DEFAULT_CHUNK_WORDS)
+    ap.add_argument("--strategy", default="fixed", choices=cqa.STRATEGIES)
+    ap.add_argument("--ranker", default="hybrid", choices=("bm25", "dense", "hybrid"))
+    args = ap.parse_args(argv)
+    env = systems.Env(args.words, args.strategy, args.ranker)
+    status = 0
+    for model_key in args.model:
+        for system in args.system:
+            try:
+                s = run_cell(system, model_key, args.qset, env=env, limit=args.limit,
+                             token_budget=args.token_budget, progress=True)
+                print(json.dumps(s), flush=True)
+            except CellInterrupted as exc:
+                print(f"INTERRUPTED (resumable): {exc}", file=sys.stderr, flush=True)
+                status = 3
+    return status
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

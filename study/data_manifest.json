@@ -1,0 +1,14 @@
+{
+ "conditionalqa": {
+  "LICENSE.txt": "62a47f90ddb8fda1bbf1e731a5861d827c109a3570b86b371f9d927cbc75aa14",
+  "README.md": "2c128ba7e4a50c3481f65d63536b1a8f7ab09d7135573df38e5085faa5323d06",
+  "dev.json": "a06cfe3e8b3ffe04f2652a2dbd912b647eb4448b724585c891539344b02fb7c7",
+  "documents.json": "1c977c1b14738b9ce1e53336c5abf3b3de34b72ee24985e7de6d8fae30856c59",
+  "evaluate.py.txt": "417d662aa21b5affafe4d45e0da04fb885e29bd4c26cb7fb3062523a69409fcc",
+  "train.json": "2976f448bad58efd747c5b7b4127fb3ad7a4834f760e9022c06a86536618bc2d"
+ },
+ "ramdocs": {
+  "RAMDocs_test.jsonl": "c67f699c97349f00cf1bd08d1dbf8ca1d0cc38c306715c93a10a4f961dcf28b7",
+  "README.md": "3ea3839483081f927203722da7cb381d86e9824bf8e0eb036a3a3a7837f6dd02"
+ }
+}

@@ -55,3 +55,12 @@ site/test-results/
 
 # Third-party sources cloned for reading; vendor only what is used, at a pinned commit
 third_party/normbench_src/
+
+# Public benchmarks fetched by study/fetch_data.py (redistributed by their authors, pinned by hash)
+data/external/
+
+# Study intermediates (rankings, embeddings): regenerable from data/external
+study/artifacts/
+
+# Model outputs per cell (large; results.json and tables are committed instead)
+study/runs/
