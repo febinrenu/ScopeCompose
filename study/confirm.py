@@ -53,7 +53,7 @@ EXPLORATORY: tuple[tuple[str, str, str, str], ...] = (
 )
 
 LOCAL = ("qwen7b", "llama8b")
-HOSTED = ("oss20b", "qwen27b", "oss120b")
+HOSTED = ("oss20b", "gemma31b", "mistral4")
 
 
 @lru_cache(maxsize=None)

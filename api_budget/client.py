@@ -102,6 +102,12 @@ class Tier(str, Enum):
     STUDY_OSS120B = "STUDY_OSS120B"
     """Hosted gpt-oss-120b. Replication on a subsample."""
 
+    STUDY_GEMMA31B = "STUDY_GEMMA31B"
+    """Hosted Gemma-4-31B (NVIDIA). Replication on a subsample."""
+
+    STUDY_MISTRAL4 = "STUDY_MISTRAL4"
+    """Hosted Mistral-Large-4 (NVIDIA). Replication on a subsample."""
+
     # Other providers serving the *same weights* as a study tier. Used only when the primary
     # provider's quota is spent; every answer records which one served it.
     STUDY_OSS20B_NV = "STUDY_OSS20B_NV"

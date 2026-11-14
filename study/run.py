@@ -36,14 +36,17 @@ MODELS: dict[str, Tier] = {
     "oss20b": Tier.STUDY_OSS20B,
     "qwen27b": Tier.STUDY_QWEN27B,
     "oss120b": Tier.STUDY_OSS120B,
+    "gemma31b": Tier.STUDY_GEMMA31B,
+    "mistral4": Tier.STUDY_MISTRAL4,
 }
 
 #: Providers serving the same open weights, tried in order when one's quota is spent or it is
 #: unreachable. The cell's model id stays the primary tier's; each answer records ``served_by``.
 ROUTES: dict[str, tuple[Tier, ...]] = {
-    "oss20b": (Tier.STUDY_OSS20B, Tier.STUDY_OSS20B_NV, Tier.STUDY_OSS20B_OC),
-    "oss120b": (Tier.STUDY_OSS120B, Tier.STUDY_OSS120B_OC),
+    "oss20b": (Tier.STUDY_OSS20B, Tier.STUDY_OSS20B_NV),
 }
+# Ollama's cloud (STUDY_*_OC tiers) also serves the gpt-oss weights but is paid-only on this
+# account (HTTP 402), so it is not in the routes.
 _route: dict[str, int] = {}          # model key -> route in use; sticky for the life of the process
 _route_lock = threading.Lock()
 
@@ -74,10 +77,15 @@ def cell_path(system: str, model_key: str, qset: str, env: systems.Env) -> Path:
 def read_cell(path: Path) -> dict[str, dict]:
     done: dict[str, dict] = {}
     if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
+        lines = [l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        for i, line in enumerate(lines):
+            try:
                 rec = json.loads(line)
-                done[rec["qid"]] = rec
+            except json.JSONDecodeError:
+                if i == len(lines) - 1:      # a run stopped mid-write: that question is simply asked again
+                    continue
+                raise
+            done[rec["qid"]] = rec
     return done
 
 
@@ -132,6 +140,10 @@ def run_cell(system: str, model_key: str, qset: str, *, env: systems.Env | None 
     config = {"system": system, "model": model_id(model_key), "prompts": reader.prompts_sha(),
               "words": env.words, "strategy": env.strategy, "ranker": env.ranker}
     path = cell_path(system, model_key, qset, env)
+    if path.exists():                           # drop a line cut off by an interrupted run before appending
+        raw = path.read_bytes()
+        if raw and not raw.endswith(b"\n"):
+            path.write_bytes(raw[: raw.rfind(b"\n") + 1])
     done = read_cell(path)
     for rec in done.values():
         got = {k: rec.get(k) for k in config}

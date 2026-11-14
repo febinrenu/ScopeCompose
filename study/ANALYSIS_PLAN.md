@@ -146,3 +146,12 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
    token limit). Every answer records the provider in `served_by`; the paper reports the
    share served by each and the gold-context F1c by provider. Qwen 27B is served only by
    Groq and is unchanged. No system, question, metric or test changes.
+2. **Hosted models (2026-11-15, same day, before any hosted analysis).** Ollama's cloud
+   turned out to be paid-only for this account, leaving gpt-oss-120b and Qwen 27B on Groq
+   alone (about twelve more days each). Both are replaced in the hosted replication by
+   models NVIDIA serves: Gemma-4-31B (`google/gemma-4-31b-it`, dense) and Mistral-Large-4
+   (`mistralai/mistral-large-4-1t-a52b`, mixture of experts, 52B active), with the frozen
+   prompt, temperature 0 and no other change. The ladder becomes three model families
+   instead of two. gpt-oss-120b had answered no hosted question; Qwen 27B had answered 9 of
+   them, which are not analysed. Qwen 27B's tuning-set probe (Table 2) is unaffected. The
+   hosted results were replication of direction before this change and remain so.

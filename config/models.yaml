@@ -209,6 +209,22 @@ tiers:
     reasoning_effort: low
     fallback: false
 
+  # Hosted ladder after deviation 2 (study/ANALYSIS_PLAN.md): Groq's daily cap made Qwen 27B and
+  # gpt-oss-120b two-week runs, so the second and third rungs are served by NVIDIA instead.
+  STUDY_GEMMA31B:
+    provider: nvidia
+    model: google/gemma-4-31b-it
+    temperature: 0.0
+    max_tokens: 1024
+    fallback: false
+
+  STUDY_MISTRAL4:
+    provider: nvidia
+    model: mistralai/mistral-large-4-1t-a52b
+    temperature: 0.0
+    max_tokens: 3072              # reasons before answering, like gpt-oss
+    fallback: false
+
   # The same open weights from other providers, used in turn when Groq's daily cap
   # is spent (study/run.py, ROUTES). Settings identical to the primary tier.
   STUDY_OSS20B_NV:

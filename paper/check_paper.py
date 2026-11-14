@@ -107,7 +107,7 @@ def main() -> int:
                    r"|width=[0-9.]+\\textwidth", " ", prose)
     allowed = re.compile(r"\b(?:Table|Figure|Section|Tables|Figures)~?\s*\d+(?:--\d+)?|\b(?:v[1-4]|k\s*=\s*\d+)\b"
                          r"|\b(?:BM25|F1|DeBERTa-?v?3?|Qwen2\.5-7B(?:-Instruct)?|Llama-3\.1-8B(?:-Instruct)?"
-                         r"|Qwen3\.8-27B|gpt-oss-\d+b|bge-reranker-base|ConditionalQA v1\.0|COLM 2025|gov\.uk|top-\d+)\b"
+                         r"|Qwen3\.8-27B|Gemma-4-31B|Mistral-Large-4|gpt-oss-\d+b|bge-reranker-base|ConditionalQA v1\.0|COLM 2025|gov\.uk|top-\d+)\b"
                          r"|\b(?:19|20)\d\d\b|\b\d+-word\b|\b(?:one|two)\b")
     stray = sorted({t for t in re.findall(r"\b\d[\d.,]*\b", allowed.sub(" ", prose))})
     # Numbers fixed by the design (not measured) are allowed when listed here.
