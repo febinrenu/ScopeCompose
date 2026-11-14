@@ -17,6 +17,13 @@
 \usepackage{titlesec}
 \usepackage{booktabs}
 \usepackage{mathptmx}
+% The template's mathptmx sets Times under pdfLaTeX. Under XeTeX (Tectonic) it sets only the maths,
+% so the text gets TeX Gyre Termes, the free Times clone; pdfLaTeX builds are unchanged.
+\usepackage{iftex}
+\ifXeTeX
+  \usepackage{fontspec}
+  \setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold, ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\fi
 \usepackage{setspace}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{1em}
@@ -46,6 +53,10 @@
 \renewcommand{\footrulewidth}{0 pt}
 \renewcommand{\headrulewidth}{0 pt}
 \usepackage{amsmath,amssymb}
+
+\usepackage{xcolor}
+% A visible marker for text that waits on results. The submission check fails while any remains.
+\newcommand{\pending}[1]{\textcolor{red}{\textbf{[PENDING: #1]}}}
 
 \input{numbers}
 

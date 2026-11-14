@@ -42,6 +42,9 @@ def dataset() -> dict:
         "pages": len(cqa.documents()),
         "chunks": len(ch),
         "chunk_words": st.fmean(c.n_words for c in ch),
+        "chunk_words_section": st.fmean(c.n_words for c in cqa.chunks(cqa.DEFAULT_CHUNK_WORDS, "section")),
+        "chunk_words_100": st.fmean(c.n_words for c in cqa.chunks(100, "fixed")),
+        "chunk_words_300": st.fmean(c.n_words for c in cqa.chunks(300, "fixed")),
         "labelled_questions": len(qs),
         "labelled_conditional": sum(q.kind == "conditional" for q in qs),
         "tuning_pages": s["n_tuning_docs"],
@@ -52,6 +55,7 @@ def dataset() -> dict:
         "eval_unconditional": len(s["eval"]["unconditional"]),
         "eval_unanswerable": len(s["eval"]["unanswerable"]),
         "eval_opposite": sum(q.opposite_outcomes for q in ev),
+        "hosted_questions": len(cqa.hosted_questions()),
         "ramdocs_questions": len(rq),
         "ramdocs_multi": sum(q.regime == "multi" for q in rq),
         "ramdocs_misinfo": sum(q.has_misinfo for q in rq),
@@ -162,6 +166,37 @@ def operator_survival() -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# Prompt tuning (tuning set only; gold context)
+# --------------------------------------------------------------------------- #
+
+PROMPT_DIRS = {"v1": "tuning_prompt_v1", "v2": "tuning_prompt_v2", "v3": "tuning_prompt_v3", "v4": "tuning"}
+
+
+def tuning() -> dict:
+    """``gold`` on the tuning set under each prompt wording, per model; hosted models on the probe sample."""
+    from study.analysis import score_cell, summarise
+    from study.probe import probe_questions
+    from study.run import RUNS
+
+    probe = {q.id for q in probe_questions()}
+    out: dict[str, dict] = {}
+    for prompt, d in PROMPT_DIRS.items():
+        for path in sorted((RUNS / d).glob("gold__*.jsonl")):
+            model = path.stem.split("__")[1]
+            sc = score_cell(path)
+            if model in ("qwen27b", "oss20b", "oss120b"):
+                sc = {k: v for k, v in sc.items() if k in probe}
+            row = {}
+            for kind in ("conditional", "unconditional"):
+                s = summarise([v for v in sc.values() if v.kind == kind])
+                row[kind] = {k: s.get(k) for k in ("n", "f1", "f1_cond", "cond_precision", "cond_recall",
+                                                    "any_condition", "cond_in_context", "cond_noticed")}
+            row["all"] = {k: summarise(list(sc.values())).get(k) for k in ("n", "f1", "f1_cond")}
+            out.setdefault(prompt, {})[model] = row
+    return out
+
+
+# --------------------------------------------------------------------------- #
 # Assembly
 # --------------------------------------------------------------------------- #
 
@@ -171,6 +206,7 @@ SECTIONS: dict[str, Callable[[], dict]] = {
                                                                     (300, "fixed"), (150, "section"))},
     "retrieval": retrieval_all,
     "operator_survival": operator_survival,
+    "tuning": tuning,
 }
 
 
@@ -215,6 +251,20 @@ MACROS: dict[str, tuple[str, Callable]] = {
     "nPages": ("dataset.pages", integer),
     "nChunks": ("dataset.chunks", integer),
     "chunkWords": ("dataset.chunk_words", lambda x: f"{x:.0f}"),
+    "chunkWordsSection": ("dataset.chunk_words_section", lambda x: f"{x:.0f}"),
+    "chunkWordsHundred": ("dataset.chunk_words_100", lambda x: f"{x:.0f}"),
+    "chunkWordsThreeHundred": ("dataset.chunk_words_300", lambda x: f"{x:.0f}"),
+    "tunNoticedQwen": ("tuning.v4.qwen7b.conditional.cond_noticed", pct),
+    "tunNoticedLlama": ("tuning.v4.llama8b.conditional.cond_noticed", pct),
+    "tunNoticedBig": ("tuning.v4.qwen27b.conditional.cond_noticed", pct),
+    "tunRecallQwen": ("tuning.v4.qwen7b.conditional.cond_recall", pct),
+    "tunRecallLlama": ("tuning.v4.llama8b.conditional.cond_recall", pct),
+    "tunRecallBig": ("tuning.v4.qwen27b.conditional.cond_recall", pct),
+    "tunFcCondQwen": ("tuning.v4.qwen7b.conditional.f1_cond", pct),
+    "tunFcCondLlama": ("tuning.v4.llama8b.conditional.f1_cond", pct),
+    "tunFcCondBig": ("tuning.v4.qwen27b.conditional.f1_cond", pct),
+    "tunAnyCondUncondVOne": ("tuning.v1.qwen7b.unconditional.any_condition", pct),
+    "tunAnyCondUncondVOneLlama": ("tuning.v1.llama8b.unconditional.any_condition", pct),
     "nLabelled": ("dataset.labelled_questions", integer),
     "nLabelledCond": ("dataset.labelled_conditional", integer),
     "nTuningPages": ("dataset.tuning_pages", integer),
@@ -225,6 +275,7 @@ MACROS: dict[str, tuple[str, Callable]] = {
     "nEvalUncond": ("dataset.eval_unconditional", integer),
     "nEvalUnans": ("dataset.eval_unanswerable", integer),
     "nEvalOpposite": ("dataset.eval_opposite", integer),
+    "nHostedQ": ("dataset.hosted_questions", integer),
     "nRamQ": ("dataset.ramdocs_questions", integer),
     "nRamMulti": ("dataset.ramdocs_multi", integer),
     "nRamMisinfo": ("dataset.ramdocs_misinfo", integer),
@@ -284,8 +335,62 @@ def write_numbers(results: dict, extra: dict[str, str] | None = None) -> int:
     return missing
 
 
+TABLES = settings.REPO_ROOT / "paper" / "tables"
+
+PROMPT_LABELS = {
+    "v1": "lines stating unresolved requirements; no evidence field",
+    "v2": "``usually []''; evidence field added",
+    "v3": "``list every one of them''",
+    "v4": "the benchmark's definition (frozen)",
+}
+
+
+def tuning_rows(results: dict) -> str:
+    lines = []
+    for p, label in PROMPT_LABELS.items():
+        cells = []
+        for m in ("qwen7b", "llama8b", "qwen27b"):
+            row = results.get("tuning", {}).get(p, {}).get(m)
+            if row is None:
+                cells += ["--", "--"]
+                continue
+            c, u = row["conditional"]["f1_cond"], row["unconditional"]["f1_cond"]
+            cells += [f"{100 * c:.1f} / {100 * u:.1f}", f"{100 * row['unconditional']['any_condition']:.0f}\\%"]
+        lines.append(f"{p} & {label} & " + " & ".join(cells) + r" \\")
+    return "\n".join(lines) + "\n"
+
+
+#: Table 2, written whole: \input cannot sit between rows of a tabular.
+TUNING_TABLE = "\n".join([
+    r"% Generated by study/report.py. Do not edit by hand.",
+    r"\begin{center}",
+    r"\textbf{Table 2.} Generator wording on the tuning set with the gold chunks in context: F1 with conditions (\%) "
+    r"on conditional (C) and unconditional (U) questions, and the share of unconditional answers that name any "
+    r"condition. Qwen3.8-27B on a fixed 60-question sample of the tuning set.\\\vspace{5pt}",
+    r"{\fontsize{10}{12}\selectfont",
+    r"\begin{tabular}{L{1.15cm}L{4.05cm}P{1.45cm}P{1.0cm}P{1.45cm}P{1.0cm}P{1.45cm}P{1.0cm}}",
+    r"\toprule",
+    r" & & \multicolumn{2}{c}{\textbf{Qwen2.5-7B}} & \multicolumn{2}{c}{\textbf{Llama-3.1-8B}} "
+    r"& \multicolumn{2}{c}{\textbf{Qwen3.8-27B}} \\",
+    r"\textbf{Prompt} & \textbf{Instruction for conditions} & C / U & cond. on U & C / U & cond. on U "
+    r"& C / U & cond. on U \\",
+    r"\midrule",
+    "%ROWS%" + r"\bottomrule",
+    r"\end{tabular}",
+    r"}",
+    r"\end{center}",
+    "",
+])
+
+
+def write_tables(results: dict) -> None:
+    TABLES.mkdir(parents=True, exist_ok=True)
+    (TABLES / "tuning.tex").write_text(TUNING_TABLE.replace("%ROWS%", tuning_rows(results)), encoding="utf-8")
+
+
 def main() -> int:
     results = build()
+    write_tables(results)
     missing = write_numbers(results)
     print(f"wrote {RESULTS.relative_to(settings.REPO_ROOT)} and {NUMBERS.relative_to(settings.REPO_ROOT)}"
           f" ({len(MACROS)} macros, {missing} not yet available)")

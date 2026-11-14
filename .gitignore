@@ -64,3 +64,8 @@ study/artifacts/
 
 # Model outputs per cell (large; results.json and tables are committed instead)
 study/runs/
+
+# LaTeX build outputs
+paper/*.log
+paper/*.aux
+paper/*.out

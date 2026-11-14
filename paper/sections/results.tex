@@ -1,0 +1,51 @@
+\section{{Results and Discussion}}
+
+We follow a condition through the pipeline in order: where chunking puts it, whether retrieval finds it, whether an evidence-reducing operator keeps it, and whether the generator states it. The first three stages are measured directly against the human annotation, without any language model; the fourth uses the official metric.
+
+\subsection{Chunking separates conditions from the answers they qualify}
+\label{sec:chunking}
+
+With 150-word chunks, the gold evidence of a conditional question no longer fits in a single chunk for \sepCond\% of questions, against \sepUncond\% of unconditional ones, and a conditional question needs \goldChunksCond{} gold chunks on average against \goldChunksUncond{} (Figure~1). For \condOnly\% of conditional questions at least one condition sits in a chunk that holds no other evidence the answer needs: a chunk that a pipeline can lose while still producing a fluent and partly correct answer. In \condApart\% of them every condition is in a different chunk from every statement of the answer.
+
+Larger chunks reduce separation without removing it: \sepCondThreeHundred\% of conditional questions are still split at 300 words (mean \chunkWordsThreeHundred{} words per chunk), and \sepCondHundred\% at 100 words (mean \chunkWordsHundred{}). Chunking that starts a new chunk at every top-level heading produces much smaller chunks on these pages (mean \chunkWordsSection{} words) and still splits \sepCondSection\% of conditional questions, fewer than fixed chunks of comparable size. Conditions on gov.uk pages are typically list items under a lead-in sentence and qualifying paragraphs below a rule, so the structure that states a condition is also the structure that a word budget cuts.
+
+\begin{center}
+\includegraphics[width=0.82\textwidth]{separation.pdf}
+\vspace{5pt}\\
+\textbf{Figure 1.} Share of questions whose gold evidence and conditions span more than one chunk, by chunking strategy, over all \nLabelled{} labelled ConditionalQA questions.
+\end{center}
+
+\subsection{Retrieval finds conditions as often as answers, except those chunked apart}
+\label{sec:retrieval}
+
+Retrieval does not discriminate against conditions as such. At $k=8$ the hybrid retriever returns \recAnsEight\% of answer chunks and \recCondEight\% of condition chunks of conditional evaluation questions, and the two curves stay together at every depth (Figure~2). The exception is the chunk that holds a condition and nothing else: only \recCondOnlyEight\% of these are retrieved at $k=8$, and they trail the other curves until $k=50$. Overall, the full gold reaches the generator for \recAllGoldEight\% of conditional questions at $k=8$, and when every answer chunk has been retrieved, at least one condition chunk is still missing in \recLostGivenAnsEight\% of cases. That is the configuration that produces a confident answer without its caveat.
+
+\begin{center}
+\includegraphics[width=0.82\textwidth]{recall.pdf}
+\vspace{5pt}\\
+\textbf{Figure 2.} Recall of gold chunks against retrieval depth for the \nEvalCond{} conditional evaluation questions (hybrid BM25 and Contriever retrieval over \nChunks{} chunks). Condition-only chunks hold a condition and no other gold evidence.
+\end{center}
+
+\subsection{Evidence-reducing operators are blind to conditions}
+\label{sec:operators}
+
+The model-free operators decide which retrieved chunks to keep before any answer is generated, so their effect on conditions can be measured directly (Figure~3, left). Reranking the top 8 down to 3 removes \rrCondDrop\% of the retrieved condition chunks and \rrAnsDrop\% of the retrieved answer chunks. The contradiction filter changes the context of \nliChanged\% of conditional questions, although every passage comes from one consistent body of government guidance, and removes \nliCondDrop\% of condition chunks and \nliAnsDrop\% of answer chunks. The ConflictRAG-style resolver changes \crsChanged\% of contexts and removes \crsCondDrop\% and \crsAnsDrop\% respectively.
+
+None of them targets conditions; none of them protects them either. An exception is, to an NLI model, a contradiction of the rule it qualifies. For one evaluation question the filter kept ``You'll get a `Certificate of Destruction' to prove that the vehicle has been destroyed'' and dropped, with contradiction probability 1.00, the gold condition ``You will not get a certificate of destruction if the ATF decides to repair and sell your vehicle''. It also fires between unrelated pages: for another question it dropped the gold row giving the weekly rate for an eldest child because it scored as contradicting a chunk about the working hours of 13- to 14-year-olds. On RAMDocs, where removing documents is the purpose, the same operators do not single out misinformation either (Figure~3, right): reranking keeps \ramRrMisinfo\% of misinformation documents and \ramRrCorrect\% of correct ones, because a document in which one entity has been swapped for another is exactly as relevant to the question as the original; the contradiction filter keeps \ramNliMisinfo\% and \ramNliCorrect\%. What these operators remove is decided by relevance and surface contradiction, not by whether a passage is true or whether the answer depends on it.
+
+\begin{center}
+\includegraphics[width=\textwidth]{operators.pdf}
+\vspace{5pt}\\
+\textbf{Figure 3.} Left: share of the gold condition chunks and answer chunks retrieved in the top 8 that each operator removes (\nOpCond{} conditional evaluation questions with a retrieved condition chunk). Right: share of RAMDocs documents each operator keeps, by document type (\nRamQ{} questions; documents in reranker order).
+\end{center}
+
+\subsection{Generation: conditions in context are rarely stated}
+\label{sec:generation}
+
+The last stage is the largest. With exactly the gold chunks in context, so that every condition is present, the generators cite only \tunNoticedQwen\% (Qwen2.5-7B), \tunNoticedLlama\% (Llama-3.1-8B) and \tunNoticedBig\% (Qwen3.8-27B) of the condition lines anywhere in their output, and mark \tunRecallQwen\%, \tunRecallLlama\% and \tunRecallBig\% of them as conditions on the answer (tuning set). F1 with conditions on these questions is \tunFcCondQwen, \tunFcCondLlama{} and \tunFcCondBig{} respectively, against 56.6 for the benchmark's human annotators \cite{sun2022conditionalqa}. A larger model answers unconditional questions much better but does not find the conditions much better.
+
+The metric itself rewards silence. A stated condition scores zero whenever the gold answer has none, and most questions have none, so an instruction that discourages conditions raises the overall score while lowering it on conditional questions (Table~2). Without a separate field for supporting lines, both local models listed a condition for \tunAnyCondUncondVOne\% and \tunAnyCondUncondVOneLlama\% of unconditional questions, mostly the lines that state the answer. We fixed the wording that states the benchmark's own definition of a condition (v4) rather than the wording with the best overall score, because a generator that rarely states conditions cannot lose one, and every comparison of evidence policies would then show no effect by construction.
+
+\input{tables/tuning}
+
+\pending{End-to-end results: the oracle ladder, operators and completion on the evaluation set (Tables 3--4), RAMDocs (Table 5), and the hosted replication are written when their cells are complete.}
