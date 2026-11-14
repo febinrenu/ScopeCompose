@@ -17,12 +17,14 @@ import argparse
 import dataclasses
 import json
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable, Sequence
 
 import settings
-from api_budget import BackendError
+from api_budget import BackendError, RateLimitError
 from api_budget.client import LLMClient, Tier, get_client
 from study import cqa, reader, systems
 
@@ -35,6 +37,20 @@ MODELS: dict[str, Tier] = {
     "qwen27b": Tier.STUDY_QWEN27B,
     "oss120b": Tier.STUDY_OSS120B,
 }
+
+#: Providers serving the same open weights, tried in order when one's quota is spent or it is
+#: unreachable. The cell's model id stays the primary tier's; each answer records ``served_by``.
+ROUTES: dict[str, tuple[Tier, ...]] = {
+    "oss20b": (Tier.STUDY_OSS20B, Tier.STUDY_OSS20B_NV, Tier.STUDY_OSS20B_OC),
+    "oss120b": (Tier.STUDY_OSS120B, Tier.STUDY_OSS120B_OC),
+}
+_route: dict[str, int] = {}          # model key -> route in use; sticky for the life of the process
+_route_lock = threading.Lock()
+
+
+def served_by(tier: Tier) -> str:
+    spec = settings.models().tier(tier.value)
+    return f"{spec.provider}:{spec.model}"
 
 
 class CellInterrupted(RuntimeError):
@@ -81,10 +97,35 @@ def applicable(system: str, qs: Iterable[cqa.Question]) -> list[cqa.Question]:
     return [q for q in qs if q.kind != "unanswerable"] if system in systems.ORACLE else qs
 
 
+def _generate_routed(client: LLMClient, model_key: str, tier: Tier, q: cqa.Question, evidence, step: str):
+    """Generate with the model's providers in turn; returns (generation, tier used).
+
+    Raises the last error when every provider failed. Threads share ``_route``: a provider is
+    skipped only by the first thread to see it fail, so parallel failures never skip a working one."""
+    routes = ROUTES.get(model_key, (tier,))
+    for attempt in range(len(routes)):
+        with _route_lock:
+            idx = _route.get(model_key, 0) % len(routes)
+        use = routes[idx]
+        try:
+            return reader.generate(client, use, q, evidence, step=step), use
+        except (RateLimitError, BackendError) as exc:
+            if attempt + 1 == len(routes):
+                raise
+            with _route_lock:
+                if _route.get(model_key, 0) % len(routes) == idx:     # nobody has moved on yet
+                    _route[model_key] = idx + 1
+                    print(f"  {model_key}: {served_by(use)} unavailable ({str(exc)[:90]}); "
+                          f"switching to {served_by(routes[(idx + 1) % len(routes)])}", file=sys.stderr, flush=True)
+    raise AssertionError("unreachable")
+
+
 def run_cell(system: str, model_key: str, qset: str, *, env: systems.Env | None = None,
              client: LLMClient | None = None, questions: Sequence[cqa.Question] | None = None,
              limit: int | None = None, token_budget: int | None = None, max_errors: int = 3,
-             progress: bool = False) -> dict:
+             progress: bool = False, workers: int = 1) -> dict:
+    """Answer every question of the cell not yet in its file. ``workers`` > 1 sends that many requests
+    at once (hosted providers); answers are appended as they arrive, each line whole."""
     client = client or get_client()
     tier = MODELS[model_key]
     env = dataclasses.replace(env or systems.Env(), client=client, tier=tier)
@@ -102,48 +143,65 @@ def run_cell(system: str, model_key: str, qset: str, *, env: systems.Env | None 
     if limit is not None:
         todo = todo[:limit]
     summary = {"cell": path.stem, "total": len(todo), "skipped": 0, "ran": 0, "tokens": 0}
-    errors = spent = 0
+    state = {"errors": 0, "spent": 0}
+    lock = threading.Lock()
     started = time.time()
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        for q in todo:
-            if q.id in done:
-                summary["skipped"] += 1
-                continue
-            if token_budget is not None and spent >= token_budget:
-                raise CellInterrupted(f"{path.stem}: token budget {token_budget} reached after {summary['ran']} new answers")
-            ctx = systems.build(system, q, env)
-            if system in systems.ORACLE and not ctx.chunks and not env.gold(q).all_chunks:
+
+    def answer(q: cqa.Question, fh) -> None:
+        if token_budget is not None and state["spent"] >= token_budget:
+            raise CellInterrupted(f"{path.stem}: token budget {token_budget} reached after {summary['ran']} new answers")
+        ctx = systems.build(system, q, env)
+        if system in systems.ORACLE and not ctx.chunks and not env.gold(q).all_chunks:
+            with lock:
                 summary["undefined"] = summary.get("undefined", 0) + 1     # no annotated evidence: the rung does not exist
-                continue
-            evidence = None if ctx.chunks is None else reader.render_evidence(ctx.chunks, drop_elements=ctx.drop_elements)
-            try:
-                gen = reader.generate(client, tier, q, evidence, step=f"study_{system}")
-            except BackendError as exc:
-                errors += 1
-                if errors >= max_errors:
-                    raise CellInterrupted(f"{path.stem}: {errors} provider errors, last: {exc}") from exc
-                continue
-            # An operator that called the model reports what that cost; it is part of the system's price.
-            extra_p = int(ctx.trace.get("extra_prompt_tokens", 0))
-            extra_c = int(ctx.trace.get("extra_completion_tokens", 0))
-            rec = {"qid": q.id, **config, "chunks": ctx.chunk_ids, "n_lines": evidence.n_lines if evidence else 0,
-                   "answers": [[a, list(c)] for a, c in gen.parsed.answers], "evidence": list(gen.parsed.evidence), "ok": gen.parsed.ok,
-                   "bad_citations": gen.parsed.bad_citations, "text": gen.text,
-                   "prompt_tokens": gen.prompt_tokens + extra_p, "completion_tokens": gen.completion_tokens + extra_c,
-                   "calls": 1 + int(ctx.trace.get("extra_calls", 0)),
-                   "latency_s": round(gen.latency_s, 3), "trace": ctx.trace}
+            return
+        evidence = None if ctx.chunks is None else reader.render_evidence(ctx.chunks, drop_elements=ctx.drop_elements)
+        try:
+            gen, use = _generate_routed(client, model_key, tier, q, evidence, f"study_{system}")
+        except RateLimitError:
+            raise
+        except BackendError as exc:
+            with lock:
+                state["errors"] += 1
+                if state["errors"] >= max_errors:
+                    raise CellInterrupted(f"{path.stem}: {state['errors']} provider errors, last: {exc}") from exc
+            return
+        # An operator that called the model reports what that cost; it is part of the system's price.
+        extra_p = int(ctx.trace.get("extra_prompt_tokens", 0))
+        extra_c = int(ctx.trace.get("extra_completion_tokens", 0))
+        rec = {"qid": q.id, **config, "chunks": ctx.chunk_ids, "n_lines": evidence.n_lines if evidence else 0,
+               "answers": [[a, list(c)] for a, c in gen.parsed.answers], "evidence": list(gen.parsed.evidence), "ok": gen.parsed.ok,
+               "bad_citations": gen.parsed.bad_citations, "text": gen.text,
+               "prompt_tokens": gen.prompt_tokens + extra_p, "completion_tokens": gen.completion_tokens + extra_c,
+               "calls": 1 + int(ctx.trace.get("extra_calls", 0)),
+               "latency_s": round(gen.latency_s, 3), "served_by": served_by(use), "trace": ctx.trace}
+        with lock:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
             fh.flush()
-            spent += rec["prompt_tokens"] + rec["completion_tokens"]
+            state["spent"] += rec["prompt_tokens"] + rec["completion_tokens"]
             summary["ran"] += 1
-            summary["tokens"] = spent
+            summary["tokens"] = state["spent"]
             if progress and summary["ran"] % 50 == 0:
                 rate = (time.time() - started) / summary["ran"]
                 left = len(todo) - summary["skipped"] - summary["ran"]
                 print(f"  {path.stem}: {summary['ran']} answered, {left} left, {rate:.1f}s each", file=sys.stderr, flush=True)
-    if errors:
-        raise CellInterrupted(f"{path.stem}: finished with {errors} question(s) skipped after provider errors; rerun")
+
+    new = [q for q in todo if q.id not in done]
+    summary["skipped"] = len(todo) - len(new)
+    with path.open("a", encoding="utf-8", newline="\n") as fh:
+        if workers <= 1:
+            for q in new:
+                answer(q, fh)
+        else:
+            ex = ThreadPoolExecutor(max_workers=workers)
+            try:
+                for f in as_completed([ex.submit(answer, q, fh) for q in new]):
+                    f.result()                          # re-raise a spent quota or too many errors here
+            finally:
+                ex.shutdown(wait=True, cancel_futures=True)
+    if state["errors"]:
+        raise CellInterrupted(f"{path.stem}: finished with {state['errors']} question(s) skipped after provider errors; rerun")
     summary["seconds"] = round(time.time() - started, 1)
     return summary
 

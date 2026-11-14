@@ -102,6 +102,17 @@ class Tier(str, Enum):
     STUDY_OSS120B = "STUDY_OSS120B"
     """Hosted gpt-oss-120b. Replication on a subsample."""
 
+    # Other providers serving the *same weights* as a study tier. Used only when the primary
+    # provider's quota is spent; every answer records which one served it.
+    STUDY_OSS20B_NV = "STUDY_OSS20B_NV"
+    """gpt-oss-20b on NVIDIA's API."""
+
+    STUDY_OSS20B_OC = "STUDY_OSS20B_OC"
+    """gpt-oss-20b on Ollama's cloud."""
+
+    STUDY_OSS120B_OC = "STUDY_OSS120B_OC"
+    """gpt-oss-120b on Ollama's cloud."""
+
 
 class TierNotConfigured(RuntimeError):
     """A tier has no model assigned yet."""

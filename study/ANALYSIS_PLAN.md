@@ -138,4 +138,11 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
 
 ## Deviations
 
-None yet.
+1. **Hosted serving providers (2026-11-15, after 118 hosted answers, before any hosted
+   analysis).** Groq's per-model daily cap made the hosted replication a two-week run. The
+   two gpt-oss models are open weights served by other providers, so when Groq's quota for
+   one is spent, the same model is called on NVIDIA's API (gpt-oss-20b) or Ollama's cloud
+   (both), with identical settings (temperature 0, reasoning effort low, same prompt and
+   token limit). Every answer records the provider in `served_by`; the paper reports the
+   share served by each and the gold-context F1c by provider. Qwen 27B is served only by
+   Groq and is unchanged. No system, question, metric or test changes.

@@ -200,7 +200,12 @@ def train_fold(fold: str, *, epochs: int = 2, batch: int = 8, accum: int = 4, lr
     (out_dir / "done.json").write_text(json.dumps(
         {"fold": fold, "n_pairs": len(pairs), "n_pos": n_pos, "epochs": epochs, "steps": step,
          "train_questions": len(qs)}), encoding="utf-8")
-    del model
+    # The optimizer and scheduler hold the weights and Adam's state (about 3x the model); free them
+    # all, or the next fold trains on top of this one's leftovers and spills out of GPU memory.
+    del model, opt, sched, loss_fn
+    import gc
+
+    gc.collect()
     if device == "cuda":
         torch.cuda.empty_cache()
     return out_dir
@@ -368,10 +373,11 @@ def choose_threshold(kind: str) -> dict:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("action", choices=("train", "score", "threshold", "report"))
+    ap.add_argument("--fold", default=None, help="train only this fold")
     args = ap.parse_args(argv)
     plan = fold_plan()
     if args.action == "train":
-        for fold in plan:
+        for fold in ([args.fold] if args.fold else plan):
             path = train_fold(fold)
             print(fold, json.loads((path / "done.json").read_text(encoding="utf-8")), flush=True)
     elif args.action == "score":

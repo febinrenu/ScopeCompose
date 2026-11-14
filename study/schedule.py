@@ -46,7 +46,8 @@ def prepare_qualifier() -> None:
     for fold in plan:
         if not (qualifier.MODELS / fold / "done.json").exists():
             print(f"training qualifier fold {fold}", flush=True)
-            qualifier.train_fold(fold)
+            # A fresh process per fold: the GPU starts empty every time.
+            subprocess.run([sys.executable, "-m", "study.qualifier", "train", "--fold", fold], check=True)
     if not qualifier.SCORES.exists():
         print("scoring qualifier candidates", flush=True)
         qualifier.main(["score"])
@@ -78,9 +79,19 @@ def local(only: str | None) -> int:
     return status
 
 
+HOSTED_WAIT_S = 1200          # Groq's daily cap is a rolling window: tokens come back through the day
+HOSTED_WORKERS = 4            # requests in flight per model; NVIDIA's free endpoint queues each one for minutes
+
+
 def hosted(models: tuple[str, ...]) -> int:
-    """Round-robin over models and cells; a model whose daily quota is spent waits an hour and tries again."""
+    """Run the hosted cells. Several models: one child process each, so every model works through its
+    own quotas in parallel. One model: its cells in turn; when every provider of the model is spent,
+    wait and try again. The ``qc`` cell waits until the qualifier is trained (it needs its scores)."""
     from study import cqa
+
+    if len(models) > 1:
+        procs = [subprocess.Popen([sys.executable, "-m", "study.schedule", "hosted", "--models", m]) for m in models]
+        return max(p.wait() for p in procs)
 
     pending = [(m, s, k) for s, k in HOSTED_CELLS for m in models]
     while pending:
@@ -88,13 +99,17 @@ def hosted(models: tuple[str, ...]) -> int:
         for m, s, k in pending:
             qs = [q for q in cqa.hosted_questions() if k is None or q.kind == k]
             try:
-                print(json.dumps(run_cell(s, m, "hosted", questions=qs, max_errors=2)), flush=True)
+                print(json.dumps(run_cell(s, m, "hosted", questions=qs, max_errors=3, workers=HOSTED_WORKERS,
+                                          progress=True)), flush=True)
             except (CellInterrupted, RateLimitError) as exc:
                 print(f"{m}/{s}: paused ({str(exc)[:160]})", file=sys.stderr, flush=True)
                 nxt.append((m, s, k))
+            except FileNotFoundError as exc:           # the qualifier is not trained yet
+                print(f"{m}/{s}: waiting ({str(exc)[:120]})", file=sys.stderr, flush=True)
+                nxt.append((m, s, k))
         pending = nxt
         if pending:
-            time.sleep(3600)
+            time.sleep(HOSTED_WAIT_S)
     return 0
 
 
