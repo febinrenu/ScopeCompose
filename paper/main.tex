@@ -1,0 +1,82 @@
+% Manuscript for the Journal of Trends in Computer Science and Smart Technology (IRO Journals).
+% Preamble and title block follow the publisher's template
+% (irojournals-scopus-paper-template-LaTex/IRO_Journals-Manuscript_LaTex_Template.tex) unchanged,
+% except: amsmath and amssymb for the equations, xcolor for figure-free shading,
+% and the template's "\vspace{5pt}\\" after a blank line (a LaTeX error) written without the "\\".
+%
+% Every number in the text comes from numbers.tex, which study/report.py generates from
+% results/results.json. Build: tectonic -X compile main.tex
+\documentclass[12pt,twoside]{article}
+\usepackage{geometry}
+\usepackage[shortlabels]{enumitem}
+\setlist{nosep}
+\setlist[enumerate]{wide=0pt, widest=99,leftmargin=25pt, labelsep=*}
+\usepackage[none]{hyphenat}
+\usepackage{graphicx}
+\graphicspath{ {./} {./figures/} }
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{mathptmx}
+\usepackage{setspace}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1em}
+\sloppy
+\usepackage{array}
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\titleformat{\section}
+  {\normalfont\fontsize{12}{12}\bfseries}{\thesection.}{12pt}{}
+\titlespacing*{\section}
+  {0pt}{12pt plus 2pt minus 2pt}{0pt}
+\titleformat{\subsection}
+  {\normalfont\fontsize{12}{12}\bfseries}{\thesubsection}{12pt}{}
+\titlespacing*{\subsection}
+  {0pt}{10pt plus 2pt minus 2pt}{0pt}
+\geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=2.54 cm,
+ top=2.65 cm,
+ right=2.54 cm,
+ bottom=2.65 cm,
+ }
+ \rmfamily
+\usepackage{fancyhdr}
+\renewcommand{\footrulewidth}{0 pt}
+\renewcommand{\headrulewidth}{0 pt}
+\usepackage{amsmath,amssymb}
+
+\input{numbers}
+
+\begin{document}
+
+ \begin{singlespace}
+ \begin{center}
+\fontsize{24}{24}\selectfont\textbf
+{Where Do the Conditions Go? Stage-wise Attribution of Condition Loss in Chunked Retrieval-Augmented Generation}
+\end{center}
+\vspace{24pt}
+\fontsize{16}{16}\selectfont\textbf{
+Author Name$^1$, Author Name$^2$}
+\vspace{16pt}\\
+\fontsize{11}{11}\selectfont {
+$^1$Department, College, University, City, Country \\
+$^2$Department, College, University, City, Country
+}\vspace{16pt}\\
+{\fontsize{9}{9}\selectfont\textbf{{E-mail:}} $^1$author1@college.edu, $^2$author2@institute.com}\\
+
+\end{singlespace}
+\fontsize{12}{12}\selectfont
+\begin{onehalfspace}
+\input{sections/abstract}
+\input{sections/introduction}
+\input{sections/related}
+\input{sections/method}
+\input{sections/results}
+\input{sections/conclusion}
+\input{sections/statements}
+\input{sections/references}
+\input{sections/biography}
+\end{onehalfspace}
+ \end{document}

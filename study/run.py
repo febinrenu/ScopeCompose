@@ -70,6 +70,8 @@ def question_set(name: str) -> list[cqa.Question]:
         return [q for q in cqa.tuning_questions() if q.id not in reader.DEMO_QUESTION_IDS]
     if name == "eval":
         return cqa.eval_questions()
+    if name == "hosted":       # the stratified subsample the hosted models answer
+        return cqa.hosted_questions()
     raise ValueError(f"unknown question set {name!r}")
 
 
@@ -152,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--system", nargs="+", required=True)
     ap.add_argument("--model", nargs="+", required=True, choices=sorted(MODELS))
-    ap.add_argument("--set", dest="qset", default="eval", choices=("tuning", "eval"))
+    ap.add_argument("--set", dest="qset", default="eval", choices=("tuning", "eval", "hosted"))
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--token-budget", type=int, default=None)
     ap.add_argument("--words", type=int, default=cqa.DEFAULT_CHUNK_WORDS)

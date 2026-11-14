@@ -1,0 +1,83 @@
+\section{{Proposed Work}}
+
+\subsection{Applicability conditions and how a pipeline can lose them}
+
+A question about a policy often has an answer that holds only under a condition the asker has not settled. A person asks whether they can bring another child on a Parent of a Child Student visa; the guidance says yes, \emph{if} the child also has or is applying for a Child Student visa. Neither ``yes'' nor ``no'' is a correct answer on its own: the correct answer is ``yes, provided that \dots''. We call the clause that must also hold an \emph{applicability condition}.
+
+Formally, a question $q$ with scenario $s$ has a gold answer set $A(q)=\{(a_i, C_i)\}$, where $a_i$ is an answer and $C_i$ is the set of condition statements under which $a_i$ holds and which $s$ leaves unresolved. A question is \emph{conditional} when some $C_i \neq \emptyset$. The statements in $C_i$, together with the statements that give $a_i$ itself (its \emph{answer evidence} $E_i$), are passages of a source document $d(q)$.
+
+A retrieval-augmented pipeline never sees $d(q)$ whole. It sees chunks. Let $\kappa$ be a chunking function that partitions a document into chunks, and let $\kappa(x)$ denote the chunk holding statement $x$. For each conditional question we define
+\begin{equation}
+\mathrm{Sep}(q) = \mathbb{1}\Big[\big|\{\kappa(x) : x \in \textstyle\bigcup_i (C_i \cup E_i)\}\big| > 1\Big],
+\end{equation}
+the event that the gold no longer fits in one chunk, and the set of \emph{condition-only chunks}
+\begin{equation}
+\mathcal{K}_C(q) = \{\kappa(x) : x \in \textstyle\bigcup_i C_i\} \setminus \{\kappa(x) : x \in \textstyle\bigcup_i E_i\},
+\end{equation}
+chunks that carry a condition and nothing else the answer needs. A chunk in $\mathcal{K}_C(q)$ is exactly the kind of passage a pipeline can drop while still producing a fluent, confident and partly correct answer.
+
+A condition can be lost at four stages, which this work separates:
+\begin{enumerate}[(i)]
+\item \textbf{Chunking} places it in a chunk apart from the answer.
+\item \textbf{Retrieval} ranks that chunk below the cut-off $k$.
+\item \textbf{Evidence reduction}: a reranker, relevance grader, contradiction filter or conflict resolver removes the chunk after retrieval.
+\item \textbf{Generation}: the condition is in the context and the model does not state it, or states a condition that does not apply.
+\end{enumerate}
+
+\subsection{Testbed: ConditionalQA as chunked open retrieval}
+
+We use ConditionalQA v1.0 \cite{sun2022conditionalqa}, a reading-comprehension benchmark built on \nPages{} UK government guidance pages from gov.uk. Every answer is annotated with the conditions under which it holds, and every condition and evidence statement is quoted verbatim as an HTML element of its page (a paragraph, list item, table row or heading). We turn the benchmark into an open-retrieval task over the whole collection.
+
+\textbf{Chunking.} Each page is cut into chunks of whole elements, packed greedily up to 150 words; an element is never split. This yields \nChunks{} chunks (mean \chunkWords{} words). Because chunks are made of whole elements, the chunk holding every gold statement is known exactly, so $\mathrm{Sep}(q)$ and $\mathcal{K}_C(q)$ are computed directly from the human annotation. For retrieval, each chunk is prefixed with its page title and nearest section heading.
+
+\textbf{Questions.} The benchmark's test answers are not public, so we evaluate on its labelled training and development questions. All systems are used zero-shot, so the training questions are as unseen to them as the development questions. Before running any system we fixed a document-disjoint split: every question on \nTuningPages{} randomly drawn pages forms a \emph{tuning} set (\nTuning{} questions), the only place prompts and thresholds were chosen; the \emph{evaluation} set holds every conditional (\nEvalCond{}) and unanswerable (\nEvalUnans{}) question on the remaining pages, plus \nEvalUncond{} unconditional questions drawn at random, \nEval{} questions on \nEvalPages{} pages in total.
+
+\textbf{Retrieval.} A hybrid retriever fuses BM25 \cite{robertson2009bm25} and Contriever \cite{izacard2022contriever} rankings by reciprocal-rank fusion \cite{cormack2009rrf}, over all \nChunks{} chunks. The query is the question followed by the scenario. Rankings are computed once and shared by every system.
+
+\subsection{One generator, many evidence policies}
+
+Every system in the study is defined by a single thing: \emph{which chunks reach the generator}. The generator, its instructions and its output format are identical for all of them, so any difference between two systems is a difference in their evidence.
+
+The generator sees the chosen chunks as numbered lines, one per HTML element, together with the person's scenario and question. It returns JSON listing each answer with two sets of line numbers: the lines that state the answer (\emph{evidence}) and the lines that state a requirement which must also hold and which the scenario does not settle (\emph{conditions}). Condition line numbers are mapped back to the exact element strings, which is the form the official metric scores. Four worked examples, taken from the tuning pages, are given as earlier turns of the conversation. Separating evidence from conditions in the output was the one change the tuning set showed to matter: without it, the models listed supporting lines as conditions on most questions whose gold answer has none (Section~\ref{sec:generation}).
+
+Table~1 lists the systems. They form three families.
+
+\textbf{The oracle ladder} isolates stages by construction. \texttt{gold} gives the generator exactly the chunks that hold the annotated evidence and conditions. \texttt{gold\,$-$\,cond.\ elements} gives the same chunks with the condition elements deleted; it measures how much the metric depends on the conditions being present at all. \texttt{gold\,$-$\,cond.-only chunks} removes the chunks in $\mathcal{K}_C(q)$: this is what a pipeline delivers when it finds the answer and loses a separately chunked condition. \texttt{gold\,+\,distractors} keeps every gold chunk and fills the context to eight with the highest-ranked non-gold chunks, giving perfect recall under realistic distraction. \texttt{top-$k$} is the ordinary pipeline. A closed-book run with no evidence measures what the models answer from memory.
+
+\textbf{Evidence-reducing operators} start from the same top-8 and hand on fewer chunks, reproducing the decision of a module common in robust RAG stacks: a cross-encoder reranker \cite{xiao2023bge} keeping the best three; a contradiction filter that, for any pair an NLI model \cite{he2021deberta} judges contradictory, drops the lower-ranked chunk; a ConflictRAG-style resolver \cite{conflictrag2026}, which resolves each detected conflict by Entropy-TOPSIS credibility selection and keeps both sides when the evidence for either is insufficient; per-passage relevance grading by the generator model, in the manner of corrective RAG \cite{yan2024crag}; and listwise selection by the generator model, in the manner of Astute RAG \cite{wang2025astute}. The ConflictRAG-style resolver re-implements the published mechanism from its description, since the authors' code is not released, and scores three credibility criteria where the original uses five extracted by a language model; we report it under that name.
+
+\textbf{Context completion} adds chunks to retrieval rather than removing them. Our proposed method is described next; its comparisons are budget-matched baselines that add chunks without any knowledge of conditions: the plain top-8, the top-5 plus the chunks adjacent to them on their pages (\texttt{adjacent}), and the whole page of the top-ranked chunk (\texttt{page}).
+
+\input{tables/systems}
+
+\subsection{Qualifier-aware context completion}
+
+If the retriever has reached the right page but not the chunk that qualifies the answer, the missing condition is usually one of a few chunks away. Qualifier-aware completion keeps the top $k_0=5$ retrieved chunks and adds, from the pages those chunks come from, the chunks most likely to state a condition on the answer, up to the same budget of eight chunks as \texttt{top-8}.
+
+For a question $q$ with scenario $s$, let $P$ be the (at most two) pages of the top-$k_0$ chunks and, for each page $p\in P$, let $a_p$ be its highest-ranked retrieved chunk, the \emph{anchor}. Every other chunk $c$ on $p$ that was not retrieved is a candidate, scored by a cross-encoder $f_\theta$:
+\begin{equation}
+\sigma(c) = f_\theta\big([\,q;\, s;\, a_p\,],\; c\big) \in [0,1].
+\end{equation}
+The system adds the candidates with $\sigma(c)\geq\tau$, highest first, up to $8-k_0$ of them, and leaves the remaining slots empty: it adds qualifiers, not context for its own sake.
+
+$f_\theta$ is DeBERTa-v3-base \cite{he2023debertav3} fine-tuned to predict whether a candidate chunk holds a gold condition element of the question. The labels are ConditionalQA's own annotation, so no new labelling is needed; unconditional questions contribute negatives only, which is what teaches the scorer when to add nothing. To keep every question scored by a model that never saw its page, training is \emph{cross-fitted}: the evaluation questions are split into five document-disjoint folds, and the model that scores a fold is trained on the other four folds and the tuning set. The tuning questions are scored by a model trained on all five evaluation folds, and $\tau$ is chosen on them alone. A second variant, \texttt{completion (untrained)}, scores candidates with the off-the-shelf reranker on $(q, c)$ instead, to separate what training contributes from what any relevance model would give.
+
+\subsection{The contrast regime}
+
+Removing evidence is not always wrong. When some retrieved passages are false, discarding them is the purpose of the operators above. To test whether a conclusion drawn on ConditionalQA is a property of the operators or of the regime, we run the same operators on RAMDocs \cite{wang2025madam}, \nRamQ{} questions whose retrieved documents are labelled as correct, misinformation or noise. Its labels allow an \emph{oracle discard} system that removes exactly the misinformation and noise: the ceiling for any operator that removes evidence. A RAMDocs answer is correct when it contains every gold answer and no wrong answer. Three caveats apply and are stated wherever its numbers appear: \nRamMulti{} of its questions have several valid answers for same-name entities, so it mixes selection with aggregation; its misinformation is synthetic; and it has no training split.
+
+\subsection{Metrics and inference}
+
+The primary metric is ConditionalQA's official \emph{F1 with conditions}, computed by the authors' evaluation script, unchanged. For one gold answer $(a, C)$ and one predicted answer $(\hat a, \hat C)$ it is
+\begin{equation}
+\mathrm{F1}_c = \mathrm{F1}_{\mathrm{tok}}(\hat a, a)\cdot
+\begin{cases}
+\mathbb{1}[\hat C=\emptyset] & \text{if } C=\emptyset,\\
+\mathrm{F1}_{\mathrm{set}}(\hat C, C) & \text{otherwise,}
+\end{cases}
+\end{equation}
+where $\mathrm{F1}_{\mathrm{tok}}$ is SQuAD token F1 and $\mathrm{F1}_{\mathrm{set}}$ is the F1 of exact element matches. Over several answers the script takes the best one-to-one assignment and multiplies by $\exp(1-|\hat A|/|A|)$ when more answers are predicted than exist. The metric therefore cannot be raised by verbosity: listing extra answers is discounted, and naming a condition where the gold has none scores zero. We also report answer F1 (conditions ignored), the precision and recall of predicted condition elements, and the share of answers that name any condition.
+
+Questions on the same page share chunks and retrieval behaviour, so they are not independent. Every interval and test treats the \emph{page} as the unit: differences between two systems are paired by question, with 95\% BCa bootstrap intervals over pages (2{,}000 resamples) and page-level sign-flip permutation tests (20{,}000 permutations). The confirmatory comparisons, listed in the analysis plan we committed before the first evaluation run, are corrected by the Holm procedure separately for each model.
+
+\textbf{Models.} The two primary generators run locally on a consumer GPU: Qwen2.5-7B-Instruct \cite{qwen2025} and Llama-3.1-8B-Instruct \cite{grattafiori2024llama3}, both 4-bit quantised, at temperature 0. To test whether the direction of the main effects holds at larger scale, we repeat the key systems on a stratified subsample of \nHostedQ{} evaluation questions with three hosted open-weight models: gpt-oss-20b, gpt-oss-120b \cite{openai2025gptoss} and a 27B Qwen model. These are reported as replication, not as confirmatory tests.

@@ -11,6 +11,38 @@ not just *what*. The entry format is in `CONVENTIONS.md`.
 
 ## Sessions
 
+### 2026-11-14 - the pivot: condition loss in chunked RAG, on public human-annotated data
+
+**Why the direction changed.** The v6-v8 design had 14 natural cross-document rule/exception instances (1 in test),
+an unvalidated headline metric (CCA-strict), and every remaining step blocked on human annotation the owner will not
+do. The one head-to-head had the pipeline below plain full-context generation (0.500 vs 0.625, n = 12). The new study
+uses ConditionalQA (human-annotated conditions, 613 conditional questions) as an open-retrieval testbed, RAMDocs as the
+contrast regime, and needs no new annotation. Plan: `study/ANALYSIS_PLAN.md` (committed before any evaluation run).
+Branch: `pivot/condition-loss`.
+
+**Done**
+- Audit bugs fixed with regression tests (`tests/test_pivot_regressions.py`): currency normalisation in
+  `metrics/values.py`, gold pair by id not position (B3 and the projection), detection recall counting silent misses,
+  fallback chain read and cached under the fallback model's key. 1,975 tests green.
+- `study/`: data fetch with hashes, element-preserving chunker, fixed splits, BM25/Contriever/hybrid rankings,
+  one generator for every system, the official ConditionalQA scorer vendored unchanged, oracle ladder, operators,
+  qualifier-aware completion (cross-fitted), RAMDocs runner, scheduler, report generator (`results/results.json`,
+  `paper/numbers.tex`). `tests/test_study.py` green.
+- G0/G1 (no LLM): gold spans more than one 150-word chunk for 72% of conditional questions (42% unconditional); at k = 8
+  the hybrid retriever finds 74% of answer chunks and 75% of condition chunks, 68% of condition-only chunks.
+  Retrieval is not the main place conditions are lost.
+- Tuning, prompt v1: both local models cite a condition on ~80% of questions whose gold has none, mostly the lines
+  that support the answer. Prompt v2 adds a separate `evidence` field. v1 cells kept in `study/runs/tuning_prompt_v1/`.
+- Tectonic 0.17.0 installed in `%LOCALAPPDATA%\tectonic`. The publisher's template has a LaTeX error
+  (`\vspace{5pt}\\` after a blank line) that pdfTeX skips and Tectonic stops on; `paper/main.tex` avoids it.
+- Groq key verified for gpt-oss-20b, qwen3.8-27b and gpt-oss-120b.
+
+**Memory**: the laptop has 15.6 GB. Two Ollama models plus the GPU scorers at once got background jobs killed.
+Run one heavy job at a time; `study/schedule.py` unloads each local model before the next.
+
+**Next**: tune prompt v2 on the tuning set; train the qualifier folds; run `python -m study.schedule local`;
+start `python -m study.schedule hosted` (about 11 days of free-tier quota); write results and discussion.
+
 ### 2026-10-31 (late night) - the human loop, K = 6 contexts, first live G1, and a rehearsal of everything after annotation
 
 **Done** (1,953 tests collected, full suite green)

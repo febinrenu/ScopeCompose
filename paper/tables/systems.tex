@@ -1,0 +1,33 @@
+\begin{center}
+\textbf{Table 1.} The systems. Each differs only in which chunks reach the same generator.\\\vspace{5pt}
+{\fontsize{10}{12}\selectfont
+\begin{tabular}{L{4.3cm}L{10.6cm}}
+\toprule
+\textbf{System} & \textbf{Chunks given to the generator} \\
+\midrule
+\multicolumn{2}{l}{\emph{Oracle ladder (uses the gold annotation; not deployable)}}\\
+\texttt{closed-book} & none \\
+\texttt{gold} & exactly the chunks holding the annotated evidence and conditions \\
+\texttt{gold\,$-$\,cond.\ elements} & the same chunks with the condition elements deleted \\
+\texttt{gold\,$-$\,cond.-only chunks} & the gold chunks minus those holding only conditions \\
+\texttt{gold\,+\,distractors} & all gold chunks, filled to 8 with top-ranked non-gold chunks \\
+\midrule
+\multicolumn{2}{l}{\emph{Retrieval}}\\
+\texttt{top-$k$} & the $k$ highest-ranked chunks, $k\in\{3,5,8,12,20\}$; \texttt{top-8} is the reference \\
+\midrule
+\multicolumn{2}{l}{\emph{Evidence-reducing operators (applied to the top 8)}}\\
+\texttt{rerank-3} & the 3 chunks a cross-encoder reranker scores highest \\
+\texttt{NLI filter} & drops the lower-ranked chunk of each pair judged contradictory \\
+\texttt{ConflictRAG-style} & resolves each detected conflict by Entropy-TOPSIS credibility selection \\
+\texttt{relevance grading} & keeps the chunks the generator model grades as useful, one call each \\
+\texttt{listwise selection} & keeps the chunks the generator model selects, one call in total \\
+\midrule
+\multicolumn{2}{l}{\emph{Context completion (budget of 8 chunks)}}\\
+\texttt{adjacent} & the top 5 plus the chunks next to them on their pages \\
+\texttt{page} & every chunk of the top-ranked chunk's page \\
+\texttt{completion (untrained)} & the top 5 plus same-page chunks scored by an off-the-shelf reranker \\
+\texttt{completion} (ours) & the top 5 plus same-page chunks a trained scorer predicts state a condition \\
+\bottomrule
+\end{tabular}
+}
+\end{center}

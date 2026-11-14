@@ -105,7 +105,7 @@ def table(qset: str, model_key: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--set", dest="qset", default="eval", choices=("tuning", "eval"))
+    ap.add_argument("--set", dest="qset", default="eval", choices=("tuning", "eval", "hosted"))
     ap.add_argument("--model", nargs="+", required=True)
     args = ap.parse_args(argv)
     for m in args.model:

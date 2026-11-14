@@ -370,6 +370,23 @@ def eval_questions(strata: Iterable[str] = ("conditional", "unconditional", "una
     return [idx[i] for s in strata for i in splits()["eval"][s]]
 
 
+HOSTED_SIZES = {"conditional": 150, "unconditional": 100, "unanswerable": 50}
+
+
+def hosted_questions(*, seed: int = 0) -> list[Question]:
+    """The stratified evaluation subsample the hosted models answer (analysis plan, *Models*).
+
+    Drawn from the evaluation set, so every hosted answer has a local
+    counterpart on the same question.
+    """
+    rng = random.Random(seed)
+    out: list[Question] = []
+    for stratum, n in HOSTED_SIZES.items():
+        ids = splits()["eval"][stratum]
+        out += [by_id()[i] for i in sorted(rng.sample(ids, min(n, len(ids))))]
+    return out
+
+
 def tuning_questions() -> list[Question]:
     idx = by_id()
     return [idx[i] for i in splits()["tuning"]]
