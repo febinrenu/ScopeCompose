@@ -27,7 +27,11 @@ from typing import Sequence
 
 import settings
 
-MAX_ANSWERS = 4      # the scorer tries every permutation; an output contract, not a change to the scorer
+#: The most answers any gold reference has (66 questions have 5). The scorer
+#: tries every permutation, so the cap bounds its cost (5! = 120); set lower
+#: and a perfect prediction of a 5-answer question would lose a fifth of its
+#: score. An output contract, not a change to the scorer.
+MAX_ANSWERS = 5
 
 
 @lru_cache(maxsize=None)
