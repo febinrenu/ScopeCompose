@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import time
 import random
 from dataclasses import dataclass
 from functools import lru_cache
@@ -142,7 +143,9 @@ def train_ids_for(fold: str, plan: dict[str, list[str]]) -> list[str]:
 # --------------------------------------------------------------------------- #
 
 
-def train_fold(fold: str, *, epochs: int = 2, batch: int = 8, accum: int = 4, lr: float = 2e-5) -> Path:
+def train_fold(fold: str, *, epochs: int = 2, batch: int = 4, accum: int = 8, lr: float = 2e-5) -> Path:
+    """Effective batch 32. Fold f0 ran as 8 x 4; the rest run as 4 x 8 (the same gradient, half the peak
+    memory), because 8 x 4 outgrew the 8 GB card and Windows spilled it into system RAM, 2-3x slower."""
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
@@ -161,6 +164,11 @@ def train_fold(fold: str, *, epochs: int = 2, batch: int = 8, accum: int = 4, lr
     n_pos = sum(labels)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":                 # free the cache instead of spilling past the card
+        torch.cuda.set_per_process_memory_fraction(0.85)
+    progress = MODELS / f"{fold}.progress"
+    MODELS.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
     tok = AutoTokenizer.from_pretrained(BASE_MODEL)
     # Explicit float32 master weights. Transformers 5 otherwise loads the checkpoint's stored
     # precision (float16 here), and AdamW on float16 weights turns every parameter into NaN
@@ -194,11 +202,16 @@ def train_fold(fold: str, *, epochs: int = 2, batch: int = 8, accum: int = 4, lr
                 sched.step()
                 opt.zero_grad()
                 step += 1
+                if step % 20 == 0:
+                    progress.write_text(f"{step}/{steps} steps, {time.time() - t0:.0f}s, "
+                                        f"{torch.cuda.max_memory_reserved() / 2**30 if device == 'cuda' else 0:.1f} GB peak",
+                                        encoding="utf-8")
     out_dir.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(out_dir)
     tok.save_pretrained(out_dir)
     (out_dir / "done.json").write_text(json.dumps(
         {"fold": fold, "n_pairs": len(pairs), "n_pos": n_pos, "epochs": epochs, "steps": step,
+         "micro_batch": batch, "accum": accum, "seconds": round(time.time() - t0),
          "train_questions": len(qs)}), encoding="utf-8")
     # The optimizer and scheduler hold the weights and Adam's state (about 3x the model); free them
     # all, or the next fold trains on top of this one's leftovers and spills out of GPU memory.
