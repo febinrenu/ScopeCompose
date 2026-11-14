@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -91,7 +92,23 @@ def hosted(models: tuple[str, ...]) -> int:
 
     if len(models) > 1:
         procs = [subprocess.Popen([sys.executable, "-m", "study.schedule", "hosted", "--models", m]) for m in models]
-        return max(p.wait() for p in procs)
+        try:
+            return max(p.wait() for p in procs)
+        except KeyboardInterrupt:                       # Ctrl+C stops every model's process, not just this one
+            for p in procs:
+                p.terminate()
+            raise
+
+    try:
+        return _hosted_one(models)
+    except KeyboardInterrupt:
+        # Worker threads blocked in a long HTTP request would keep the interpreter alive; leave now.
+        print("interrupted", file=sys.stderr, flush=True)
+        os._exit(130)
+
+
+def _hosted_one(models: tuple[str, ...]) -> int:
+    from study import cqa
 
     pending = [(m, s, k) for s, k in HOSTED_CELLS for m in models]
     while pending:

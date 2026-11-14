@@ -212,8 +212,13 @@ def run_cell(system: str, model_key: str, qset: str, *, env: systems.Env | None 
             try:
                 for f in as_completed([ex.submit(answer, q, fh) for q in new]):
                     f.result()                          # re-raise a spent quota or too many errors here
-            finally:
+            except KeyboardInterrupt:                   # stop now; requests in flight are asked again next run
+                ex.shutdown(wait=False, cancel_futures=True)
+                raise
+            except BaseException:                       # keep what is already being answered, then stop
                 ex.shutdown(wait=True, cancel_futures=True)
+                raise
+            ex.shutdown(wait=True)
     if state["errors"]:
         raise CellInterrupted(f"{path.stem}: finished with {state['errors']} question(s) skipped after provider errors; rerun")
     summary["seconds"] = round(time.time() - started, 1)
