@@ -92,7 +92,34 @@ def summarise(scores: Sequence[QScore]) -> dict:
     out["parse_ok"] = mean(s.ok for s in scores)
     out["tokens"] = mean(s.tokens for s in scores)
     out["latency_s"] = mean(s.latency_s for s in scores)
+    out["taxonomy"] = taxonomy(scores)
     return out
+
+
+TAXONOMY = ("answer_wrong", "condition_omitted", "wrong_condition", "partial_conditions", "all_conditions",
+            "spurious_condition", "no_condition_needed")
+
+
+def error_class(s: QScore) -> str:
+    """One label per answered question, from the official scores alone (analysis plan, "Error taxonomy").
+
+    The answer counts as right when its answer-only F1 is at least 0.5, so a condition error is never
+    blamed for a wrong answer."""
+    if s.f1 < 0.5:
+        return "answer_wrong"
+    if s.kind != "conditional":
+        return "spurious_condition" if s.cond_pred else "no_condition_needed"
+    if s.cond_pred == 0:
+        return "condition_omitted"
+    if s.cond_correct == 0:
+        return "wrong_condition"
+    return "all_conditions" if s.cond_correct >= s.cond_gold else "partial_conditions"
+
+
+def taxonomy(scores: Sequence[QScore]) -> dict[str, float]:
+    """Share of answerable questions in each error class."""
+    keep = [s for s in scores if s.kind != "unanswerable"]
+    return {c: mean(error_class(s) == c for s in keep) for c in TAXONOMY} if keep else {}
 
 
 def by_stratum(scores: dict[str, QScore], qids: Iterable[str] | None = None) -> dict[str, dict]:

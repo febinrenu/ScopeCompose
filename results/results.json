@@ -81,6 +81,15 @@
       "n": 118,
       "no_answer": 0.05084745762711865,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.11864406779661017,
+       "answer_wrong": 0.423728813559322,
+       "condition_omitted": 0.22033898305084745,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.1271186440677966,
+       "spurious_condition": 0.0,
+       "wrong_condition": 0.11016949152542373
+      },
       "tokens": 1748.0084745762713
      },
      "conditional": {
@@ -97,6 +106,15 @@
       "n": 118,
       "no_answer": 0.05084745762711865,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.11864406779661017,
+       "answer_wrong": 0.423728813559322,
+       "condition_omitted": 0.22033898305084745,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.1271186440677966,
+       "spurious_condition": 0.0,
+       "wrong_condition": 0.11016949152542373
+      },
       "tokens": 1748.0084745762713
      },
      "opposite": {
@@ -113,6 +131,15 @@
       "n": 20,
       "no_answer": 0.05,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.1,
+       "answer_wrong": 0.1,
+       "condition_omitted": 0.3,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.3,
+       "spurious_condition": 0.0,
+       "wrong_condition": 0.2
+      },
       "tokens": 1779.25
      },
      "unanswerable": {
@@ -137,6 +164,15 @@
       "n": 2,
       "no_answer": 0.5,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.5,
+       "answer_wrong": 0.5,
+       "condition_omitted": 0.0,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.0,
+       "spurious_condition": 0.0,
+       "wrong_condition": 0.0
+      },
       "tokens": 3137.0
      },
      "conditional": {
@@ -153,6 +189,15 @@
       "n": 2,
       "no_answer": 0.5,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.5,
+       "answer_wrong": 0.5,
+       "condition_omitted": 0.0,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.0,
+       "spurious_condition": 0.0,
+       "wrong_condition": 0.0
+      },
       "tokens": 3137.0
      },
      "opposite": {
@@ -182,6 +227,15 @@
       "n": 9,
       "no_answer": 0.0,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.1111111111111111,
+       "answer_wrong": 0.6666666666666666,
+       "condition_omitted": 0.0,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.0,
+       "spurious_condition": 0.0,
+       "wrong_condition": 0.2222222222222222
+      },
       "tokens": 1696.4444444444443
      },
      "conditional": {
@@ -198,6 +252,15 @@
       "n": 9,
       "no_answer": 0.0,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.1111111111111111,
+       "answer_wrong": 0.6666666666666666,
+       "condition_omitted": 0.0,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.0,
+       "spurious_condition": 0.0,
+       "wrong_condition": 0.2222222222222222
+      },
       "tokens": 1696.4444444444443
      },
      "opposite": {
@@ -225,6 +288,15 @@
       "n": 1,
       "no_answer": 0.0,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.0,
+       "answer_wrong": 0.0,
+       "condition_omitted": 0.0,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.0,
+       "spurious_condition": 0.0,
+       "wrong_condition": 1.0
+      },
       "tokens": 3219.0
      },
      "conditional": {
@@ -241,6 +313,15 @@
       "n": 1,
       "no_answer": 0.0,
       "parse_ok": 1.0,
+      "taxonomy": {
+       "all_conditions": 0.0,
+       "answer_wrong": 0.0,
+       "condition_omitted": 0.0,
+       "no_condition_needed": 0.0,
+       "partial_conditions": 0.0,
+       "spurious_condition": 0.0,
+       "wrong_condition": 1.0
+      },
       "tokens": 3219.0
      },
      "opposite": {
