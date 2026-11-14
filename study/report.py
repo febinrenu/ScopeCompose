@@ -123,6 +123,45 @@ def retrieval_all() -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# Operator survival (model-free operators; no generation involved)
+# --------------------------------------------------------------------------- #
+
+CQA_REDUCERS = ("rr8to3", "rr8to5", "nli", "crs")
+
+
+def operator_survival() -> dict:
+    """For each model-free reducer: how often it changes the top 8, and what share of the gold
+    condition chunks and answer chunks that retrieval had found it removes (conditional questions)."""
+    from study import operators  # noqa: F401  (registers the reducers)
+    from study import ram
+
+    env = systems.Env()
+    qs = cqa.eval_questions(["conditional"])
+    out: dict[str, dict] = {"cqa": {}, "ramdocs": {}}
+    for name in CQA_REDUCERS:
+        changed, kept_n, cond_drop, ans_drop, any_cond_lost = [], [], [], [], []
+        for q in qs:
+            g = env.gold(q)
+            top8 = {c.id for c in env.ranked(q)[:8]}
+            kept = set(systems.build(name, q, env).chunk_ids)
+            changed.append(kept != top8)
+            kept_n.append(len(kept))
+            pc, pa = g.condition_chunks & top8, g.answer_chunks & top8
+            if pc:
+                cond_drop.append(len(pc - kept) / len(pc))
+                any_cond_lost.append(bool(pc - kept))
+            if pa:
+                ans_drop.append(len(pa - kept) / len(pa))
+        out["cqa"][name] = {"changed": st.fmean(changed), "kept": st.fmean(kept_n),
+                            "condition_dropped": st.fmean(cond_drop), "answer_dropped": st.fmean(ans_drop),
+                            "any_condition_lost": st.fmean(any_cond_lost), "n_condition": len(cond_drop),
+                            "n_answer": len(ans_drop)}
+    for name in ("rr3", "nli", "crs", "oracle"):
+        out["ramdocs"][name] = ram.survival(name)
+    return out
+
+
+# --------------------------------------------------------------------------- #
 # Assembly
 # --------------------------------------------------------------------------- #
 
@@ -131,6 +170,7 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "separation": lambda: {f"{s}{w}": separation(w, s) for w, s in ((150, "fixed"), (100, "fixed"),
                                                                     (300, "fixed"), (150, "section"))},
     "retrieval": retrieval_all,
+    "operator_survival": operator_survival,
 }
 
 
@@ -203,6 +243,22 @@ MACROS: dict[str, tuple[str, Callable]] = {
     "recAllGoldEight": ("retrieval.hybrid_fixed150.8.all_gold", pct),
     "recLostGivenAnsEight": ("retrieval.hybrid_fixed150.8.condition_lost_given_answer", pct),
     "recUncondAnsEight": ("retrieval.hybrid_fixed150.8.unconditional_answer_recall", pct),
+    "nliChanged": ("operator_survival.cqa.nli.changed", pct),
+    "nliCondDrop": ("operator_survival.cqa.nli.condition_dropped", pct),
+    "nliAnsDrop": ("operator_survival.cqa.nli.answer_dropped", pct),
+    "crsChanged": ("operator_survival.cqa.crs.changed", pct),
+    "crsCondDrop": ("operator_survival.cqa.crs.condition_dropped", pct),
+    "crsAnsDrop": ("operator_survival.cqa.crs.answer_dropped", pct),
+    "rrCondDrop": ("operator_survival.cqa.rr8to3.condition_dropped", pct),
+    "rrAnsDrop": ("operator_survival.cqa.rr8to3.answer_dropped", pct),
+    "nOpCond": ("operator_survival.cqa.nli.n_condition", integer),
+    "ramRrCorrect": ("operator_survival.ramdocs.rr3.correct", pct),
+    "ramRrMisinfo": ("operator_survival.ramdocs.rr3.misinfo", pct),
+    "ramRrNoise": ("operator_survival.ramdocs.rr3.noise", pct),
+    "ramNliCorrect": ("operator_survival.ramdocs.nli.correct", pct),
+    "ramNliMisinfo": ("operator_survival.ramdocs.nli.misinfo", pct),
+    "ramCrsCorrect": ("operator_survival.ramdocs.crs.correct", pct),
+    "ramCrsMisinfo": ("operator_survival.ramdocs.crs.misinfo", pct),
 }
 
 
