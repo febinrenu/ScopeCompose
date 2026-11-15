@@ -20,7 +20,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Sequence
 
-from api_budget import TruncatedResponseError
+from api_budget import BackendError, TruncatedResponseError
 from api_budget.client import LLMClient, Tier
 from study import cqa
 from study.scoring import MAX_ANSWERS
@@ -236,16 +236,22 @@ def messages_for(q: cqa.Question, evidence: Evidence | None) -> list[dict[str, s
 
 
 def generate(client: LLMClient, tier: Tier, q: cqa.Question, evidence: Evidence | None, *, step: str) -> Generation:
-    """One answer. An output cut off at the token limit is an answer the system
-    failed to give: it is recorded as such and scored, not retried or dropped."""
+    """One answer. An output cut off at the token limit, or aborted by the server because the
+    model fell into a repetition loop, is an answer the system failed to give: it is recorded
+    as such and scored, not retried or dropped. Both are deterministic at temperature 0."""
+    import settings
+
     system = SYSTEM if evidence is not None else SYSTEM_CLOSED_BOOK
     try:
         res = client.complete(messages=messages_for(q, evidence), system=system, tier=tier, step=step,
                               response_format={"type": "json_object"})
     except TruncatedResponseError as exc:
-        import settings
-
         return Generation(Parsed((), ok=False), f"[truncated] {exc}"[:300],
+                          settings.models().tier(tier.value).model or "", 0, 0, 0.0, False)
+    except BackendError as exc:
+        if "token repeat limit" not in str(exc):
+            raise
+        return Generation(Parsed((), ok=False), f"[degenerate] {exc}"[:300],
                           settings.models().tier(tier.value).model or "", 0, 0, 0.0, False)
     return Generation(parse_output(res.text, evidence), res.text, res.model, res.prompt_tokens,
                       res.completion_tokens, res.latency_s, res.cached)

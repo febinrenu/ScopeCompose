@@ -61,6 +61,18 @@
 \newcommand{\ramNliMisinfo}{68.1}
 \newcommand{\ramCrsCorrect}{63.6}
 \newcommand{\ramCrsMisinfo}{67.8}
+\newcommand{\ramOracleEffAllQwen}{+11.2 points (95\% CI +7.6 to +14.4; $p<0.001$)}
+\newcommand{\ramRerankEffAllQwen}{$-$1.0 points (95\% CI $-$3.8 to +1.2; $p=0.531$)}
+\newcommand{\ramNliEffAllQwen}{$-$5.4 points (95\% CI $-$8.6 to $-$2.6; $p<0.001$)}
+\newcommand{\ramCrsEffAllQwen}{$-$7.2 points (95\% CI $-$10.6 to $-$4.4; $p<0.001$)}
+\newcommand{\ramSelectEffAllQwen}{$-$9.4 points (95\% CI $-$13.2 to $-$6.4; $p<0.001$)}
+\newcommand{\ramGradeEffAllQwen}{$-$1.6 points (95\% CI $-$5.2 to +1.0; $p=0.368$)}
+\newcommand{\ramOracleEffAllLlama}{+13.8 points (95\% CI +10.0 to +17.4; $p<0.001$)}
+\newcommand{\ramRerankEffAllLlama}{$-$0.8 points (95\% CI $-$3.8 to +1.8; $p=0.678$)}
+\newcommand{\ramNliEffAllLlama}{$-$5.8 points (95\% CI $-$9.2 to $-$2.8; $p<0.001$)}
+\newcommand{\ramCrsEffAllLlama}{$-$8.2 points (95\% CI $-$11.6 to $-$5.2; $p<0.001$)}
+\newcommand{\ramSelectEffAllLlama}{$-$10.0 points (95\% CI $-$13.8 to $-$6.2; $p<0.001$)}
+\newcommand{\ramGradeEffAllLlama}{+0.6 points (95\% CI $-$3.0 to +3.6; $p=0.817$)}
 \newcommand{\nCondOnlyEval}{216}
 \newcommand{\fcClosedUncondQwen}{40.3}
 \newcommand{\anyCondTopUncondQwen}{54.5}
@@ -69,11 +81,11 @@
 \newcommand{\eSevenQwen}{+1.4 points (95\% CI 0.0 to +2.9; $p=0.057$)}
 \newcommand{\eSixQwen}{+5.9 points (95\% CI +2.2 to +10.4; $p=0.006$)}
 \newcommand{\nOppositeQwen}{88}
-\newcommand{\fcClosedUncondLlama}{\textbf{??}}
+\newcommand{\fcClosedUncondLlama}{43.1}
 \newcommand{\anyCondTopUncondLlama}{20.0}
-\newcommand{\fcSelectLlama}{\textbf{??}}
+\newcommand{\fcSelectLlama}{10.3}
 \newcommand{\fcGoldUncondLlama}{52.9}
-\newcommand{\eSevenLlama}{\textbf{??}}
+\newcommand{\eSevenLlama}{+2.7 points (95\% CI +1.1 to +4.6; $p=0.002$)}
 \newcommand{\eSixLlama}{+5.9 points (95\% CI +0.2 to +11.7; $p=0.048$)}
 \newcommand{\nOppositeLlama}{88}
 \newcommand{\hServedGroqOss}{138}
@@ -110,33 +122,33 @@
 \newcommand{\ramGradeMiQwen}{17.7}
 \newcommand{\ramGradeWrongQwen}{40.7}
 \newcommand{\ramGradeEffQwen}{$-$1.2 points (95\% CI $-$6.2 to +2.5; $p=0.703$)}
-\newcommand{\ramFullAccLlama}{\textbf{??}}
-\newcommand{\ramFullMiLlama}{\textbf{??}}
-\newcommand{\ramFullWrongLlama}{\textbf{??}}
-\newcommand{\ramOracleAccLlama}{\textbf{??}}
-\newcommand{\ramOracleMiLlama}{\textbf{??}}
-\newcommand{\ramOracleWrongLlama}{\textbf{??}}
-\newcommand{\ramOracleEffLlama}{\textbf{??}}
-\newcommand{\ramRerankAccLlama}{\textbf{??}}
-\newcommand{\ramRerankMiLlama}{\textbf{??}}
-\newcommand{\ramRerankWrongLlama}{\textbf{??}}
-\newcommand{\ramRerankEffLlama}{\textbf{??}}
-\newcommand{\ramNliAccLlama}{\textbf{??}}
-\newcommand{\ramNliMiLlama}{\textbf{??}}
-\newcommand{\ramNliWrongLlama}{\textbf{??}}
-\newcommand{\ramNliEffLlama}{\textbf{??}}
-\newcommand{\ramCrsAccLlama}{\textbf{??}}
-\newcommand{\ramCrsMiLlama}{\textbf{??}}
-\newcommand{\ramCrsWrongLlama}{\textbf{??}}
-\newcommand{\ramCrsEffLlama}{\textbf{??}}
-\newcommand{\ramSelectAccLlama}{\textbf{??}}
-\newcommand{\ramSelectMiLlama}{\textbf{??}}
-\newcommand{\ramSelectWrongLlama}{\textbf{??}}
-\newcommand{\ramSelectEffLlama}{\textbf{??}}
-\newcommand{\ramGradeAccLlama}{\textbf{??}}
-\newcommand{\ramGradeMiLlama}{\textbf{??}}
-\newcommand{\ramGradeWrongLlama}{\textbf{??}}
-\newcommand{\ramGradeEffLlama}{\textbf{??}}
+\newcommand{\ramFullAccLlama}{25.8}
+\newcommand{\ramFullMiLlama}{14.8}
+\newcommand{\ramFullWrongLlama}{49.8}
+\newcommand{\ramOracleAccLlama}{39.6}
+\newcommand{\ramOracleMiLlama}{43.2}
+\newcommand{\ramOracleWrongLlama}{5.8}
+\newcommand{\ramOracleEffLlama}{+28.4 points (95\% CI +22.2 to +33.7; $p<0.001$)}
+\newcommand{\ramRerankAccLlama}{25.0}
+\newcommand{\ramRerankMiLlama}{11.9}
+\newcommand{\ramRerankWrongLlama}{53.9}
+\newcommand{\ramRerankEffLlama}{$-$2.9 points (95\% CI $-$7.0 to +0.4; $p=0.188$)}
+\newcommand{\ramNliAccLlama}{20.0}
+\newcommand{\ramNliMiLlama}{14.0}
+\newcommand{\ramNliWrongLlama}{43.6}
+\newcommand{\ramNliEffLlama}{$-$0.8 points (95\% CI $-$5.8 to +3.3; $p=0.859$)}
+\newcommand{\ramCrsAccLlama}{17.6}
+\newcommand{\ramCrsMiLlama}{10.3}
+\newcommand{\ramCrsWrongLlama}{42.8}
+\newcommand{\ramCrsEffLlama}{$-$4.5 points (95\% CI $-$9.5 to $-$0.8; $p=0.063$)}
+\newcommand{\ramSelectAccLlama}{15.8}
+\newcommand{\ramSelectMiLlama}{13.6}
+\newcommand{\ramSelectWrongLlama}{28.4}
+\newcommand{\ramSelectEffLlama}{$-$1.2 points (95\% CI $-$6.2 to +2.9; $p=0.729$)}
+\newcommand{\ramGradeAccLlama}{26.4}
+\newcommand{\ramGradeMiLlama}{18.1}
+\newcommand{\ramGradeWrongLlama}{42.8}
+\newcommand{\ramGradeEffLlama}{+3.3 points (95\% CI $-$1.2 to +7.4; $p=0.230$)}
 \newcommand{\fcGoldQwen}{9.6}
 \newcommand{\fcNoCondElQwen}{2.6}
 \newcommand{\fcPadQwen}{6.0}
@@ -166,13 +178,13 @@
 \newcommand{\fcNoCondElLlama}{5.2}
 \newcommand{\fcPadLlama}{8.8}
 \newcommand{\fcTopLlama}{7.6}
-\newcommand{\fcClosedLlama}{4.9}
+\newcommand{\fcClosedLlama}{4.0}
 \newcommand{\fcRerankLlama}{8.6}
 \newcommand{\fcNliLlama}{8.2}
 \newcommand{\fcCrsLlama}{7.2}
 \newcommand{\fcQcLlama}{8.9}
-\newcommand{\fcAdjLlama}{\textbf{??}}
-\newcommand{\fcPageLlama}{\textbf{??}}
+\newcommand{\fcAdjLlama}{8.5}
+\newcommand{\fcPageLlama}{8.9}
 \newcommand{\noticedGoldLlama}{37.3}
 \newcommand{\recallGoldLlama}{18.2}
 \newcommand{\noticedTopLlama}{23.3}

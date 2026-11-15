@@ -13,13 +13,13 @@
 \texttt{gold\,+\,distractors} & all gold chunks, filled to 8 with top-ranked non-gold chunks \\
 \midrule
 \multicolumn{2}{l}{\emph{Retrieval}}\\
-\texttt{top-$k$} & the $k$ highest-ranked chunks, $k\in\{3,5,8,12,20\}$; \texttt{top-8} is the reference \\
+\texttt{top-$k$} & the $k$ highest-ranked chunks, $k\in\{3,8\}$ (recall alone is measured up to $k=50$); \texttt{top-8} is the reference \\
 \midrule
 \multicolumn{2}{l}{\emph{Evidence-reducing operators (applied to the top 8)}}\\
 \texttt{rerank-3} & the 3 chunks a cross-encoder reranker scores highest \\
 \texttt{NLI filter} & drops the lower-ranked chunk of each pair judged contradictory \\
 \texttt{ConflictRAG-style} & resolves each detected conflict by Entropy-TOPSIS credibility selection \\
-\texttt{relevance grading} & keeps the chunks the generator model grades as useful, one call each \\
+\texttt{relevance grading} & keeps the chunks the generator model grades as useful, one call each (RAMDocs only) \\
 \texttt{listwise selection} & keeps the chunks the generator model selects, one call in total \\
 \midrule
 \multicolumn{2}{l}{\emph{Context completion (budget of 8 chunks)}}\\
