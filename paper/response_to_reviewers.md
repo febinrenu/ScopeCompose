@@ -171,7 +171,7 @@ The cross-fitting and threshold protocol is now described step by step in the me
 We thank the reviewer for the second reading, and for withdrawing the numerical-inconsistency point after checking the C† populations. The three experiments the reviewer flagged as outstanding are now complete, for every generator they were run on. The target journal is the *Journal of Trends in Computer Science and Smart Technology* (IRO Journals), which limits papers to 25 pages and 25 references. Some responses below are shaped by those limits.
 
 **Outstanding experiments.**
-- **Verification pass:** results for Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra are in "Inside the generation loss". (The same pass for Gemma-4-31B is still running; its results will be added to the final version.)
+- **Verification pass:** results for Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra are in "Inside the generation loss". (The same pass for Gemma-4-31B was still running at this round; it is now complete and reported, see the fourth round.)
 - **Section-aware chunks end to end:** results for both local generators are in the same subsection.
 - **Oracle completion:** results for all four generators (Qwen2.5-7B, Llama-3.1-8B, Nemotron-3-Ultra, Gemma-4-31B) are in "Why context completion does not help".
 
@@ -262,7 +262,7 @@ The C-Pack reference is kept only as background for the BGE family, which is wha
 
 We thank the reviewer for the third report. The changes are listed in the order of the reviewer's checklist.
 
-**Gemma-4-31B verification pass.** Still running on NVIDIA's API at the time of this copy. The paper says so in one sentence, and the results will replace it in the final version. No partial results are reported. The report script now leaves out any cell that has not finished, so a partial run cannot enter the paper.
+**Gemma-4-31B verification pass.** Still running on NVIDIA's API at the time of this copy. The paper says so in one sentence, and the results will replace it in the final version. No partial results are reported. The report script now leaves out any cell that has not finished, so a partial run cannot enter the paper. (Now complete; see the fourth round, item 1.)
 
 **Fixed 70-word control.** It was only ever a control for separation, run without generation: the analysis plan describes it as "a size-matched separation control", and its results are in Section 4.1 (70-word chunks isolate a condition in more conditional questions than section-aware chunks of similar size). The method's sentence read as if it were also run end to end, so it now says the control is "for separation only" and points to Section 4.1.
 
@@ -303,7 +303,17 @@ Exact matching therefore explains little of the measured loss. The abstract now 
 
 We thank the reviewer again. The changes follow the reviewer's five tasks.
 
-**1. Gemma-4-31B verification.** GEMMA_VERIFICATION_PENDING
+**1. Gemma-4-31B verification.** Complete, on all 250 hosted questions with gold context (the 50 unanswerable ones have no gold chunks) and all 300 with the top 8. The "still running" sentence is replaced by the results, reported beside Nemotron-3-Ultra's in "Inside the generation loss", with every item the reviewer listed:
+
+| Gemma-4-31B, verification vs. single pass | Gold context | Top 8 |
+|---|---|---|
+| Condition recall, conditional questions | 27.9% → 46.6% | 15.9% → 31.8% |
+| Condition precision, conditional questions | 55.7% → 50.9% | 38.7% → 27.7% |
+| F1 with conditions, conditional questions | +5.4 (95% CI +1.4 to +10.0; p = 0.017) | +1.9 (−2.3 to +6.6; p = 0.393) |
+| Unconditional answers with a condition | 13.0% → 51.0% | 22.0% → 64.0% |
+| F1 with conditions, unconditional questions | −31.7 (−42.1 to −22.6; p < 0.001) | −35.4 (−45.7 to −25.9; p < 0.001) |
+
+With gold context, Gemma-4-31B's gain on conditional questions is distinguishable from zero, as for the two local generators (+2.9 and +3.5 points) but not for Nemotron-3-Ultra (+2.2, CI includes zero). This does not change the conclusion. For every generator, the gain on conditional questions is at most about a sixth of the loss on unconditional ones (Gemma-4-31B +5.4 against −31.7, the others between a tenth and a seventeenth). The sentence the paper draws from the pass, that locating conditions is not the same as judging which ones the scenario leaves open, therefore now rests on all four generators the pass was run on.
 
 **2. Listwise selection.** Section 4.5 now reads: listwise selection "yields a numerical gain for both generators (+1.4 points, 95% CI 0.0 to +2.9, p = 0.057, and +2.7 points, +1.1 to +4.6, p = 0.002), distinguishable from zero only for Llama-3.1-8B". The RAMDocs section no longer calls it "the one policy that helped", but "the one policy with a gain".
 
@@ -330,6 +340,6 @@ The like-for-like comparison does not support "the stages before generation matt
 
 The same-question contrasts are listed in the analysis plan's deviations as exploratory.
 
-**5. Numerical audit.** Every number in the text and tables is regenerated from the raw outputs by `python -m study.report`. `paper/check_paper.py` passes except for the Gemma sentence and the biography placeholder. In this round the regenerated tables were unchanged.
+**5. Numerical audit.** Every number in the text and tables is regenerated from the raw outputs by `python -m study.report`. `paper/check_paper.py` passes except for the biography placeholder, which the authors will fill. In this round the regenerated tables were unchanged.
 
 **Manual annotation audit (optional).** Not done in this round, for the reason given in the third round; the automatic bound and the limitations paragraph stand.
