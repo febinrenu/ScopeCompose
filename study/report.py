@@ -288,7 +288,8 @@ def providers() -> dict:
         for path in sorted((RUNS / "hosted").glob(f"*__{m}.jsonl")):
             counts.update(r.get("served_by", "groq:" + str(r.get("model"))).split(":")[0] for r in read_cell(path).values())
         if counts:
-            out[m] = {"counts": dict(counts), "total": sum(counts.values())}
+            out[m] = {"counts": dict(counts), "total": sum(counts.values()),
+                      "groq": counts.get("groq", 0), "nvidia": counts.get("nvidia", 0) + counts.get("nvidia2", 0)}
     gold = RUNS / "hosted" / "gold__oss20b.jsonl"
     if gold.exists():
         recs, scores = read_cell(gold), score_cell(gold)
@@ -469,6 +470,13 @@ MACROS: dict[str, tuple[str, Callable]] = {
     "ramCrsCorrect": ("operator_survival.ramdocs.crs.correct", pct),
     "ramCrsMisinfo": ("operator_survival.ramdocs.crs.misinfo", pct),
     # -- generation results (study.confirm, end_to_end, qualifier) -- #
+    "hServedGroqOss": ("providers.oss20b.groq", integer),
+    "hServedNvidiaOss": ("providers.oss20b.nvidia", integer),
+    "hServedTotalOss": ("providers.oss20b.total", integer),
+    "hCondOnlyN": ("confirmatory.gemma31b.family.C2.population", integer),
+    "hCEightOss": ("confirmatory.oss20b.C8", effect),
+    "hCEightGemma": ("confirmatory.gemma31b.C8", effect),
+    "hCEightNemo": ("confirmatory.nemotron.C8", effect),
     "ramFullAccQwen": ("ramdocs.qwen7b.full.all.correct", pct),
     "ramFullMiQwen": ("ramdocs.qwen7b.full.misinfo.correct", pct),
     "ramFullWrongQwen": ("ramdocs.qwen7b.full.misinfo.any_wrong", pct),

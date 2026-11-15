@@ -60,7 +60,15 @@ The metric itself rewards silence. A stated condition scores zero whenever the g
 \subsection{Larger generators}
 \label{sec:hosted}
 
-\pending{Text on Table 5: the hosted replication; written when its cells are complete.}
+Table~5 repeats four systems with three larger generators from three model families, on a stratified subsample of \nHostedQ{} evaluation questions. These comparisons were planned as replication of direction: they are exploratory, unadjusted for multiplicity, and rest on 150 conditional questions (\hCondOnlyN{} for the comparison that removes condition-only chunks).
+
+The direction of every main effect holds, and the stages before generation matter more, not less, as the generator improves. Removing the gold chunks that hold only a condition costs gpt-oss-20b \hCTwoOss, Gemma-4-31B \hCTwoGemma{} and Nemotron-3-Ultra \hCTwoNemo, against \cTwoQwen{} for Qwen2.5-7B. Replacing the gold chunks by the top 8 retrieved ones costs \hEOneOss, \hEOneGemma{} and \hEOneNemo{} respectively. A generator that states more conditions has more of them to lose when chunking or retrieval separates them from the answer.
+
+Generation nevertheless remains the largest single loss. With exactly the gold chunks in context, the three models cite \hNoticedOss\%, \hNoticedGemma\% and \hNoticedNemo\% of the condition lines anywhere in their output, and state \hRecallOss\%, \hRecallGemma\% and \hRecallNemo\% of the gold conditions as conditions on the answer; F1 with conditions on these questions is \hGoldOss, \hGoldGemma{} and \hGoldNemo. Scale narrows the gap only slowly: the largest model, with 550B parameters, still leaves two thirds of the conditions unstated.
+
+Context completion helps none of the larger models. Against the top 8 it changes F1 with conditions by \hCSevenOss{} for gpt-oss-20b, \hCSevenGemma{} for Gemma-4-31B and \hCSevenNemo{} for Nemotron-3-Ultra, and on unconditional questions none of the three meets the non-inferiority margin. The chunks it adds are mostly not conditions (Section~\ref{sec:completion}), and a stronger reader is distracted by them rather than helped.
+
+The gpt-oss-20b answers were served by Groq for \hServedGroqOss{} of the \hServedTotalOss{} calls and by NVIDIA's API, with identical settings, for the remaining \hServedNvidiaOss, after Groq's daily quota was spent (Section~\ref{sec:method}); Gemma-4-31B and Nemotron-3-Ultra were served by NVIDIA throughout.
 
 \input{tables/hosted}
 
