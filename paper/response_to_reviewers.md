@@ -31,7 +31,7 @@ The RAMDocs paragraph in the method section now opens with its limits: synthetic
 We go further than speculation, with new analyses in "Why context completion does not help":
 - **The candidate pool is not the problem.** 71.5% of the condition chunks that the top five miss lie on the pages completion searches.
 - **The threshold is not the problem.** Choosing it on the evaluation questions themselves, the most favourable case, raises the trained scorer's F1 only to 0.09 (0.11 for the untrained reranker).
-- **Even a perfect scorer changes little.** A new oracle variant adds exactly the missed condition chunks, raising the share of gold conditions in context from 72.7% to 89.1%. Yet F1 with conditions on conditional questions changes by only +0.5 points for Qwen2.5-7B (95% CI −0.8 to +1.7) and +2.4 for Llama-3.1-8B (+1.1 to +4.2). Nemotron-3-Ultra's condition recall does not move (15.6% and 15.9%). [Gemma-4-31B to be added.]
+- **Even a perfect scorer changes little.** A new oracle variant adds exactly the missed condition chunks, raising the share of gold conditions in context from 72.7% to 89.1%. Yet F1 with conditions on conditional questions changes by only +0.5 points for Qwen2.5-7B (95% CI −0.8 to +1.7) and +2.4 for Llama-3.1-8B (+1.1 to +4.2). On the hosted subsample, where the share rises from 68.5% to 83.6%, neither larger generator's condition recall rises: 15.6% and 15.9% for Nemotron-3-Ultra, 15.9% and 14.8% for Gemma-4-31B (F1 with conditions −1.4 points, 95% CI −4.7 to +1.6).
 - **Three task properties explain the weak learning:** few positive pairs per fold, near-identical vocabulary between condition chunks and their neighbours, and the dependence of "is a condition" on the scenario.
 
 ---
@@ -84,7 +84,7 @@ We agree, and reframed it as a pre-registered hypothesis with a negative result,
 - The method section states its page-local candidate ceiling.
 - The completion-ceiling analysis separates candidate-generation recall (71.5% of missed condition chunks are in the pool) from ranking precision (threshold sweep).
 - The class imbalance is discussed.
-- The reviewer's oracle candidate selector is now included as `completion (oracle)`. Even with a perfect scorer, the end-to-end gain is at most a few points: +0.5 (not significant) for Qwen2.5-7B, +2.4 for Llama-3.1-8B, and nothing detectable for Nemotron-3-Ultra. Completion's ceiling is set by generation, which leaves most supplied conditions unstated. [Gemma-4-31B to be added.]
+- The reviewer's oracle candidate selector is now included as `completion (oracle)`. Even with a perfect scorer, the end-to-end gain is at most a few points: +0.5 (not significant) for Qwen2.5-7B, +2.4 for Llama-3.1-8B, and nothing detectable for Nemotron-3-Ultra (−0.7) or Gemma-4-31B (−1.4). Completion's ceiling is set by generation, which leaves most supplied conditions unstated.
 
 **Issue 6. Interpretation of the conflict-handling experiments.**
 - (A) The ConflictRAG-style resolver is labelled a partial reproduction throughout. The method section lists the three criteria implemented (source authority, recency, specificity) and the two omitted (relevance, consistency, which the original extracts with a language model). It also explains how their omission could matter, and the paper no longer makes any claim about the original system.
@@ -173,7 +173,7 @@ We thank the reviewer for the second reading, and for withdrawing the numerical-
 **Outstanding experiments.**
 - **Verification pass:** results for Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra are in "Inside the generation loss". [Gemma-4-31B to be added.]
 - **Section-aware chunks end to end:** results for both local generators are in the same subsection.
-- **Oracle completion:** results for Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra are in "Why context completion does not help". [Gemma-4-31B to be added.]
+- **Oracle completion:** results for all four generators (Qwen2.5-7B, Llama-3.1-8B, Nemotron-3-Ultra, Gemma-4-31B) are in "Why context completion does not help".
 
 None of the three changes the paper's conclusions, and each sharpens one:
 - A dedicated pass finds more conditions but cannot tell when none applies.
