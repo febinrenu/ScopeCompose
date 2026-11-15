@@ -2065,3 +2065,15 @@ correctly skips until `SECOND_BACKBONE` is assigned.
    confirmed anchors in `docs/wp0_positioning_memo.md`.
 5. Collect ~20 real documents and run `benchmark.mining.tier1_pilot` for the
    actual Tier-1 yield. Due end of week 4.
+
+## 2026-11-15 — all runs complete; paper complete except author-supplied items
+
+- Every cell complete: local matrix (Qwen2.5-7B, Llama-3.1-8B; 30 ConditionalQA + 14 RAMDocs cells),
+  hosted replication (gpt-oss-20b, Gemma-4-31B, Nemotron-3-Ultra; deviations 1-3 in study/ANALYSIS_PLAN.md).
+- Confirmatory family (Holm): C1-C3 significant for both local models; C4-C7 null; C8 non-inferior for
+  Qwen only. Completion scorer AUC 0.70 < untrained reranker 0.78; does not transfer (OOD AUC 0.36/0.25).
+- `python -m study.report` rebuilds results/results.json, paper/numbers.tex (241 macros) and Tables 2-6.
+- `python paper/check_paper.py` passes except the \pending markers in statements.tex and biography.tex,
+  which need: author names/affiliations/emails/biographies/photos, funding and COI confirmation,
+  repository URL. Paper: 23 pages, 25 references.
+- Model outputs and qualifier scores are now committed (study/runs/, study/artifacts/qualifier/*.json).
