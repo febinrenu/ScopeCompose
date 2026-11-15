@@ -175,9 +175,11 @@ def local() -> int:
     return 0
 
 
-def hosted() -> int:
-    print(json.dumps(provider_check()), flush=True)
-    for m in ("gemma31b", "nemotron"):
+def hosted(models: tuple[str, ...] = ("gemma31b", "nemotron")) -> int:
+    """Run one process per model to work on both at once; never two processes on the same model."""
+    if "gemma31b" in models:
+        print(json.dumps(provider_check()), flush=True)
+    for m in models:
         qs = cqa.hosted_questions()
         for attempt in range(6):
             try:
@@ -194,8 +196,11 @@ def hosted() -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("which", choices=("local", "hosted"))
+    ap.add_argument("--model", choices=("gemma31b", "nemotron"), help="hosted only: run just this model")
     args = ap.parse_args(argv)
-    return local() if args.which == "local" else hosted()
+    if args.which == "local":
+        return local()
+    return hosted((args.model,) if args.model else ("gemma31b", "nemotron"))
 
 
 if __name__ == "__main__":

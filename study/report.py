@@ -364,6 +364,77 @@ def diagnostics() -> dict:
     return out
 
 
+#: revision comparisons: name -> (system a, env a, system b, env b); each is a - b on the same questions
+REVISION_PAIRS = {
+    "verify_gold": ("gold_verify", "fixed", "gold", "fixed"),
+    "verify_top": ("top8_verify", "fixed", "top8", "fixed"),
+    "oracle": ("qcoracle", "fixed", "top8", "fixed"),
+    "oracle_vs_qc": ("qcoracle", "fixed", "qc", "fixed"),
+    "section_top": ("top8", "section", "top8", "fixed"),
+    "section_gold": ("gold", "section", "gold", "fixed"),
+}
+
+
+def revision() -> dict:
+    """Generation-side and chunking-side checks added in revision (deviation 4): a second-pass condition
+    check, completion with a perfect scorer, and section-aware chunks end to end. Exploratory, unadjusted."""
+    from study import confirm
+    from study.analysis import score_cell, summarise
+    from study.revision import SECTION_ENV
+    from study.run import cell_path, read_cell
+
+    idx = cqa.by_id()
+
+    def _cited(recs: dict, keys) -> dict:
+        """Conditions stated per question, and the share of them that are lines stating the answer."""
+        tot = ans = 0
+        for k in keys:
+            c = {x for _, cs in recs[k]["answers"] for x in cs}
+            tot, ans = tot + len(c), ans + len(c & set(idx[k].answer_evidence))
+        return {"conditions_per_question": tot / len(keys), "answer_line_share": ans / tot if tot else float("nan")}
+
+    envs = {"fixed": systems.Env(), "section": SECTION_ENV}
+    out: dict = {}
+    for qset, models in (("eval", LOCAL_MODELS), ("hosted", HOSTED_MODELS)):
+        pops = {k: confirm.population(qset, k) for k in ("conditional", "unconditional")}
+        for m in models:
+            cache: dict = {}
+
+            def cell(system, env):
+                key = (system, env)
+                if key not in cache:
+                    cache[key] = score_cell(cell_path(system, m, qset, envs[env]))
+                return cache[key]
+
+            row: dict = {}
+            for name, (sa, ea, sb, eb) in REVISION_PAIRS.items():
+                a, b = cell(sa, ea), cell(sb, eb)
+                if not a or not b:
+                    continue
+                res: dict = {}
+                for pop_name, pop in pops.items():
+                    keys = pop & set(a) & set(b)
+                    if not keys:
+                        continue
+                    r = confirm.compare({"a": a, "b": b}, "a", "b", frozenset(keys))
+                    if r is None:
+                        continue
+                    r["complete"] = len(keys) == len(pop)
+                    sa_sum, sb_sum = summarise([a[k] for k in keys]), summarise([b[k] for k in keys])
+                    for tag, s, sys_, env_ in (("a_stats", sa_sum, sa, ea), ("b_stats", sb_sum, sb, eb)):
+                        r[tag] = {x: s[x] for x in ("f1_cond", "cond_precision", "cond_recall", "any_condition", "em_cond",
+                                                    "cond_in_context") if x in s}
+                        r[tag].update(_cited(read_cell(cell_path(sys_, m, qset, envs[env_])), keys))
+                    res[pop_name] = r
+                if res:
+                    row[name] = res
+            if row:
+                out.setdefault(qset, {})[m] = row
+    if not out:
+        raise FileNotFoundError("no revision cells yet")
+    return out
+
+
 def providers() -> dict:
     """Which provider served each hosted answer (deviations 1-3), and gpt-oss-20b's gold-context F1c by provider."""
     from collections import Counter
@@ -454,6 +525,7 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "qualifier": qualifier_section,
     "providers": providers,
     "diagnostics": diagnostics,
+    "revision": revision,
 }
 
 
@@ -839,6 +911,37 @@ MACROS: dict[str, tuple[str, Callable]] = {
 def short_effect(d: dict) -> str:
     """The point estimate alone, for prose next to a table that gives the interval."""
     return f"{_pts(d['diff'])} points"
+
+
+#: provider check: gpt-oss-20b re-run on NVIDIA for the questions Groq answered with gold context
+MACROS.update({
+    "provN": ("providers.oss20b.provider_check.n", integer),
+    "provNCond": ("providers.oss20b.provider_check.n_conditional", integer),
+    "provSame": ("providers.oss20b.provider_check.same_answers", pct),
+    "provGroq": ("providers.oss20b.provider_check.f1c_groq", pct),
+    "provNvidia": ("providers.oss20b.provider_check.f1c_nvidia", pct),
+    "provDiff": ("providers.oss20b.provider_check.paired", effect),
+})
+
+#: revision comparisons, per model: rev<Pair><Population><Model>, plus the condition statistics behind them
+_REV_MODELS = {"eval": {"qwen7b": "Qwen", "llama8b": "Llama"}, "hosted": {"gemma31b": "Gemma", "nemotron": "Nemo"}}
+_REV_PAIRS = {"verify_gold": "VerGold", "verify_top": "VerTop", "oracle": "Oracle", "oracle_vs_qc": "OracleQc",
+              "section_top": "SecTop", "section_gold": "SecGold"}
+for _qs, _ms in _REV_MODELS.items():
+    for _m, _mn in _ms.items():
+        for _pair, _pn in _REV_PAIRS.items():
+            for _pop, _popn in (("conditional", "Cond"), ("unconditional", "Uncond")):
+                _base = f"revision.{_qs}.{_m}.{_pair}.{_pop}"
+                MACROS[f"rev{_pn}{_popn}{_mn}"] = (_base, effect)
+                MACROS[f"rev{_pn}{_popn}{_mn}Pt"] = (_base, short_effect)
+                for _side, _sn in (("a_stats", ""), ("b_stats", "Base")):
+                    for _stat, _st in (("f1_cond", "Fc"), ("cond_recall", "Recall"), ("cond_precision", "Prec"),
+                                       ("any_condition", "Any"), ("cond_in_context", "Ctx")):
+                        if _pop == "unconditional" and _stat in ("cond_recall", "cond_precision", "cond_in_context"):
+                            continue
+                        MACROS[f"rev{_pn}{_popn}{_mn}{_st}{_sn}"] = (f"{_base}.{_side}.{_stat}", pct)
+                    MACROS[f"rev{_pn}{_popn}{_mn}AnsLine{_sn}"] = (f"{_base}.{_side}.answer_line_share", pct)
+                    MACROS[f"rev{_pn}{_popn}{_mn}PerQ{_sn}"] = (f"{_base}.{_side}.conditions_per_question", one)
 
 
 # A short form of every confirmatory effect, for prose beside Table 4 (which gives intervals and p-values).

@@ -318,6 +318,636 @@
 \newcommand{\oodAucProbes}{0.25}
 \newcommand{\oodPosNatural}{18}
 \newcommand{\oodNegNatural}{56}
+\newcommand{\provN}{128}
+\newcommand{\provNCond}{123}
+\newcommand{\provSame}{67.2}
+\newcommand{\provGroq}{16.5}
+\newcommand{\provNvidia}{13.8}
+\newcommand{\provDiff}{$-$2.7 points (95\% CI $-$7.7 to +1.7; $p=0.252$)}
+\newcommand{\revVerGoldCondQwen}{+2.9 points (95\% CI +0.8 to +4.7; $p=0.005$)}
+\newcommand{\revVerGoldCondQwenPt}{+2.9 points}
+\newcommand{\revVerGoldCondQwenFc}{12.5}
+\newcommand{\revVerGoldCondQwenRecall}{44.0}
+\newcommand{\revVerGoldCondQwenPrec}{21.7}
+\newcommand{\revVerGoldCondQwenAny}{77.7}
+\newcommand{\revVerGoldCondQwenCtx}{100.0}
+\newcommand{\revVerGoldCondQwenAnsLine}{24.5}
+\newcommand{\revVerGoldCondQwenPerQ}{5.2}
+\newcommand{\revVerGoldCondQwenFcBase}{9.6}
+\newcommand{\revVerGoldCondQwenRecallBase}{21.0}
+\newcommand{\revVerGoldCondQwenPrecBase}{22.6}
+\newcommand{\revVerGoldCondQwenAnyBase}{54.5}
+\newcommand{\revVerGoldCondQwenCtxBase}{100.0}
+\newcommand{\revVerGoldCondQwenAnsLineBase}{20.0}
+\newcommand{\revVerGoldCondQwenPerQBase}{2.4}
+\newcommand{\revVerGoldUncondQwen}{$-$28.1 points (95\% CI $-$32.7 to $-$24.1; $p<0.001$)}
+\newcommand{\revVerGoldUncondQwenPt}{$-$28.1 points}
+\newcommand{\revVerGoldUncondQwenFc}{0.3}
+\newcommand{\revVerGoldUncondQwenAny}{77.8}
+\newcommand{\revVerGoldUncondQwenAnsLine}{41.1}
+\newcommand{\revVerGoldUncondQwenPerQ}{3.6}
+\newcommand{\revVerGoldUncondQwenFcBase}{28.4}
+\newcommand{\revVerGoldUncondQwenAnyBase}{39.0}
+\newcommand{\revVerGoldUncondQwenAnsLineBase}{27.6}
+\newcommand{\revVerGoldUncondQwenPerQBase}{1.8}
+\newcommand{\revVerTopCondQwen}{\textbf{??}}
+\newcommand{\revVerTopCondQwenPt}{\textbf{??}}
+\newcommand{\revVerTopCondQwenFc}{\textbf{??}}
+\newcommand{\revVerTopCondQwenRecall}{\textbf{??}}
+\newcommand{\revVerTopCondQwenPrec}{\textbf{??}}
+\newcommand{\revVerTopCondQwenAny}{\textbf{??}}
+\newcommand{\revVerTopCondQwenCtx}{\textbf{??}}
+\newcommand{\revVerTopCondQwenAnsLine}{\textbf{??}}
+\newcommand{\revVerTopCondQwenPerQ}{\textbf{??}}
+\newcommand{\revVerTopCondQwenFcBase}{\textbf{??}}
+\newcommand{\revVerTopCondQwenRecallBase}{\textbf{??}}
+\newcommand{\revVerTopCondQwenPrecBase}{\textbf{??}}
+\newcommand{\revVerTopCondQwenAnyBase}{\textbf{??}}
+\newcommand{\revVerTopCondQwenCtxBase}{\textbf{??}}
+\newcommand{\revVerTopCondQwenAnsLineBase}{\textbf{??}}
+\newcommand{\revVerTopCondQwenPerQBase}{\textbf{??}}
+\newcommand{\revVerTopUncondQwen}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenPt}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenFc}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenAny}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenAnsLine}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenPerQ}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenFcBase}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenAnyBase}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenAnsLineBase}{\textbf{??}}
+\newcommand{\revVerTopUncondQwenPerQBase}{\textbf{??}}
+\newcommand{\revOracleCondQwen}{+0.5 points (95\% CI $-$0.8 to +1.7; $p=0.402$)}
+\newcommand{\revOracleCondQwenPt}{+0.5 points}
+\newcommand{\revOracleCondQwenFc}{5.4}
+\newcommand{\revOracleCondQwenRecall}{18.8}
+\newcommand{\revOracleCondQwenPrec}{7.9}
+\newcommand{\revOracleCondQwenAny}{66.4}
+\newcommand{\revOracleCondQwenCtx}{89.1}
+\newcommand{\revOracleCondQwenAnsLine}{9.0}
+\newcommand{\revOracleCondQwenPerQ}{6.1}
+\newcommand{\revOracleCondQwenFcBase}{4.9}
+\newcommand{\revOracleCondQwenRecallBase}{13.0}
+\newcommand{\revOracleCondQwenPrecBase}{3.8}
+\newcommand{\revOracleCondQwenAnyBase}{60.4}
+\newcommand{\revOracleCondQwenCtxBase}{72.7}
+\newcommand{\revOracleCondQwenAnsLineBase}{5.5}
+\newcommand{\revOracleCondQwenPerQBase}{8.9}
+\newcommand{\revOracleUncondQwen}{+4.1 points (95\% CI +0.9 to +7.7; $p=0.017$)}
+\newcommand{\revOracleUncondQwenPt}{+4.1 points}
+\newcommand{\revOracleUncondQwenFc}{13.7}
+\newcommand{\revOracleUncondQwenAny}{53.0}
+\newcommand{\revOracleUncondQwenAnsLine}{6.7}
+\newcommand{\revOracleUncondQwenPerQ}{4.5}
+\newcommand{\revOracleUncondQwenFcBase}{9.6}
+\newcommand{\revOracleUncondQwenAnyBase}{54.5}
+\newcommand{\revOracleUncondQwenAnsLineBase}{5.7}
+\newcommand{\revOracleUncondQwenPerQBase}{7.4}
+\newcommand{\revOracleQcCondQwen}{+0.5 points (95\% CI $-$0.1 to +1.1; $p=0.071$)}
+\newcommand{\revOracleQcCondQwenPt}{+0.5 points}
+\newcommand{\revOracleQcCondQwenFc}{5.4}
+\newcommand{\revOracleQcCondQwenRecall}{18.8}
+\newcommand{\revOracleQcCondQwenPrec}{7.9}
+\newcommand{\revOracleQcCondQwenAny}{66.4}
+\newcommand{\revOracleQcCondQwenCtx}{89.1}
+\newcommand{\revOracleQcCondQwenAnsLine}{9.0}
+\newcommand{\revOracleQcCondQwenPerQ}{6.1}
+\newcommand{\revOracleQcCondQwenFcBase}{4.8}
+\newcommand{\revOracleQcCondQwenRecallBase}{14.5}
+\newcommand{\revOracleQcCondQwenPrecBase}{5.9}
+\newcommand{\revOracleQcCondQwenAnyBase}{63.9}
+\newcommand{\revOracleQcCondQwenCtxBase}{68.1}
+\newcommand{\revOracleQcCondQwenAnsLineBase}{7.9}
+\newcommand{\revOracleQcCondQwenPerQBase}{6.3}
+\newcommand{\revOracleQcUncondQwen}{+0.3 points (95\% CI $-$1.4 to +2.1; $p=0.737$)}
+\newcommand{\revOracleQcUncondQwenPt}{+0.3 points}
+\newcommand{\revOracleQcUncondQwenFc}{13.7}
+\newcommand{\revOracleQcUncondQwenAny}{53.0}
+\newcommand{\revOracleQcUncondQwenAnsLine}{6.7}
+\newcommand{\revOracleQcUncondQwenPerQ}{4.5}
+\newcommand{\revOracleQcUncondQwenFcBase}{13.3}
+\newcommand{\revOracleQcUncondQwenAnyBase}{53.0}
+\newcommand{\revOracleQcUncondQwenAnsLineBase}{6.8}
+\newcommand{\revOracleQcUncondQwenPerQBase}{5.1}
+\newcommand{\revSecTopCondQwen}{$-$0.3 points (95\% CI $-$1.7 to +1.1; $p=0.673$)}
+\newcommand{\revSecTopCondQwenPt}{$-$0.3 points}
+\newcommand{\revSecTopCondQwenFc}{4.5}
+\newcommand{\revSecTopCondQwenRecall}{11.8}
+\newcommand{\revSecTopCondQwenPrec}{6.2}
+\newcommand{\revSecTopCondQwenAny}{59.1}
+\newcommand{\revSecTopCondQwenCtx}{65.2}
+\newcommand{\revSecTopCondQwenAnsLine}{8.2}
+\newcommand{\revSecTopCondQwenPerQ}{4.9}
+\newcommand{\revSecTopCondQwenFcBase}{4.9}
+\newcommand{\revSecTopCondQwenRecallBase}{13.0}
+\newcommand{\revSecTopCondQwenPrecBase}{3.8}
+\newcommand{\revSecTopCondQwenAnyBase}{60.4}
+\newcommand{\revSecTopCondQwenCtxBase}{72.7}
+\newcommand{\revSecTopCondQwenAnsLineBase}{5.5}
+\newcommand{\revSecTopCondQwenPerQBase}{8.9}
+\newcommand{\revSecTopUncondQwen}{+2.6 points (95\% CI $-$0.2 to +5.9; $p=0.096$)}
+\newcommand{\revSecTopUncondQwenPt}{+2.6 points}
+\newcommand{\revSecTopUncondQwenFc}{12.2}
+\newcommand{\revSecTopUncondQwenAny}{53.5}
+\newcommand{\revSecTopUncondQwenAnsLine}{8.6}
+\newcommand{\revSecTopUncondQwenPerQ}{4.0}
+\newcommand{\revSecTopUncondQwenFcBase}{9.6}
+\newcommand{\revSecTopUncondQwenAnyBase}{54.5}
+\newcommand{\revSecTopUncondQwenAnsLineBase}{5.7}
+\newcommand{\revSecTopUncondQwenPerQBase}{7.4}
+\newcommand{\revSecGoldCondQwen}{+1.0 points (95\% CI $-$1.1 to +3.1; $p=0.337$)}
+\newcommand{\revSecGoldCondQwenPt}{+1.0 points}
+\newcommand{\revSecGoldCondQwenFc}{10.6}
+\newcommand{\revSecGoldCondQwenRecall}{22.0}
+\newcommand{\revSecGoldCondQwenPrec}{29.1}
+\newcommand{\revSecGoldCondQwenAny}{51.4}
+\newcommand{\revSecGoldCondQwenCtx}{100.0}
+\newcommand{\revSecGoldCondQwenAnsLine}{25.4}
+\newcommand{\revSecGoldCondQwenPerQ}{2.0}
+\newcommand{\revSecGoldCondQwenFcBase}{9.6}
+\newcommand{\revSecGoldCondQwenRecallBase}{21.0}
+\newcommand{\revSecGoldCondQwenPrecBase}{22.6}
+\newcommand{\revSecGoldCondQwenAnyBase}{54.5}
+\newcommand{\revSecGoldCondQwenCtxBase}{100.0}
+\newcommand{\revSecGoldCondQwenAnsLineBase}{20.0}
+\newcommand{\revSecGoldCondQwenPerQBase}{2.4}
+\newcommand{\revSecGoldUncondQwen}{$-$3.7 points (95\% CI $-$7.3 to $-$0.1; $p=0.049$)}
+\newcommand{\revSecGoldUncondQwenPt}{$-$3.7 points}
+\newcommand{\revSecGoldUncondQwenFc}{24.8}
+\newcommand{\revSecGoldUncondQwenAny}{41.8}
+\newcommand{\revSecGoldUncondQwenAnsLine}{27.4}
+\newcommand{\revSecGoldUncondQwenPerQ}{1.7}
+\newcommand{\revSecGoldUncondQwenFcBase}{28.4}
+\newcommand{\revSecGoldUncondQwenAnyBase}{39.0}
+\newcommand{\revSecGoldUncondQwenAnsLineBase}{27.6}
+\newcommand{\revSecGoldUncondQwenPerQBase}{1.8}
+\newcommand{\revVerGoldCondLlama}{+3.5 points (95\% CI +0.7 to +6.3; $p=0.013$)}
+\newcommand{\revVerGoldCondLlamaPt}{+3.5 points}
+\newcommand{\revVerGoldCondLlamaFc}{18.6}
+\newcommand{\revVerGoldCondLlamaRecall}{33.0}
+\newcommand{\revVerGoldCondLlamaPrec}{35.7}
+\newcommand{\revVerGoldCondLlamaAny}{97.7}
+\newcommand{\revVerGoldCondLlamaCtx}{100.0}
+\newcommand{\revVerGoldCondLlamaAnsLine}{38.9}
+\newcommand{\revVerGoldCondLlamaPerQ}{2.4}
+\newcommand{\revVerGoldCondLlamaFcBase}{15.1}
+\newcommand{\revVerGoldCondLlamaRecallBase}{18.2}
+\newcommand{\revVerGoldCondLlamaPrecBase}{38.1}
+\newcommand{\revVerGoldCondLlamaAnyBase}{46.8}
+\newcommand{\revVerGoldCondLlamaCtxBase}{100.0}
+\newcommand{\revVerGoldCondLlamaAnsLineBase}{30.0}
+\newcommand{\revVerGoldCondLlamaPerQBase}{1.2}
+\newcommand{\revVerGoldUncondLlama}{$-$49.8 points (95\% CI $-$54.2 to $-$45.0; $p<0.001$)}
+\newcommand{\revVerGoldUncondLlamaPt}{$-$49.8 points}
+\newcommand{\revVerGoldUncondLlamaFc}{3.1}
+\newcommand{\revVerGoldUncondLlamaAny}{96.8}
+\newcommand{\revVerGoldUncondLlamaAnsLine}{66.4}
+\newcommand{\revVerGoldUncondLlamaPerQ}{1.6}
+\newcommand{\revVerGoldUncondLlamaFcBase}{52.9}
+\newcommand{\revVerGoldUncondLlamaAnyBase}{26.5}
+\newcommand{\revVerGoldUncondLlamaAnsLineBase}{41.8}
+\newcommand{\revVerGoldUncondLlamaPerQBase}{0.7}
+\newcommand{\revVerTopCondLlama}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaPt}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaFc}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaRecall}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaPrec}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaAny}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaCtx}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaAnsLine}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaPerQ}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaFcBase}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaRecallBase}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaPrecBase}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaAnyBase}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaCtxBase}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaAnsLineBase}{\textbf{??}}
+\newcommand{\revVerTopCondLlamaPerQBase}{\textbf{??}}
+\newcommand{\revVerTopUncondLlama}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaPt}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaFc}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaAny}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaAnsLine}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaPerQ}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaFcBase}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaAnyBase}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaAnsLineBase}{\textbf{??}}
+\newcommand{\revVerTopUncondLlamaPerQBase}{\textbf{??}}
+\newcommand{\revOracleCondLlama}{+2.4 points (95\% CI +1.1 to +4.2; $p=0.003$)}
+\newcommand{\revOracleCondLlamaPt}{+2.4 points}
+\newcommand{\revOracleCondLlamaFc}{10.0}
+\newcommand{\revOracleCondLlamaRecall}{11.2}
+\newcommand{\revOracleCondLlamaPrec}{26.3}
+\newcommand{\revOracleCondLlamaAny}{40.9}
+\newcommand{\revOracleCondLlamaCtx}{89.1}
+\newcommand{\revOracleCondLlamaAnsLine}{21.1}
+\newcommand{\revOracleCondLlamaPerQ}{1.1}
+\newcommand{\revOracleCondLlamaFcBase}{7.6}
+\newcommand{\revOracleCondLlamaRecallBase}{7.1}
+\newcommand{\revOracleCondLlamaPrecBase}{15.4}
+\newcommand{\revOracleCondLlamaAnyBase}{32.5}
+\newcommand{\revOracleCondLlamaCtxBase}{72.7}
+\newcommand{\revOracleCondLlamaAnsLineBase}{19.2}
+\newcommand{\revOracleCondLlamaPerQBase}{1.2}
+\newcommand{\revOracleUncondLlama}{$-$2.8 points (95\% CI $-$6.4 to +1.2; $p=0.151$)}
+\newcommand{\revOracleUncondLlamaPt}{$-$2.8 points}
+\newcommand{\revOracleUncondLlamaFc}{44.4}
+\newcommand{\revOracleUncondLlamaAny}{27.0}
+\newcommand{\revOracleUncondLlamaAnsLine}{25.2}
+\newcommand{\revOracleUncondLlamaPerQ}{0.6}
+\newcommand{\revOracleUncondLlamaFcBase}{47.3}
+\newcommand{\revOracleUncondLlamaAnyBase}{20.0}
+\newcommand{\revOracleUncondLlamaAnsLineBase}{13.7}
+\newcommand{\revOracleUncondLlamaPerQBase}{0.6}
+\newcommand{\revOracleQcCondLlama}{+1.2 points (95\% CI +0.1 to +2.4; $p=0.047$)}
+\newcommand{\revOracleQcCondLlamaPt}{+1.2 points}
+\newcommand{\revOracleQcCondLlamaFc}{10.0}
+\newcommand{\revOracleQcCondLlamaRecall}{11.2}
+\newcommand{\revOracleQcCondLlamaPrec}{26.3}
+\newcommand{\revOracleQcCondLlamaAny}{40.9}
+\newcommand{\revOracleQcCondLlamaCtx}{89.1}
+\newcommand{\revOracleQcCondLlamaAnsLine}{21.1}
+\newcommand{\revOracleQcCondLlamaPerQ}{1.1}
+\newcommand{\revOracleQcCondLlamaFcBase}{8.9}
+\newcommand{\revOracleQcCondLlamaRecallBase}{8.6}
+\newcommand{\revOracleQcCondLlamaPrecBase}{21.9}
+\newcommand{\revOracleQcCondLlamaAnyBase}{38.6}
+\newcommand{\revOracleQcCondLlamaCtxBase}{68.1}
+\newcommand{\revOracleQcCondLlamaAnsLineBase}{21.6}
+\newcommand{\revOracleQcCondLlamaPerQBase}{1.0}
+\newcommand{\revOracleQcUncondLlama}{$-$0.3 points (95\% CI $-$2.1 to +1.5; $p=0.733$)}
+\newcommand{\revOracleQcUncondLlamaPt}{$-$0.3 points}
+\newcommand{\revOracleQcUncondLlamaFc}{44.4}
+\newcommand{\revOracleQcUncondLlamaAny}{27.0}
+\newcommand{\revOracleQcUncondLlamaAnsLine}{25.2}
+\newcommand{\revOracleQcUncondLlamaPerQ}{0.6}
+\newcommand{\revOracleQcUncondLlamaFcBase}{44.8}
+\newcommand{\revOracleQcUncondLlamaAnyBase}{26.0}
+\newcommand{\revOracleQcUncondLlamaAnsLineBase}{21.7}
+\newcommand{\revOracleQcUncondLlamaPerQBase}{0.6}
+\newcommand{\revSecTopCondLlama}{+1.6 points (95\% CI +0.1 to +3.1; $p=0.035$)}
+\newcommand{\revSecTopCondLlamaPt}{+1.6 points}
+\newcommand{\revSecTopCondLlamaFc}{9.2}
+\newcommand{\revSecTopCondLlamaRecall}{9.0}
+\newcommand{\revSecTopCondLlamaPrec}{23.6}
+\newcommand{\revSecTopCondLlamaAny}{35.2}
+\newcommand{\revSecTopCondLlamaCtx}{65.2}
+\newcommand{\revSecTopCondLlamaAnsLine}{18.0}
+\newcommand{\revSecTopCondLlamaPerQ}{1.0}
+\newcommand{\revSecTopCondLlamaFcBase}{7.6}
+\newcommand{\revSecTopCondLlamaRecallBase}{7.1}
+\newcommand{\revSecTopCondLlamaPrecBase}{15.4}
+\newcommand{\revSecTopCondLlamaAnyBase}{32.5}
+\newcommand{\revSecTopCondLlamaCtxBase}{72.7}
+\newcommand{\revSecTopCondLlamaAnsLineBase}{19.2}
+\newcommand{\revSecTopCondLlamaPerQBase}{1.2}
+\newcommand{\revSecTopUncondLlama}{$-$1.6 points (95\% CI $-$5.8 to +2.4; $p=0.424$)}
+\newcommand{\revSecTopUncondLlamaPt}{$-$1.6 points}
+\newcommand{\revSecTopUncondLlamaFc}{45.7}
+\newcommand{\revSecTopUncondLlamaAny}{25.0}
+\newcommand{\revSecTopUncondLlamaAnsLine}{21.9}
+\newcommand{\revSecTopUncondLlamaPerQ}{0.5}
+\newcommand{\revSecTopUncondLlamaFcBase}{47.3}
+\newcommand{\revSecTopUncondLlamaAnyBase}{20.0}
+\newcommand{\revSecTopUncondLlamaAnsLineBase}{13.7}
+\newcommand{\revSecTopUncondLlamaPerQBase}{0.6}
+\newcommand{\revSecGoldCondLlama}{+0.6 points (95\% CI $-$1.4 to +2.5; $p=0.589$)}
+\newcommand{\revSecGoldCondLlamaPt}{+0.6 points}
+\newcommand{\revSecGoldCondLlamaFc}{15.7}
+\newcommand{\revSecGoldCondLlamaRecall}{17.4}
+\newcommand{\revSecGoldCondLlamaPrec}{36.9}
+\newcommand{\revSecGoldCondLlamaAny}{43.2}
+\newcommand{\revSecGoldCondLlamaCtx}{100.0}
+\newcommand{\revSecGoldCondLlamaAnsLine}{34.4}
+\newcommand{\revSecGoldCondLlamaPerQ}{1.2}
+\newcommand{\revSecGoldCondLlamaFcBase}{15.1}
+\newcommand{\revSecGoldCondLlamaRecallBase}{18.2}
+\newcommand{\revSecGoldCondLlamaPrecBase}{38.1}
+\newcommand{\revSecGoldCondLlamaAnyBase}{46.8}
+\newcommand{\revSecGoldCondLlamaCtxBase}{100.0}
+\newcommand{\revSecGoldCondLlamaAnsLineBase}{30.0}
+\newcommand{\revSecGoldCondLlamaPerQBase}{1.2}
+\newcommand{\revSecGoldUncondLlama}{+2.8 points (95\% CI $-$1.4 to +6.9; $p=0.178$)}
+\newcommand{\revSecGoldUncondLlamaPt}{+2.8 points}
+\newcommand{\revSecGoldUncondLlamaFc}{55.7}
+\newcommand{\revSecGoldUncondLlamaAny}{23.0}
+\newcommand{\revSecGoldUncondLlamaAnsLine}{49.1}
+\newcommand{\revSecGoldUncondLlamaPerQ}{0.4}
+\newcommand{\revSecGoldUncondLlamaFcBase}{52.9}
+\newcommand{\revSecGoldUncondLlamaAnyBase}{26.5}
+\newcommand{\revSecGoldUncondLlamaAnsLineBase}{41.8}
+\newcommand{\revSecGoldUncondLlamaPerQBase}{0.7}
+\newcommand{\revVerGoldCondGemma}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaPt}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaFc}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaRecall}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaPrec}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaAny}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaCtx}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaAnsLine}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaPerQ}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaFcBase}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaRecallBase}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaPrecBase}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaAnyBase}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaCtxBase}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaAnsLineBase}{\textbf{??}}
+\newcommand{\revVerGoldCondGemmaPerQBase}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemma}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaPt}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaFc}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaAny}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaAnsLine}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaPerQ}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaFcBase}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaAnyBase}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaAnsLineBase}{\textbf{??}}
+\newcommand{\revVerGoldUncondGemmaPerQBase}{\textbf{??}}
+\newcommand{\revVerTopCondGemma}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaPt}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaFc}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaRecall}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaPrec}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaAny}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaCtx}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaAnsLine}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaPerQ}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaFcBase}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaRecallBase}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaPrecBase}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaAnyBase}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaCtxBase}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaAnsLineBase}{\textbf{??}}
+\newcommand{\revVerTopCondGemmaPerQBase}{\textbf{??}}
+\newcommand{\revVerTopUncondGemma}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaPt}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaFc}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaAny}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaAnsLine}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaPerQ}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaFcBase}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaAnyBase}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaAnsLineBase}{\textbf{??}}
+\newcommand{\revVerTopUncondGemmaPerQBase}{\textbf{??}}
+\newcommand{\revOracleCondGemma}{$-$1.4 points (95\% CI $-$4.7 to +1.6; $p=0.426$)}
+\newcommand{\revOracleCondGemmaPt}{$-$1.4 points}
+\newcommand{\revOracleCondGemmaFc}{15.4}
+\newcommand{\revOracleCondGemmaRecall}{14.8}
+\newcommand{\revOracleCondGemmaPrec}{34.6}
+\newcommand{\revOracleCondGemmaAny}{40.7}
+\newcommand{\revOracleCondGemmaCtx}{83.6}
+\newcommand{\revOracleCondGemmaAnsLine}{29.5}
+\newcommand{\revOracleCondGemmaPerQ}{1.0}
+\newcommand{\revOracleCondGemmaFcBase}{16.8}
+\newcommand{\revOracleCondGemmaRecallBase}{15.9}
+\newcommand{\revOracleCondGemmaPrecBase}{38.7}
+\newcommand{\revOracleCondGemmaAnyBase}{41.3}
+\newcommand{\revOracleCondGemmaCtxBase}{68.5}
+\newcommand{\revOracleCondGemmaAnsLineBase}{28.0}
+\newcommand{\revOracleCondGemmaPerQBase}{1.0}
+\newcommand{\revOracleUncondGemma}{+0.1 points (95\% CI $-$9.3 to +9.9; $p=1.000$)}
+\newcommand{\revOracleUncondGemmaPt}{+0.1 points}
+\newcommand{\revOracleUncondGemmaFc}{52.2}
+\newcommand{\revOracleUncondGemmaAny}{21.3}
+\newcommand{\revOracleUncondGemmaAnsLine}{44.4}
+\newcommand{\revOracleUncondGemmaPerQ}{0.4}
+\newcommand{\revOracleUncondGemmaFcBase}{52.1}
+\newcommand{\revOracleUncondGemmaAnyBase}{23.0}
+\newcommand{\revOracleUncondGemmaAnsLineBase}{37.9}
+\newcommand{\revOracleUncondGemmaPerQBase}{0.5}
+\newcommand{\revOracleQcCondGemma}{+1.2 points (95\% CI $-$0.3 to +3.8; $p=0.269$)}
+\newcommand{\revOracleQcCondGemmaPt}{+1.2 points}
+\newcommand{\revOracleQcCondGemmaFc}{15.4}
+\newcommand{\revOracleQcCondGemmaRecall}{14.8}
+\newcommand{\revOracleQcCondGemmaPrec}{34.6}
+\newcommand{\revOracleQcCondGemmaAny}{40.7}
+\newcommand{\revOracleQcCondGemmaCtx}{83.6}
+\newcommand{\revOracleQcCondGemmaAnsLine}{29.5}
+\newcommand{\revOracleQcCondGemmaPerQ}{1.0}
+\newcommand{\revOracleQcCondGemmaFcBase}{14.3}
+\newcommand{\revOracleQcCondGemmaRecallBase}{12.6}
+\newcommand{\revOracleQcCondGemmaPrecBase}{31.1}
+\newcommand{\revOracleQcCondGemmaAnyBase}{40.7}
+\newcommand{\revOracleQcCondGemmaCtxBase}{65.2}
+\newcommand{\revOracleQcCondGemmaAnsLineBase}{28.4}
+\newcommand{\revOracleQcCondGemmaPerQBase}{1.0}
+\newcommand{\revOracleQcUncondGemma}{$-$0.1 points (95\% CI $-$5.1 to +3.1; $p=1.000$)}
+\newcommand{\revOracleQcUncondGemmaPt}{$-$0.1 points}
+\newcommand{\revOracleQcUncondGemmaFc}{52.2}
+\newcommand{\revOracleQcUncondGemmaAny}{21.3}
+\newcommand{\revOracleQcUncondGemmaAnsLine}{44.4}
+\newcommand{\revOracleQcUncondGemmaPerQ}{0.4}
+\newcommand{\revOracleQcUncondGemmaFcBase}{52.3}
+\newcommand{\revOracleQcUncondGemmaAnyBase}{21.3}
+\newcommand{\revOracleQcUncondGemmaAnsLineBase}{46.4}
+\newcommand{\revOracleQcUncondGemmaPerQBase}{0.5}
+\newcommand{\revSecTopCondGemma}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaPt}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaFc}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaRecall}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaPrec}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaAny}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaCtx}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaAnsLine}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaPerQ}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaFcBase}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaRecallBase}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaPrecBase}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaAnyBase}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaCtxBase}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaAnsLineBase}{\textbf{??}}
+\newcommand{\revSecTopCondGemmaPerQBase}{\textbf{??}}
+\newcommand{\revSecTopUncondGemma}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaPt}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaFc}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaAny}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaAnsLine}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaPerQ}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaFcBase}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaAnyBase}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaAnsLineBase}{\textbf{??}}
+\newcommand{\revSecTopUncondGemmaPerQBase}{\textbf{??}}
+\newcommand{\revSecGoldCondGemma}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaPt}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaFc}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaRecall}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaPrec}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaAny}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaCtx}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaAnsLine}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaPerQ}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaFcBase}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaRecallBase}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaPrecBase}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaAnyBase}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaCtxBase}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaAnsLineBase}{\textbf{??}}
+\newcommand{\revSecGoldCondGemmaPerQBase}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemma}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaPt}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaFc}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaAny}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaAnsLine}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaPerQ}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaFcBase}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaAnyBase}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaAnsLineBase}{\textbf{??}}
+\newcommand{\revSecGoldUncondGemmaPerQBase}{\textbf{??}}
+\newcommand{\revVerGoldCondNemo}{+2.2 points (95\% CI $-$1.0 to +5.9; $p=0.229$)}
+\newcommand{\revVerGoldCondNemoPt}{+2.2 points}
+\newcommand{\revVerGoldCondNemoFc}{21.4}
+\newcommand{\revVerGoldCondNemoRecall}{58.4}
+\newcommand{\revVerGoldCondNemoPrec}{35.7}
+\newcommand{\revVerGoldCondNemoAny}{90.0}
+\newcommand{\revVerGoldCondNemoCtx}{100.0}
+\newcommand{\revVerGoldCondNemoAnsLine}{23.0}
+\newcommand{\revVerGoldCondNemoPerQ}{4.0}
+\newcommand{\revVerGoldCondNemoFcBase}{19.2}
+\newcommand{\revVerGoldCondNemoRecallBase}{32.1}
+\newcommand{\revVerGoldCondNemoPrecBase}{55.2}
+\newcommand{\revVerGoldCondNemoAnyBase}{48.7}
+\newcommand{\revVerGoldCondNemoCtxBase}{100.0}
+\newcommand{\revVerGoldCondNemoAnsLineBase}{23.6}
+\newcommand{\revVerGoldCondNemoPerQBase}{1.4}
+\newcommand{\revVerGoldUncondNemo}{$-$38.1 points (95\% CI $-$47.8 to $-$29.7; $p<0.001$)}
+\newcommand{\revVerGoldUncondNemoPt}{$-$38.1 points}
+\newcommand{\revVerGoldUncondNemoFc}{20.3}
+\newcommand{\revVerGoldUncondNemoAny}{70.0}
+\newcommand{\revVerGoldUncondNemoAnsLine}{48.6}
+\newcommand{\revVerGoldUncondNemoPerQ}{2.2}
+\newcommand{\revVerGoldUncondNemoFcBase}{58.3}
+\newcommand{\revVerGoldUncondNemoAnyBase}{17.0}
+\newcommand{\revVerGoldUncondNemoAnsLineBase}{51.6}
+\newcommand{\revVerGoldUncondNemoPerQBase}{0.3}
+\newcommand{\revVerTopCondNemo}{0.0 points (95\% CI $-$4.1 to +4.2; $p=0.995$)}
+\newcommand{\revVerTopCondNemoPt}{0.0 points}
+\newcommand{\revVerTopCondNemoFc}{14.1}
+\newcommand{\revVerTopCondNemoRecall}{42.2}
+\newcommand{\revVerTopCondNemoPrec}{16.8}
+\newcommand{\revVerTopCondNemoAny}{88.7}
+\newcommand{\revVerTopCondNemoCtx}{68.5}
+\newcommand{\revVerTopCondNemoAnsLine}{15.0}
+\newcommand{\revVerTopCondNemoPerQ}{6.1}
+\newcommand{\revVerTopCondNemoFcBase}{14.1}
+\newcommand{\revVerTopCondNemoRecallBase}{15.6}
+\newcommand{\revVerTopCondNemoPrecBase}{39.6}
+\newcommand{\revVerTopCondNemoAnyBase}{36.0}
+\newcommand{\revVerTopCondNemoCtxBase}{68.5}
+\newcommand{\revVerTopCondNemoAnsLineBase}{23.6}
+\newcommand{\revVerTopCondNemoPerQBase}{1.0}
+\newcommand{\revVerTopUncondNemo}{$-$44.2 points (95\% CI $-$54.0 to $-$35.5; $p<0.001$)}
+\newcommand{\revVerTopUncondNemoPt}{$-$44.2 points}
+\newcommand{\revVerTopUncondNemoFc}{11.4}
+\newcommand{\revVerTopUncondNemoAny}{82.0}
+\newcommand{\revVerTopUncondNemoAnsLine}{24.4}
+\newcommand{\revVerTopUncondNemoPerQ}{4.4}
+\newcommand{\revVerTopUncondNemoFcBase}{55.6}
+\newcommand{\revVerTopUncondNemoAnyBase}{14.0}
+\newcommand{\revVerTopUncondNemoAnsLineBase}{51.5}
+\newcommand{\revVerTopUncondNemoPerQBase}{0.3}
+\newcommand{\revOracleCondNemo}{$-$0.7 points (95\% CI $-$3.3 to +1.4; $p=0.557$)}
+\newcommand{\revOracleCondNemoPt}{$-$0.7 points}
+\newcommand{\revOracleCondNemoFc}{13.4}
+\newcommand{\revOracleCondNemoRecall}{15.9}
+\newcommand{\revOracleCondNemoPrec}{40.8}
+\newcommand{\revOracleCondNemoAny}{34.0}
+\newcommand{\revOracleCondNemoCtx}{83.6}
+\newcommand{\revOracleCondNemoAnsLine}{25.4}
+\newcommand{\revOracleCondNemoPerQ}{0.9}
+\newcommand{\revOracleCondNemoFcBase}{14.1}
+\newcommand{\revOracleCondNemoRecallBase}{15.6}
+\newcommand{\revOracleCondNemoPrecBase}{39.6}
+\newcommand{\revOracleCondNemoAnyBase}{36.0}
+\newcommand{\revOracleCondNemoCtxBase}{68.5}
+\newcommand{\revOracleCondNemoAnsLineBase}{23.6}
+\newcommand{\revOracleCondNemoPerQBase}{1.0}
+\newcommand{\revOracleUncondNemo}{$-$1.1 points (95\% CI $-$6.3 to +3.1; $p=0.644$)}
+\newcommand{\revOracleUncondNemoPt}{$-$1.1 points}
+\newcommand{\revOracleUncondNemoFc}{54.5}
+\newcommand{\revOracleUncondNemoAny}{18.0}
+\newcommand{\revOracleUncondNemoAnsLine}{35.6}
+\newcommand{\revOracleUncondNemoPerQ}{0.5}
+\newcommand{\revOracleUncondNemoFcBase}{55.6}
+\newcommand{\revOracleUncondNemoAnyBase}{14.0}
+\newcommand{\revOracleUncondNemoAnsLineBase}{51.5}
+\newcommand{\revOracleUncondNemoPerQBase}{0.3}
+\newcommand{\revOracleQcCondNemo}{+1.3 points (95\% CI $-$0.7 to +4.1; $p=0.282$)}
+\newcommand{\revOracleQcCondNemoPt}{+1.3 points}
+\newcommand{\revOracleQcCondNemoFc}{13.4}
+\newcommand{\revOracleQcCondNemoRecall}{15.9}
+\newcommand{\revOracleQcCondNemoPrec}{40.8}
+\newcommand{\revOracleQcCondNemoAny}{34.0}
+\newcommand{\revOracleQcCondNemoCtx}{83.6}
+\newcommand{\revOracleQcCondNemoAnsLine}{25.4}
+\newcommand{\revOracleQcCondNemoPerQ}{0.9}
+\newcommand{\revOracleQcCondNemoFcBase}{12.0}
+\newcommand{\revOracleQcCondNemoRecallBase}{16.7}
+\newcommand{\revOracleQcCondNemoPrecBase}{37.9}
+\newcommand{\revOracleQcCondNemoAnyBase}{37.3}
+\newcommand{\revOracleQcCondNemoCtxBase}{65.2}
+\newcommand{\revOracleQcCondNemoAnsLineBase}{21.7}
+\newcommand{\revOracleQcCondNemoPerQBase}{1.1}
+\newcommand{\revOracleQcUncondNemo}{+1.1 points (95\% CI $-$1.9 to +5.1; $p=0.439$)}
+\newcommand{\revOracleQcUncondNemoPt}{+1.1 points}
+\newcommand{\revOracleQcUncondNemoFc}{54.5}
+\newcommand{\revOracleQcUncondNemoAny}{18.0}
+\newcommand{\revOracleQcUncondNemoAnsLine}{35.6}
+\newcommand{\revOracleQcUncondNemoPerQ}{0.5}
+\newcommand{\revOracleQcUncondNemoFcBase}{53.5}
+\newcommand{\revOracleQcUncondNemoAnyBase}{19.0}
+\newcommand{\revOracleQcUncondNemoAnsLineBase}{36.4}
+\newcommand{\revOracleQcUncondNemoPerQBase}{0.4}
+\newcommand{\revSecTopCondNemo}{\textbf{??}}
+\newcommand{\revSecTopCondNemoPt}{\textbf{??}}
+\newcommand{\revSecTopCondNemoFc}{\textbf{??}}
+\newcommand{\revSecTopCondNemoRecall}{\textbf{??}}
+\newcommand{\revSecTopCondNemoPrec}{\textbf{??}}
+\newcommand{\revSecTopCondNemoAny}{\textbf{??}}
+\newcommand{\revSecTopCondNemoCtx}{\textbf{??}}
+\newcommand{\revSecTopCondNemoAnsLine}{\textbf{??}}
+\newcommand{\revSecTopCondNemoPerQ}{\textbf{??}}
+\newcommand{\revSecTopCondNemoFcBase}{\textbf{??}}
+\newcommand{\revSecTopCondNemoRecallBase}{\textbf{??}}
+\newcommand{\revSecTopCondNemoPrecBase}{\textbf{??}}
+\newcommand{\revSecTopCondNemoAnyBase}{\textbf{??}}
+\newcommand{\revSecTopCondNemoCtxBase}{\textbf{??}}
+\newcommand{\revSecTopCondNemoAnsLineBase}{\textbf{??}}
+\newcommand{\revSecTopCondNemoPerQBase}{\textbf{??}}
+\newcommand{\revSecTopUncondNemo}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoPt}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoFc}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoAny}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoAnsLine}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoPerQ}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoFcBase}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoAnyBase}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoAnsLineBase}{\textbf{??}}
+\newcommand{\revSecTopUncondNemoPerQBase}{\textbf{??}}
+\newcommand{\revSecGoldCondNemo}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoPt}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoFc}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoRecall}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoPrec}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoAny}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoCtx}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoAnsLine}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoPerQ}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoFcBase}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoRecallBase}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoPrecBase}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoAnyBase}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoCtxBase}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoAnsLineBase}{\textbf{??}}
+\newcommand{\revSecGoldCondNemoPerQBase}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemo}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoPt}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoFc}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoAny}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoAnsLine}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoPerQ}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoFcBase}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoAnyBase}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoAnsLineBase}{\textbf{??}}
+\newcommand{\revSecGoldUncondNemoPerQBase}{\textbf{??}}
 \newcommand{\ramOracleEffAllQwenPt}{+11.2 points}
 \newcommand{\ramRerankEffAllQwenPt}{$-$1.0 points}
 \newcommand{\ramNliEffAllQwenPt}{$-$5.4 points}
