@@ -51,7 +51,21 @@ The metric itself rewards silence. A stated condition scores zero whenever the g
 \subsection{End to end: where the conditions are lost}
 \label{sec:endtoend}
 
-\pending{Text on Tables 3--4: the oracle ladder, the operators and completion on the evaluation set, from the confirmatory family; written when the local cells are complete.}
+Table~3 lists every system on the evaluation set and Table~4 the pre-registered tests. The two local generators agree on every comparison in the confirmatory family but the last.
+
+\textbf{The metric measures condition use.} Deleting the condition elements from the gold chunks lowers F1 with conditions by \cOneQwen{} for Qwen2.5-7B and \cOneLlama{} for Llama-3.1-8B (C1). A change in this score is therefore a change in the conditions a generator states, not only in its answers.
+
+\textbf{Chunking costs conditions.} For the \nCondOnlyEval{} conditional questions on which some condition sits in a chunk that holds no other gold evidence, removing those chunks from the gold context costs \cTwoQwen{} and \cTwoLlama{} (C2). A condition that chunking isolates, and that the pipeline then does not pass on, is lost even when everything else the answer needs is present.
+
+\textbf{Retrieval costs a little; dilution costs more.} At an equal budget of eight chunks, the gold chunks filled up with top-ranked distractors beat the top 8 retrieved by \cThreeQwen{} and \cThreeLlama{} (C3). Most of the distance between the gold chunks and the top 8 (\fcGoldQwen{} against \fcTopQwen{} for Qwen2.5-7B, \fcGoldLlama{} against \fcTopLlama{} for Llama-3.1-8B) is not what retrieval misses but what it adds: the distractors alone lower the score to \fcPadQwen{} and \fcPadLlama.
+
+\textbf{The operators change nothing measurable at this scale.} Reranking to three chunks, the contradiction filter and ConflictRAG-style selection each leave F1 with conditions within about a point of the top 8 (C4--C6), although they remove \rrCondDrop\%, \nliCondDrop\% and \crsCondDrop\% of the retrieved condition chunks (Section~\ref{sec:operators}). The deletions are real but invisible end to end, because these generators state so few conditions that there is little left to lose: with the top 8 in context they cite \noticedTopQwen\% and \noticedTopLlama\% of the condition lines they are shown. The larger generators of Section~\ref{sec:hosted}, which state more conditions, also lose more at the stages before generation.
+
+\textbf{Context completion does not help.} Against the top 8 it changes F1 with conditions by \cSevenQwen{} and \cSevenLlama{} (C7). On unconditional questions it meets the non-inferiority margin of 2 points for Qwen2.5-7B (lower bound \cEightLowQwen) but not for Llama-3.1-8B (lower bound \cEightLowLlama). Of the exploratory evidence policies, only listwise selection by the generator itself comes close to a gain (\eSevenQwen{} and \eSevenLlama).
+
+\textbf{Closed-book answering is a sobering baseline.} Without any evidence, Qwen2.5-7B scores \fcClosedQwen{} on conditional questions, against \fcTopQwen{} with the top 8; answers to these questions are often ``yes'' or ``no'', and a guessed answer with no condition earns partial credit. On unconditional questions the closed-book generator scores \fcClosedUncondQwen, far above the \fcTopUncondQwen{} it reaches with retrieved evidence, because with evidence in front of it, it attaches a condition to \anyCondTopUncondQwen\% of answers that need none. Llama-3.1-8B over-conditions less (\anyCondTopUncondLlama\%) and scores \fcTopUncondLlama{} there. The metric's penalty for a spurious condition is as large as its reward for a correct one, and a reader that is shown evidence is tempted into both.
+
+\textbf{The rule-and-exception subset.} On the \nOppositeQwen{} conditional questions whose gold contains both ``yes'' and ``no'', the gold chunks beat the top 8 by \eSixQwen{} and \eSixLlama{}, the same direction as on all conditional questions, from a smaller sample.
 
 \input{tables/endtoend}
 
