@@ -255,3 +255,44 @@ The C-Pack reference is kept only as background for the BGE family, which is wha
 - **Limitations:** split into experimental limitations and external validity.
 - **Title:** retained, as the reviewer recommends.
 - **Condition types (2.2):** ConditionalQA does not label condition types, and a reliable breakdown would need new annotation. We describe the forms conditions take and state that the analysis does not distinguish them.
+
+---
+
+## Third round (Reviewer 2, report on the review copy)
+
+We thank the reviewer for the third report. The changes are listed in the order of the reviewer's checklist.
+
+**Gemma-4-31B verification pass.** Still running on NVIDIA's API at the time of this copy. The paper says so in one sentence, and the results will replace it in the final version. No partial results are reported. The report script now leaves out any cell that has not finished, so a partial run cannot enter the paper.
+
+**Fixed 70-word control.** It was only ever a control for separation, run without generation: the analysis plan describes it as "a size-matched separation control", and its results are in Section 4.1 (70-word chunks isolate a condition in more conditional questions than section-aware chunks of similar size). The method's sentence read as if it were also run end to end, so it now says the control is "for separation only" and points to Section 4.1.
+
+**Reranker and NLI checkpoints.** Each checkpoint now has a footnote linking its Hugging Face model card, beside its revision hash in the text. The reference list is at the journal's limit of 25. C-Pack stays as the reference for the BGE model family, and DeBERTa-v3 for the architecture the NLI cross-encoder is fine-tuned from; the text now says "an NLI cross-encoder fine-tuned from DeBERTa-v3".
+
+**Oracle-completion sentence (Section 4.7).** Rewritten. The hosted result is now one sentence giving each model's change with its interval: Nemotron-3-Ultra −0.7 points (95% CI −3.3 to +1.4), Gemma-4-31B −1.4 (−4.7 to +1.6).
+
+**Condition recognition versus applicability judgement (Issue 1).**
+- Section 4.6 now says that we measure outputs, not comprehension. It names three observable steps: a gold condition in context is cited at all, cited as a condition, and cited as a condition only when the scenario leaves it open.
+- The verification paragraph ends with the reviewer's distinction: failure to state conditions "is not explained solely by failure to locate them", but "extracting a condition does not show that a generator can judge whether the scenario leaves it open".
+- The introduction and Tables 3 and 5 no longer say "noticed": the measure is the share of conditions cited anywhere, and is now called that. The method no longer says "recognised".
+
+**Exact-match audit (Issue 2).** No manual audit was feasible, since the authors could not annotate a further sample independently. Instead, the paper now bounds what exact element matching could explain, from the saved outputs. With gold context, a missed gold condition is credited when the generator stated another element that restates it (token F1 ≥ 0.5 against the gold element, one-to-one).
+- This adds 0.5 to 1.5 points of condition recall across the five generators.
+- A deliberately loose criterion (a third of words shared), which also credits neighbouring list items, adds at most 6.6 points. No generator's recall then exceeds 34.5%.
+
+Exact matching therefore explains little of the measured loss. The abstract now says "about two thirds unstated" rather than "at least two thirds", so the claim holds under the loose criterion too. The audit is listed as an exploratory addition in the analysis plan's deviations.
+
+**Single domain (Issue 3).** The external-validity paragraph now says that the conclusions, "and above all our quantitative results, are claims about structured policy guidance", with healthcare, financial and legal documents named as natural extensions.
+
+**The learned scorer (Issue 4).** The abstract and conclusion now speak of "our" trained completion scorer, and the conclusion says "a cheaper first step than learned completion", no longer "than any learned completion". The oracle result is reported as it is: a perfect scorer gains +2.4 points for Llama-3.1-8B and nothing detectable for the other three generators.
+
+**Implementations, not complete systems (Issue 5).** The limitations now state: "Each operator is our implementation of a published method's evidence-reducing step, not the complete system." The ConflictRAG-style resolver's three of five criteria are stated there and in the method.
+
+**Exploratory results (Issue 6).** The section-aware result for Llama-3.1-8B (+1.6 points, p = 0.035) is now labelled "an exploratory and unadjusted result" where it is reported. Neither the abstract nor the conclusion cites it.
+
+**Table 5 rounding.** The caption now states that differences quoted in the text use unrounded scores.
+
+**Abstract and conclusion.** The hosted section's "largest single loss" now reads "largest observed deficit", matching the abstract and conclusion. Every figure in the abstract and conclusion is a macro generated from the saved outputs.
+
+**Every table and figure against the repository.** All tables, figures and in-text numbers are regenerated from the raw model outputs by `python -m study.report` and `python -m study.figures`. `paper/check_paper.py` fails the build if any number is typed by hand, any macro is unresolved, or a page, reference or abstract limit is exceeded.
+
+**Length.** To stay within the journal's 25 pages including references and biographies, the text was tightened throughout without removing any analysis. The review copy is 24 pages.

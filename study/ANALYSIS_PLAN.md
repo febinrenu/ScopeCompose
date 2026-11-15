@@ -174,5 +174,8 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
    question served by Groq asked again on NVIDIA's API. Also added, from existing outputs only:
    the decomposition of gold conditions in context (stated / evidence only / not cited), the
    completion candidate pool's ceiling, and the scorer's threshold sweep on the evaluation set.
+   In the third review round, also from existing outputs: an audit of exact element matching
+   (`report.metric_audit`), which credits a missed gold condition when the generator stated another
+   element restating it (token F1 >= 0.5, and a loose bound at 1/3), on the gold-context cells.
    Two Qwen2.5-7B `page` answers aborted by the server as repetition loops are scored as
    unanswered, the same rule as for truncated output.

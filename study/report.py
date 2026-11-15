@@ -556,6 +556,63 @@ def protocol() -> dict:
     return out
 
 
+def _token_f1(a: str, b: str) -> float:
+    from collections import Counter
+
+    ta, tb = Counter(re.findall(r"[a-z0-9]+", a.lower())), Counter(re.findall(r"[a-z0-9]+", b.lower()))
+    common = sum((ta & tb).values())
+    if not common:
+        return 0.0
+    p, r = common / sum(ta.values()), common / sum(tb.values())
+    return 2 * p * r / (p + r)
+
+
+#: Token-F1 thresholds at which a stated element counts as restating a missed gold condition:
+#: 0.5 (a restatement) and 1/3 (a loose bound that also credits neighbouring list items).
+AUDIT_THRESHOLDS = {"restate": 0.5, "loose": 1 / 3}
+
+
+def metric_audit() -> dict:
+    """How much of the gold-context condition loss exact element matching could explain.
+
+    A gold condition not cited exactly is credited when the generator stated, as a condition,
+    another element whose token F1 against it reaches the threshold (one-to-one, greedy by overlap).
+    """
+    from study.run import cell_path, read_cell
+
+    idx = cqa.by_id()
+    out: dict = {}
+    for qset, models in (("eval", ("qwen7b", "llama8b")), ("hosted", ("oss20b", "gemma31b", "nemotron"))):
+        for m in models:
+            recs = read_cell(cell_path("gold", m, qset, systems.Env()))
+            row: dict = {}
+            for name, t in AUDIT_THRESHOLDS.items():
+                n_gold = exact = extra = 0
+                for qid, rec in recs.items():
+                    q = idx[qid]
+                    if q.kind != "conditional":
+                        continue
+                    gold = {c for _, cs in q.reference() for c in cs}
+                    pred = {c for _, cs in rec["answers"] for c in cs}
+                    hit = gold & pred
+                    n_gold, exact = n_gold + len(gold), exact + len(hit)
+                    pairs = sorted(((_token_f1(p, g), g, p) for g in gold - hit for p in pred - hit), reverse=True)
+                    used_g, used_p = set(), set()
+                    for s, g, p in pairs:
+                        if s < t:
+                            break
+                        if g not in used_g and p not in used_p:
+                            used_g.add(g), used_p.add(p)
+                            extra += 1
+                row[name] = {"exact_recall": exact / n_gold, "added": extra / n_gold, "recall": (exact + extra) / n_gold}
+            out[m] = row
+    for name in AUDIT_THRESHOLDS:
+        out[f"{name}_added_min"] = min(out[m][name]["added"] for m in out if isinstance(out[m], dict) and name in out[m])
+        out[f"{name}_added_max"] = max(out[m][name]["added"] for m in out if isinstance(out[m], dict) and name in out[m])
+        out[f"{name}_recall_max"] = max(out[m][name]["recall"] for m in out if isinstance(out[m], dict) and name in out[m])
+    return out
+
+
 SECTIONS: dict[str, Callable[[], dict]] = {
     "dataset": dataset,
     "separation": lambda: {f"{s}{w}": separation(w, s) for w, s in ((150, "fixed"), (100, "fixed"), (70, "fixed"),
@@ -571,6 +628,7 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "diagnostics": diagnostics,
     "revision": revision,
     "protocol": protocol,
+    "metric_audit": metric_audit,
 }
 
 
@@ -979,6 +1037,10 @@ MACROS.update({
     "oodNaturalPages": ("qualifier.ood.natural_pages", integer),
     "nLocalAnswers": ("protocol.local_answers", integer),
     "nNearWindow": ("protocol.near_window", integer),
+    "auditRestateMin": ("metric_audit.restate_added_min", pct),
+    "auditRestateMax": ("metric_audit.restate_added_max", pct),
+    "auditLooseMax": ("metric_audit.loose_added_max", pct),
+    "auditLooseRecallMax": ("metric_audit.loose_recall_max", pct),
 })
 
 #: revision comparisons, per model: rev<Pair><Population><Model>, plus the condition statistics behind them
@@ -1130,13 +1192,13 @@ E2E_TABLE = "\n".join([
     r"\begin{table}[!htbp]\centering",
     r"\textbf{Table 3.} End-to-end results on the evaluation set: F1 with conditions (\%) on conditional (C) and "
     r"unconditional (U) questions, and the share of gold condition elements in the context that the generator "
-    r"cites anywhere (noticed, \%). C: \nEvalCond{} questions; U: \nEvalUncond{}. The C2 test in Table 4 uses "
+    r"cites anywhere (cited, \%). C: \nEvalCond{} questions; U: \nEvalUncond{}. The C2 test in Table 4 uses "
     r"only the \nCondOnlyEval{} conditional questions with a condition-only gold chunk.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
     r"\begin{tabular}{L{4.6cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}}",
     r"\toprule",
     r" & \multicolumn{3}{c}{\textbf{Qwen2.5-7B}} & \multicolumn{3}{c}{\textbf{Llama-3.1-8B}} \\",
-    r"\textbf{System} & F1c (C) & noticed & F1c (U) & F1c (C) & noticed & F1c (U) \\",
+    r"\textbf{System} & F1c (C) & cited & F1c (U) & F1c (C) & cited & F1c (U) \\",
     r"\midrule",
     "%ROWS%" + r"\bottomrule",
     r"\end{tabular}",
@@ -1225,8 +1287,8 @@ HOSTED_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
     r"\begin{table}[!htbp]\centering",
     r"\textbf{Table 5.} Larger hosted generators on the stratified subsample (150 conditional, 100 unconditional "
-    r"questions): F1 with conditions (\%) on conditional (C) and unconditional (U) questions, and conditions "
-    r"noticed (N, \%) as in Table 3. The first four rows cover all 150 conditional questions; the last two only "
+    r"questions): F1 with conditions (\%) on conditional (C) and unconditional (U) questions, and gold "
+    r"conditions cited (N, \%) as in Table 3; differences quoted in the text use unrounded scores. The first four rows cover all 150 conditional questions; the last two only "
     r"the \hCondOnlyN{} of them with a condition-only gold chunk (C$^\dagger$), the population of the C2 "
     r"comparison.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
