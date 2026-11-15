@@ -165,3 +165,14 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
    550B mixture of experts, 55B active) with its reasoning mode off, chosen before any of its
    answers were scored because it was the largest model the endpoint served that answered in
    seconds and returned a parseable answer on the two questions tried.
+4. **Diagnostics added in revision (2026-11-15, after every confirmatory result was computed).**
+   In answer to reviewers, four exploratory analyses were added; none changes or replaces a
+   planned test, and all are reported as exploratory: (i) a condition-verification second pass
+   over the frozen generator's answers (`study/revision.py`, cells `<system>_verify`); (ii) oracle
+   completion (`qcoracle`); (iii) `top8` and `gold` with section-aware chunks end to end, with fixed
+   70-word chunking as a size-matched separation control; (iv) every gpt-oss-20b gold-context
+   question served by Groq asked again on NVIDIA's API. Also added, from existing outputs only:
+   the decomposition of gold conditions in context (stated / evidence only / not cited), the
+   completion candidate pool's ceiling, and the scorer's threshold sweep on the evaluation set.
+   Two Qwen2.5-7B `page` answers aborted by the server as repetition loops are scored as
+   unanswered, the same rule as for truncated output.

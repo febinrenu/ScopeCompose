@@ -61,6 +61,84 @@
 \newcommand{\ramNliMisinfo}{68.1}
 \newcommand{\ramCrsCorrect}{63.6}
 \newcommand{\ramCrsMisinfo}{67.8}
+\newcommand{\unansTopQwen}{68.3}
+\newcommand{\unansClosedQwen}{8.9}
+\newcommand{\unansPageQwen}{73.3}
+\newcommand{\emcGoldQwen}{8.2}
+\newcommand{\emcTopQwen}{4.3}
+\newcommand{\unansTopLlama}{1.0}
+\newcommand{\unansClosedLlama}{0.0}
+\newcommand{\unansPageLlama}{6.9}
+\newcommand{\emcGoldLlama}{12.5}
+\newcommand{\emcTopLlama}{5.8}
+\newcommand{\condOnlySeventy}{61.3}
+\newcommand{\condOnlySection}{35.4}
+\newcommand{\recCondEightSection}{66.5}
+\newcommand{\recCondOnlyEightSection}{50.1}
+\newcommand{\recAllGoldEightSection}{48.0}
+\newcommand{\recAllCondEight}{68.9}
+\newcommand{\recCondEightDense}{76.8}
+\newcommand{\recCondEightBm}{45.4}
+\newcommand{\annMeanCond}{2.58}
+\newcommand{\annTwoPlus}{58.2}
+\newcommand{\annMultiAnswer}{49.6}
+\newcommand{\nOodCorpus}{128}
+\newcommand{\ceilMissedInPool}{71.5}
+\newcommand{\ceilQuestionsMissed}{223}
+\newcommand{\sweepBestTrained}{0.09}
+\newcommand{\sweepBestZero}{0.11}
+\newcommand{\sepCondSeventy}{86.1}
+\newcommand{\chunkWordsSeventy}{60}
+\newcommand{\decGoldAsCondQwen}{21.0}
+\newcommand{\decGoldEvOnlyQwen}{15.6}
+\newcommand{\decGoldNotCitedQwen}{63.5}
+\newcommand{\decGoldSpurQwen}{77.4}
+\newcommand{\decGoldSpurAnsQwen}{25.8}
+\newcommand{\decTopAsCondQwen}{17.9}
+\newcommand{\decTopEvOnlyQwen}{13.4}
+\newcommand{\decTopNotCitedQwen}{68.7}
+\newcommand{\decTopSpurQwen}{96.2}
+\newcommand{\decTopSpurAnsQwen}{5.7}
+\newcommand{\decGoldAsCondLlama}{18.2}
+\newcommand{\decGoldEvOnlyLlama}{19.1}
+\newcommand{\decGoldNotCitedLlama}{62.7}
+\newcommand{\decGoldSpurLlama}{61.9}
+\newcommand{\decGoldSpurAnsLlama}{48.5}
+\newcommand{\decTopAsCondLlama}{9.7}
+\newcommand{\decTopEvOnlyLlama}{13.6}
+\newcommand{\decTopNotCitedLlama}{76.7}
+\newcommand{\decTopSpurLlama}{84.6}
+\newcommand{\decTopSpurAnsLlama}{22.7}
+\newcommand{\decGoldAsCondOss}{21.1}
+\newcommand{\decGoldEvOnlyOss}{12.9}
+\newcommand{\decGoldNotCitedOss}{66.0}
+\newcommand{\decGoldSpurOss}{57.9}
+\newcommand{\decGoldSpurAnsOss}{54.7}
+\newcommand{\decTopAsCondOss}{16.4}
+\newcommand{\decTopEvOnlyOss}{12.4}
+\newcommand{\decTopNotCitedOss}{71.2}
+\newcommand{\decTopSpurOss}{77.1}
+\newcommand{\decTopSpurAnsOss}{39.1}
+\newcommand{\decGoldAsCondGemma}{27.9}
+\newcommand{\decGoldEvOnlyGemma}{15.3}
+\newcommand{\decGoldNotCitedGemma}{56.7}
+\newcommand{\decGoldSpurGemma}{44.3}
+\newcommand{\decGoldSpurAnsGemma}{58.0}
+\newcommand{\decTopAsCondGemma}{23.2}
+\newcommand{\decTopEvOnlyGemma}{18.0}
+\newcommand{\decTopNotCitedGemma}{58.8}
+\newcommand{\decTopSpurGemma}{61.3}
+\newcommand{\decTopSpurAnsGemma}{45.7}
+\newcommand{\decGoldAsCondNemo}{32.1}
+\newcommand{\decGoldEvOnlyNemo}{17.5}
+\newcommand{\decGoldNotCitedNemo}{50.4}
+\newcommand{\decGoldSpurNemo}{44.8}
+\newcommand{\decGoldSpurAnsNemo}{52.6}
+\newcommand{\decTopAsCondNemo}{22.8}
+\newcommand{\decTopEvOnlyNemo}{20.4}
+\newcommand{\decTopNotCitedNemo}{56.8}
+\newcommand{\decTopSpurNemo}{60.4}
+\newcommand{\decTopSpurAnsNemo}{39.1}
 \newcommand{\ramOracleEffAllQwen}{+11.2 points (95\% CI +7.6 to +14.4; $p<0.001$)}
 \newcommand{\ramRerankEffAllQwen}{$-$1.0 points (95\% CI $-$3.8 to +1.2; $p=0.531$)}
 \newcommand{\ramNliEffAllQwen}{$-$5.4 points (95\% CI $-$8.6 to $-$2.6; $p<0.001$)}
@@ -240,3 +318,47 @@
 \newcommand{\oodAucProbes}{0.25}
 \newcommand{\oodPosNatural}{18}
 \newcommand{\oodNegNatural}{56}
+\newcommand{\ramOracleEffAllQwenPt}{+11.2 points}
+\newcommand{\ramRerankEffAllQwenPt}{$-$1.0 points}
+\newcommand{\ramNliEffAllQwenPt}{$-$5.4 points}
+\newcommand{\ramCrsEffAllQwenPt}{$-$7.2 points}
+\newcommand{\ramSelectEffAllQwenPt}{$-$9.4 points}
+\newcommand{\ramGradeEffAllQwenPt}{$-$1.6 points}
+\newcommand{\ramOracleEffAllLlamaPt}{+13.8 points}
+\newcommand{\ramRerankEffAllLlamaPt}{$-$0.8 points}
+\newcommand{\ramNliEffAllLlamaPt}{$-$5.8 points}
+\newcommand{\ramCrsEffAllLlamaPt}{$-$8.2 points}
+\newcommand{\ramSelectEffAllLlamaPt}{$-$10.0 points}
+\newcommand{\ramGradeEffAllLlamaPt}{+0.6 points}
+\newcommand{\ramOracleEffQwenPt}{+22.2 points}
+\newcommand{\ramRerankEffQwenPt}{$-$4.5 points}
+\newcommand{\ramNliEffQwenPt}{$-$3.7 points}
+\newcommand{\ramCrsEffQwenPt}{$-$6.6 points}
+\newcommand{\ramSelectEffQwenPt}{$-$3.7 points}
+\newcommand{\ramGradeEffQwenPt}{$-$1.2 points}
+\newcommand{\ramOracleEffLlamaPt}{+28.4 points}
+\newcommand{\ramRerankEffLlamaPt}{$-$2.9 points}
+\newcommand{\ramNliEffLlamaPt}{$-$0.8 points}
+\newcommand{\ramCrsEffLlamaPt}{$-$4.5 points}
+\newcommand{\ramSelectEffLlamaPt}{$-$1.2 points}
+\newcommand{\ramGradeEffLlamaPt}{+3.3 points}
+\newcommand{\cOneQwenPt}{+7.1 points}
+\newcommand{\cTwoQwenPt}{+5.2 points}
+\newcommand{\cThreeQwenPt}{+1.2 points}
+\newcommand{\cFourQwenPt}{0.0 points}
+\newcommand{\cFiveQwenPt}{$-$0.3 points}
+\newcommand{\cSixQwenPt}{$-$0.4 points}
+\newcommand{\cSevenQwenPt}{0.0 points}
+\newcommand{\cOneLlamaPt}{+9.9 points}
+\newcommand{\cTwoLlamaPt}{+5.7 points}
+\newcommand{\cThreeLlamaPt}{+1.1 points}
+\newcommand{\cFourLlamaPt}{+1.0 points}
+\newcommand{\cFiveLlamaPt}{+0.6 points}
+\newcommand{\cSixLlamaPt}{$-$0.4 points}
+\newcommand{\cSevenLlamaPt}{+1.3 points}
+\newcommand{\hCTwoOssPt}{+9.0 points}
+\newcommand{\hCSevenOssPt}{+0.6 points}
+\newcommand{\hCTwoGemmaPt}{+9.5 points}
+\newcommand{\hCSevenGemmaPt}{$-$2.5 points}
+\newcommand{\hCTwoNemoPt}{+9.5 points}
+\newcommand{\hCSevenNemoPt}{$-$2.0 points}

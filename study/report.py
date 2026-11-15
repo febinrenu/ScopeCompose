@@ -45,6 +45,7 @@ def dataset() -> dict:
         "chunk_words_section": st.fmean(c.n_words for c in cqa.chunks(cqa.DEFAULT_CHUNK_WORDS, "section")),
         "chunk_words_100": st.fmean(c.n_words for c in cqa.chunks(100, "fixed")),
         "chunk_words_300": st.fmean(c.n_words for c in cqa.chunks(300, "fixed")),
+        "chunk_words_70": st.fmean(c.n_words for c in cqa.chunks(70, "fixed")),
         "labelled_questions": len(qs),
         "labelled_conditional": sum(q.kind == "conditional" for q in qs),
         "tuning_pages": s["n_tuning_docs"],
@@ -275,6 +276,94 @@ def ramdocs_results() -> dict:
     return out
 
 
+def diagnostics() -> dict:
+    """Model-free analyses added in revision: annotation statistics, a decomposition of the generation
+    loss, the completion candidate pool's ceiling, and the scorer at every threshold on the evaluation set."""
+    from study import qualifier
+    from study.analysis import _conditions_in_context
+    from study.run import RUNS, read_cell
+
+    idx, env = cqa.by_id(), systems.Env()
+    cond_eval = cqa.eval_questions(["conditional"])
+    n_c = [len(q.conditions) for q in cond_eval]
+    out: dict = {"annotation": {
+        "n": len(n_c), "mean_conditions": st.fmean(n_c), "two_or_more": st.fmean(n >= 2 for n in n_c),
+        "three_or_more": st.fmean(n >= 3 for n in n_c),
+        "multi_answer": st.fmean(len(q.answers) > 1 for q in cond_eval)}}
+
+    # -- where the gold conditions in context end up, and what the spurious conditions are -- #
+    gen: dict = {}
+    for qset, models in (("eval", LOCAL_MODELS), ("hosted", HOSTED_MODELS)):
+        for m in models:
+            for s in ("gold", "top8", "gold_verify", "top8_verify"):
+                recs = read_cell(RUNS / qset / f"{s}__{m}.jsonl")
+                if not recs:
+                    continue
+                shown = as_cond = as_ev = 0
+                spur = spur_ev = n_pred = 0
+                for qid, r in recs.items():
+                    q = idx[qid]
+                    if q.kind != "conditional":
+                        continue
+                    ctx = _conditions_in_context(r, q, r.get("words", 150), r.get("strategy", "fixed"))
+                    cited_c = {c for _, cs in r["answers"] for c in cs}
+                    cited_e = set(r.get("evidence", []))
+                    shown += len(ctx)
+                    as_cond += len(ctx & cited_c)
+                    as_ev += len((ctx - cited_c) & cited_e)
+                    n_pred += len(cited_c)
+                    wrong = cited_c - set(q.conditions)
+                    spur += len(wrong)
+                    spur_ev += len(wrong & set(q.answer_evidence))
+                if shown:
+                    gen.setdefault(qset, {}).setdefault(m, {})[s] = {
+                        "shown": shown, "as_condition": as_cond / shown, "evidence_only": as_ev / shown,
+                        "not_cited": (shown - as_cond - as_ev) / shown,
+                        "spurious_share": spur / n_pred if n_pred else float("nan"),
+                        "spurious_answer_lines": spur_ev / spur if spur else float("nan")}
+    out["generation"] = gen
+
+    # -- the completion candidate pool: can any scorer recover what the top 5 missed? -- #
+    missed = in_pool = q_missed = q_all_in = 0
+    pool: dict[str, list] = {}
+    for q in cond_eval:
+        g = env.gold(q)
+        top5 = {c.id for c in env.ranked(q)[:qualifier.ANCHOR_K]}
+        miss = set(g.condition_chunks) - top5
+        pairs = qualifier.candidate_pairs(q, env)
+        pool[q.id] = pairs
+        cand = {p.candidate for p in pairs}
+        if miss:
+            q_missed += 1
+            missed += len(miss)
+            in_pool += len(miss & cand)
+            q_all_in += miss <= cand
+    out["completion_ceiling"] = {"questions_with_missed": q_missed, "missed_condition_chunks": missed,
+                                 "missed_in_pool": in_pool / missed if missed else float("nan"),
+                                 "questions_all_missed_in_pool": q_all_in / q_missed if q_missed else float("nan")}
+    # -- the scorer at every threshold on the evaluation questions themselves (the best case for it) -- #
+    for q in cqa.eval_questions(["unconditional", "unanswerable"]):
+        pool[q.id] = qualifier.candidate_pairs(q, env)
+    scores = qualifier.load_scores()
+    sweep: dict = {}
+    for kind in ("trained", "zeroshot"):
+        rows = []
+        for t in [round(0.05 * i, 2) for i in range(1, 20)]:
+            tp = fp = fn = 0
+            for qid, pairs in pool.items():
+                s = scores[kind].get(qid, {})
+                picked = {cid for _, cid in sorted(((v, k) for k, v in s.items() if v >= t), reverse=True)
+                          [: qualifier.BUDGET - qualifier.ANCHOR_K]}
+                gold = {p.candidate for p in pairs if p.label}
+                tp, fp, fn = tp + len(picked & gold), fp + len(picked - gold), fn + len(gold - picked)
+            p_ = tp / (tp + fp) if tp + fp else 0.0
+            r_ = tp / (tp + fn) if tp + fn else 0.0
+            rows.append({"threshold": t, "precision": p_, "recall": r_, "f1": 2 * p_ * r_ / (p_ + r_) if p_ + r_ else 0.0})
+        sweep[kind] = {"best": max(rows, key=lambda d: d["f1"]), "rows": rows}
+    out["threshold_sweep"] = sweep
+    return out
+
+
 def providers() -> dict:
     """Which provider served each hosted answer (deviations 1-3), and gpt-oss-20b's gold-context F1c by provider."""
     from collections import Counter
@@ -300,6 +389,20 @@ def providers() -> dict:
                 by.setdefault(prov, []).append(s.f1_cond)
         out.setdefault("oss20b", {})["gold_f1c_conditional_by_provider"] = {k: {"n": len(v), "f1_cond": st.fmean(v)}
                                                                           for k, v in by.items()}
+    check = RUNS / "provider_check" / "gold__oss20b_nvidia.jsonl"
+    if check.exists() and gold.exists():
+        a, b = score_cell(gold), score_cell(check)
+        keys = sorted(set(a) & set(b))
+        ga, gb = read_cell(gold), read_cell(check)
+        norm = lambda r: tuple(sorted(x[0].strip().lower() for x in r["answers"]))
+        cond = [k for k in keys if a[k].kind == "conditional"]
+        from study import stats
+        out.setdefault("oss20b", {})["provider_check"] = {
+            "n": len(keys), "same_answers": st.fmean(norm(ga[k]) == norm(gb[k]) for k in keys) if keys else float("nan"),
+            "f1c_groq": st.fmean(a[k].f1_cond for k in cond) if cond else float("nan"),
+            "f1c_nvidia": st.fmean(b[k].f1_cond for k in cond) if cond else float("nan"), "n_conditional": len(cond),
+            "paired": stats.paired({k: b[k].f1_cond for k in cond}, {k: a[k].f1_cond for k in cond},
+                                   {k: a[k].doc for k in cond}) if cond else None}
     if not out:
         raise FileNotFoundError("no hosted cells yet")
     return out
@@ -333,12 +436,14 @@ def qualifier_section() -> dict:
     ood = qualifier.MODELS / "ood.json"
     if ood.exists():
         out["ood"] = json.loads(ood.read_text(encoding="utf-8"))
+        corpus = settings.REPO_ROOT / "benchmark" / "data" / "corpus.jsonl"
+        out["ood"]["corpus_size"] = sum(1 for l in corpus.read_text(encoding="utf-8").splitlines() if l.strip())
     return out
 
 
 SECTIONS: dict[str, Callable[[], dict]] = {
     "dataset": dataset,
-    "separation": lambda: {f"{s}{w}": separation(w, s) for w, s in ((150, "fixed"), (100, "fixed"),
+    "separation": lambda: {f"{s}{w}": separation(w, s) for w, s in ((150, "fixed"), (100, "fixed"), (70, "fixed"),
                                                                     (300, "fixed"), (150, "section"))},
     "retrieval": retrieval_all,
     "operator_survival": operator_survival,
@@ -348,6 +453,7 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "ramdocs": ramdocs_results,
     "qualifier": qualifier_section,
     "providers": providers,
+    "diagnostics": diagnostics,
 }
 
 
@@ -470,6 +576,84 @@ MACROS: dict[str, tuple[str, Callable]] = {
     "ramCrsCorrect": ("operator_survival.ramdocs.crs.correct", pct),
     "ramCrsMisinfo": ("operator_survival.ramdocs.crs.misinfo", pct),
     # -- generation results (study.confirm, end_to_end, qualifier) -- #
+    "unansTopQwen": ("end_to_end.eval.qwen7b.top8.unanswerable.no_answer", pct),
+    "unansClosedQwen": ("end_to_end.eval.qwen7b.closed.unanswerable.no_answer", pct),
+    "unansPageQwen": ("end_to_end.eval.qwen7b.page.unanswerable.no_answer", pct),
+    "emcGoldQwen": ("end_to_end.eval.qwen7b.gold.conditional.em_cond", pct),
+    "emcTopQwen": ("end_to_end.eval.qwen7b.top8.conditional.em_cond", pct),
+    "unansTopLlama": ("end_to_end.eval.llama8b.top8.unanswerable.no_answer", pct),
+    "unansClosedLlama": ("end_to_end.eval.llama8b.closed.unanswerable.no_answer", pct),
+    "unansPageLlama": ("end_to_end.eval.llama8b.page.unanswerable.no_answer", pct),
+    "emcGoldLlama": ("end_to_end.eval.llama8b.gold.conditional.em_cond", pct),
+    "emcTopLlama": ("end_to_end.eval.llama8b.top8.conditional.em_cond", pct),
+    "condOnlySeventy": ("separation.fixed70.conditional.condition_only", pct),
+    "condOnlySection": ("separation.section150.conditional.condition_only", pct),
+    "recCondEightSection": ("retrieval.hybrid_section150.8.condition_recall", pct),
+    "recCondOnlyEightSection": ("retrieval.hybrid_section150.8.condition_only_recall", pct),
+    "recAllGoldEightSection": ("retrieval.hybrid_section150.8.all_gold", pct),
+    "recAllCondEight": ("retrieval.hybrid_fixed150.8.all_conditions", pct),
+    "recCondEightDense": ("retrieval.dense_fixed150.8.condition_recall", pct),
+    "recCondEightBm": ("retrieval.bm25_fixed150.8.condition_recall", pct),
+    "annMeanCond": ("diagnostics.annotation.mean_conditions", lambda x: f'{x:.2f}'),
+    "annTwoPlus": ("diagnostics.annotation.two_or_more", pct),
+    "annMultiAnswer": ("diagnostics.annotation.multi_answer", pct),
+    "nOodCorpus": ("qualifier.ood.corpus_size", integer),
+    "ceilMissedInPool": ("diagnostics.completion_ceiling.missed_in_pool", pct),
+    "ceilQuestionsMissed": ("diagnostics.completion_ceiling.questions_with_missed", integer),
+    "sweepBestTrained": ("diagnostics.threshold_sweep.trained.best.f1", lambda x: f'{x:.2f}'),
+    "sweepBestZero": ("diagnostics.threshold_sweep.zeroshot.best.f1", lambda x: f'{x:.2f}'),
+    "sepCondSeventy": ("separation.fixed70.conditional.separated", pct),
+    "chunkWordsSeventy": ("dataset.chunk_words_70", lambda x: f'{x:.0f}'),
+    "decGoldAsCondQwen": ("diagnostics.generation.eval.qwen7b.gold.as_condition", pct),
+    "decGoldEvOnlyQwen": ("diagnostics.generation.eval.qwen7b.gold.evidence_only", pct),
+    "decGoldNotCitedQwen": ("diagnostics.generation.eval.qwen7b.gold.not_cited", pct),
+    "decGoldSpurQwen": ("diagnostics.generation.eval.qwen7b.gold.spurious_share", pct),
+    "decGoldSpurAnsQwen": ("diagnostics.generation.eval.qwen7b.gold.spurious_answer_lines", pct),
+    "decTopAsCondQwen": ("diagnostics.generation.eval.qwen7b.top8.as_condition", pct),
+    "decTopEvOnlyQwen": ("diagnostics.generation.eval.qwen7b.top8.evidence_only", pct),
+    "decTopNotCitedQwen": ("diagnostics.generation.eval.qwen7b.top8.not_cited", pct),
+    "decTopSpurQwen": ("diagnostics.generation.eval.qwen7b.top8.spurious_share", pct),
+    "decTopSpurAnsQwen": ("diagnostics.generation.eval.qwen7b.top8.spurious_answer_lines", pct),
+    "decGoldAsCondLlama": ("diagnostics.generation.eval.llama8b.gold.as_condition", pct),
+    "decGoldEvOnlyLlama": ("diagnostics.generation.eval.llama8b.gold.evidence_only", pct),
+    "decGoldNotCitedLlama": ("diagnostics.generation.eval.llama8b.gold.not_cited", pct),
+    "decGoldSpurLlama": ("diagnostics.generation.eval.llama8b.gold.spurious_share", pct),
+    "decGoldSpurAnsLlama": ("diagnostics.generation.eval.llama8b.gold.spurious_answer_lines", pct),
+    "decTopAsCondLlama": ("diagnostics.generation.eval.llama8b.top8.as_condition", pct),
+    "decTopEvOnlyLlama": ("diagnostics.generation.eval.llama8b.top8.evidence_only", pct),
+    "decTopNotCitedLlama": ("diagnostics.generation.eval.llama8b.top8.not_cited", pct),
+    "decTopSpurLlama": ("diagnostics.generation.eval.llama8b.top8.spurious_share", pct),
+    "decTopSpurAnsLlama": ("diagnostics.generation.eval.llama8b.top8.spurious_answer_lines", pct),
+    "decGoldAsCondOss": ("diagnostics.generation.hosted.oss20b.gold.as_condition", pct),
+    "decGoldEvOnlyOss": ("diagnostics.generation.hosted.oss20b.gold.evidence_only", pct),
+    "decGoldNotCitedOss": ("diagnostics.generation.hosted.oss20b.gold.not_cited", pct),
+    "decGoldSpurOss": ("diagnostics.generation.hosted.oss20b.gold.spurious_share", pct),
+    "decGoldSpurAnsOss": ("diagnostics.generation.hosted.oss20b.gold.spurious_answer_lines", pct),
+    "decTopAsCondOss": ("diagnostics.generation.hosted.oss20b.top8.as_condition", pct),
+    "decTopEvOnlyOss": ("diagnostics.generation.hosted.oss20b.top8.evidence_only", pct),
+    "decTopNotCitedOss": ("diagnostics.generation.hosted.oss20b.top8.not_cited", pct),
+    "decTopSpurOss": ("diagnostics.generation.hosted.oss20b.top8.spurious_share", pct),
+    "decTopSpurAnsOss": ("diagnostics.generation.hosted.oss20b.top8.spurious_answer_lines", pct),
+    "decGoldAsCondGemma": ("diagnostics.generation.hosted.gemma31b.gold.as_condition", pct),
+    "decGoldEvOnlyGemma": ("diagnostics.generation.hosted.gemma31b.gold.evidence_only", pct),
+    "decGoldNotCitedGemma": ("diagnostics.generation.hosted.gemma31b.gold.not_cited", pct),
+    "decGoldSpurGemma": ("diagnostics.generation.hosted.gemma31b.gold.spurious_share", pct),
+    "decGoldSpurAnsGemma": ("diagnostics.generation.hosted.gemma31b.gold.spurious_answer_lines", pct),
+    "decTopAsCondGemma": ("diagnostics.generation.hosted.gemma31b.top8.as_condition", pct),
+    "decTopEvOnlyGemma": ("diagnostics.generation.hosted.gemma31b.top8.evidence_only", pct),
+    "decTopNotCitedGemma": ("diagnostics.generation.hosted.gemma31b.top8.not_cited", pct),
+    "decTopSpurGemma": ("diagnostics.generation.hosted.gemma31b.top8.spurious_share", pct),
+    "decTopSpurAnsGemma": ("diagnostics.generation.hosted.gemma31b.top8.spurious_answer_lines", pct),
+    "decGoldAsCondNemo": ("diagnostics.generation.hosted.nemotron.gold.as_condition", pct),
+    "decGoldEvOnlyNemo": ("diagnostics.generation.hosted.nemotron.gold.evidence_only", pct),
+    "decGoldNotCitedNemo": ("diagnostics.generation.hosted.nemotron.gold.not_cited", pct),
+    "decGoldSpurNemo": ("diagnostics.generation.hosted.nemotron.gold.spurious_share", pct),
+    "decGoldSpurAnsNemo": ("diagnostics.generation.hosted.nemotron.gold.spurious_answer_lines", pct),
+    "decTopAsCondNemo": ("diagnostics.generation.hosted.nemotron.top8.as_condition", pct),
+    "decTopEvOnlyNemo": ("diagnostics.generation.hosted.nemotron.top8.evidence_only", pct),
+    "decTopNotCitedNemo": ("diagnostics.generation.hosted.nemotron.top8.not_cited", pct),
+    "decTopSpurNemo": ("diagnostics.generation.hosted.nemotron.top8.spurious_share", pct),
+    "decTopSpurAnsNemo": ("diagnostics.generation.hosted.nemotron.top8.spurious_answer_lines", pct),
     "ramOracleEffAllQwen": ("ramdocs.qwen7b.oracle.vs_full", effect),
     "ramRerankEffAllQwen": ("ramdocs.qwen7b.rr3.vs_full", effect),
     "ramNliEffAllQwen": ("ramdocs.qwen7b.nli.vs_full", effect),
@@ -652,6 +836,17 @@ MACROS: dict[str, tuple[str, Callable]] = {
 }
 
 
+def short_effect(d: dict) -> str:
+    """The point estimate alone, for prose next to a table that gives the interval."""
+    return f"{_pts(d['diff'])} points"
+
+
+# A short form of every confirmatory effect, for prose beside Table 4 (which gives intervals and p-values).
+MACROS.update({f"{n}Pt": (path, short_effect) for n, (path, fmt) in list(MACROS.items())
+               if fmt is effect and ((path.startswith("confirmatory.") and ".family." in path)
+                                                   or path.startswith("ramdocs."))})
+
+
 def _macro_name_ok(name: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z]+", name))
 
@@ -702,7 +897,7 @@ def tuning_rows(results: dict) -> str:
 #: Table 2, written whole: \input cannot sit between rows of a tabular.
 TUNING_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
-    r"\begin{center}",
+    r"\begin{table}[!htbp]\centering",
     r"\textbf{Table 2.} Generator wording on the tuning set with the gold chunks in context: F1 with conditions (\%) "
     r"on conditional (C) and unconditional (U) questions, and the share of unconditional answers that name any "
     r"condition. Qwen3.8-27B on a fixed 60-question sample of the tuning set.\\\vspace{5pt}",
@@ -717,7 +912,7 @@ TUNING_TABLE = "\n".join([
     "%ROWS%" + r"\bottomrule",
     r"\end{tabular}",
     r"}",
-    r"\end{center}",
+    r"\end{table}",
     "",
 ])
 
@@ -771,10 +966,11 @@ def e2e_rows(results: dict) -> str:
 
 E2E_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
-    r"\begin{center}",
+    r"\begin{table}[!htbp]\centering",
     r"\textbf{Table 3.} End-to-end results on the evaluation set: F1 with conditions (\%) on conditional (C) and "
     r"unconditional (U) questions, and the share of gold condition elements in the context that the generator "
-    r"cites anywhere (noticed, \%).\\\vspace{5pt}",
+    r"cites anywhere (noticed, \%). C: \nEvalCond{} questions; U: \nEvalUncond{}. The C2 test in Table 4 uses "
+    r"only the \nCondOnlyEval{} conditional questions with a condition-only gold chunk.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
     r"\begin{tabular}{L{4.6cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}}",
     r"\toprule",
@@ -784,7 +980,7 @@ E2E_TABLE = "\n".join([
     "%ROWS%" + r"\bottomrule",
     r"\end{tabular}",
     r"}",
-    r"\end{center}",
+    r"\end{table}",
     "",
 ])
 
@@ -818,7 +1014,7 @@ def confirm_rows(results: dict) -> str:
 
 CONFIRM_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
-    r"\begin{center}",
+    r"\begin{table}[!htbp]\centering",
     r"\textbf{Table 4.} The pre-registered confirmatory family: paired difference in F1 with conditions (points), "
     r"95\% BCa interval over pages, and Holm-adjusted page-level sign-flip $p$. C: conditional questions; "
     r"C$^\dagger$: those with a condition-only gold chunk; U: unconditional. C8 asks whether the lower bound "
@@ -833,7 +1029,7 @@ CONFIRM_TABLE = "\n".join([
     "%ROWS%" + r"\bottomrule",
     r"\end{tabular}",
     r"}",
-    r"\end{center}",
+    r"\end{table}",
     "",
 ])
 
@@ -852,15 +1048,26 @@ def hosted_rows(results: dict) -> str:
             vals += [_p(c.get("f1_cond")) if full_c else DASH, _p(c.get("cond_noticed")) if full_c else DASH,
                      _p(u.get("f1_cond")) if u.get("n") == 100 else DASH]
         lines.append(f"{LABEL[s]} & " + " & ".join(vals) + r" \\")
+    lines.append(r"\midrule")
+    conf = results.get("confirmatory", {})
+    for label, key in ((r"\texttt{gold}, C$^\dagger$ only", "a"),
+                       (r"\texttt{gold\,$-$\,cond.-only chunks}, C$^\dagger$ only", "b")):
+        vals = []
+        for m in HOSTED_MODELS:
+            c2 = conf.get(m, {}).get("family", {}).get("C2")
+            vals += [_p(c2[key]) if c2 and c2.get("complete") else DASH, DASH, DASH]
+        lines.append(f"{label} & " + " & ".join(vals) + r" \\")
     return "\n".join(lines) + "\n"
 
 
 HOSTED_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
-    r"\begin{center}",
+    r"\begin{table}[!htbp]\centering",
     r"\textbf{Table 5.} Larger hosted generators on the stratified subsample (150 conditional, 100 unconditional "
     r"questions): F1 with conditions (\%) on conditional (C) and unconditional (U) questions, and conditions "
-    r"noticed (N, \%) as in Table 3.\\\vspace{5pt}",
+    r"noticed (N, \%) as in Table 3. The first four rows cover all 150 conditional questions; the last two only "
+    r"the \hCondOnlyN{} of them with a condition-only gold chunk (C$^\dagger$), the population of the C2 "
+    r"comparison.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
     r"\begin{tabular}{L{3.6cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}P{0.85cm}}",
     r"\toprule",
@@ -871,7 +1078,7 @@ HOSTED_TABLE = "\n".join([
     "%ROWS%" + r"\bottomrule",
     r"\end{tabular}",
     r"}",
-    r"\end{center}",
+    r"\end{table}",
     "",
 ])
 
@@ -895,7 +1102,7 @@ def ram_rows(results: dict) -> str:
 
 RAM_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
-    r"\begin{center}",
+    r"\begin{table}[!htbp]\centering",
     r"\textbf{Table 6.} The same operators on RAMDocs, where discarding is correct: strict accuracy (\%) on all "
     r"questions and on those with misinformation (MI), and the share of MI answers that state a wrong answer.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
@@ -907,7 +1114,48 @@ RAM_TABLE = "\n".join([
     "%ROWS%" + r"\bottomrule",
     r"\end{tabular}",
     r"}",
-    r"\end{center}",
+    r"\end{table}",
+    "",
+])
+
+
+DEC_MODELS = (("eval", "qwen7b", "Qwen2.5-7B"), ("eval", "llama8b", "Llama-3.1-8B"), ("hosted", "oss20b", "gpt-oss-20b"),
+              ("hosted", "gemma31b", "Gemma-4-31B"), ("hosted", "nemotron", "Nemotron-3-Ultra"))
+
+
+def dec_rows(results: dict) -> str:
+    gen = results.get("diagnostics", {}).get("generation", {})
+    lines = []
+    for qset, key, name in DEC_MODELS:
+        vals = []
+        for s in ("gold", "top8"):
+            d = gen.get(qset, {}).get(key, {}).get(s)
+            vals += [_p(d["as_condition"]) if d else DASH, _p(d["evidence_only"]) if d else DASH,
+                     _p(d["not_cited"]) if d else DASH]
+        d = gen.get(qset, {}).get(key, {}).get("gold")
+        vals += [_p(d["spurious_share"]) if d else DASH, _p(d["spurious_answer_lines"]) if d else DASH]
+        lines.append(f"{name} & " + " & ".join(vals) + r" \\")
+    return "\n".join(lines) + "\n"
+
+
+DEC_TABLE = "\n".join([
+    r"% Generated by study/report.py. Do not edit by hand.",
+    r"\begin{table}[!htbp]\centering",
+    r"\textbf{Table 7.} What happens to the gold conditions in the context (conditional questions: \nEvalCond{} for "
+    r"the local generators, 150 for the hosted ones): the share stated as a condition (Cond.), cited only as "
+    r"evidence (Ev.) or not cited at all (None), with gold and with top-8 context; and, with gold context, the share "
+    r"of stated conditions that are not gold conditions (Spur.) and, of those, the share that are lines stating the "
+    r"answer (Ans.). All values in \%.\\\vspace{5pt}",
+    r"{\fontsize{10}{12}\selectfont",
+    r"\begin{tabular}{L{2.9cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}}",
+    r"\toprule",
+    r" & \multicolumn{3}{c}{\textbf{gold}} & \multicolumn{3}{c}{\textbf{top-8}} & \multicolumn{2}{c}{\textbf{gold}} \\",
+    r"\textbf{Generator} & Cond. & Ev. & None & Cond. & Ev. & None & Spur. & Ans. \\",
+    r"\midrule",
+    "%ROWS%" + r"\bottomrule",
+    r"\end{tabular}",
+    r"}",
+    r"\end{table}",
     "",
 ])
 
@@ -916,7 +1164,7 @@ def write_tables(results: dict) -> None:
     TABLES.mkdir(parents=True, exist_ok=True)
     for name, template, rows in (("tuning", TUNING_TABLE, tuning_rows), ("endtoend", E2E_TABLE, e2e_rows),
                                  ("confirm", CONFIRM_TABLE, confirm_rows), ("hosted", HOSTED_TABLE, hosted_rows),
-                                 ("ramdocs", RAM_TABLE, ram_rows)):
+                                 ("ramdocs", RAM_TABLE, ram_rows), ("decomposition", DEC_TABLE, dec_rows)):
         (TABLES / f"{name}.tex").write_text(template.replace("%ROWS%", rows(results)), encoding="utf-8")
 
 

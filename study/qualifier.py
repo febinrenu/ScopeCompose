@@ -350,6 +350,19 @@ systems.register("adj")(adjacent)
 systems.register("page")(fullpage)
 
 
+@systems.register("qcoracle", oracle=False)
+def oracle_completion(q: cqa.Question, env: systems.Env) -> systems.Context:
+    """Completion with a perfect scorer (revision, exploratory): the same top-``ANCHOR_K`` and the same
+    candidate pool as ``qc``, but the added chunks are the candidates that truly hold a gold condition,
+    up to the same budget. It separates what the candidate pool allows from what the scorer finds."""
+    ranked = env.ranked(q)
+    top = list(ranked[:ANCHOR_K])
+    gold = sorted({p.candidate for p in candidate_pairs(q, env) if p.label},
+                  key=lambda cid: (env.chunk(cid).doc, env.chunk(cid).index))[: BUDGET - ANCHOR_K]
+    added = [env.chunk(cid) for cid in gold]
+    return systems.Context(tuple(top + added), trace={"added": [c.id for c in added]})
+
+
 # --------------------------------------------------------------------------- #
 # Threshold and intrinsic quality (tuning set only for the choice)
 # --------------------------------------------------------------------------- #
