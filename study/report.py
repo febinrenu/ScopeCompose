@@ -1,4 +1,4 @@
-"""Every number the paper reports, computed from data and cell files.
+﻿"""Every number the paper reports, computed from data and cell files.
 
     python -m study.report            # results/results.json and paper/numbers.tex
 
@@ -994,6 +994,10 @@ MACROS: dict[str, tuple[str, Callable]] = {
     "hCTwoNemo": ("confirmatory.nemotron.family.C2", effect),
     "hCSevenNemo": ("confirmatory.nemotron.family.C7", effect),
     "hEOneNemo": ("confirmatory.nemotron.exploratory.E1", effect),
+    "hCTwoQwenSame": ("confirmatory.qwen7b.on_hosted.C2", effect),
+    "hCTwoLlamaSame": ("confirmatory.llama8b.on_hosted.C2", effect),
+    "hEOneQwenSame": ("confirmatory.qwen7b.on_hosted.E1", effect),
+    "hEOneLlamaSame": ("confirmatory.llama8b.on_hosted.E1", effect),
     "qAucTrained": ("qualifier.trained.auc", lambda x: f'{x:.2f}'),
     "qPrecTrained": ("qualifier.trained.precision", pct),
     "qRecTrained": ("qualifier.trained.recall", pct),
@@ -1066,8 +1070,9 @@ for _qs, _ms in _REV_MODELS.items():
 
 # A short form of every confirmatory effect, for prose beside Table 4 (which gives intervals and p-values).
 MACROS.update({f"{n}Pt": (path, short_effect) for n, (path, fmt) in list(MACROS.items())
-               if fmt is effect and ((path.startswith("confirmatory.") and ".family." in path)
-                                                   or path.startswith("ramdocs."))})
+               if fmt is effect and ((path.startswith("confirmatory.")
+                                      and (".family." in path or ".on_hosted." in path or path.endswith(".E1")))
+                                     or path.startswith("ramdocs."))})
 
 
 def _macro_name_ok(name: str) -> bool:
@@ -1374,8 +1379,8 @@ DEC_TABLE = "\n".join([
     r"of stated conditions that are not gold conditions (Spur.) and, of those, the share that are lines stating the "
     r"answer (Ans.); answer F1 ignoring conditions (F1) and exact match with conditions (EM$_c$) on the conditional "
     r"questions; and the share of unconditional answers that name any condition (FC). All values in \%.\\\vspace{5pt}",
-    r"{\fontsize{10}{12}\selectfont\setlength{\tabcolsep}{4.5pt}",
-    r"\begin{tabular}{L{2.7cm}" + r"P{0.78cm}" * 11 + "}",
+    r"{\fontsize{10}{12}\selectfont\setlength{\tabcolsep}{3.8pt}",
+    r"\begin{tabular}{L{2.7cm}" + r"P{0.84cm}" * 11 + "}",
     r"\toprule",
     r" & \multicolumn{3}{c}{\textbf{gold}} & \multicolumn{3}{c}{\textbf{top-8}} & \multicolumn{5}{c}{\textbf{gold}} \\",
     r"\textbf{Generator} & Cond. & Ev. & None & Cond. & Ev. & None & Spur. & Ans. & F1 & EM$_c$ & FC \\",

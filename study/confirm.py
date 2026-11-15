@@ -120,6 +120,12 @@ def confirmatory() -> dict:
     for m in LOCAL:
         r = model_results(m, "eval")
         if r["family"] or "C8" in r:
+            # The same contrasts restricted to the hosted subsample's questions, so that local and hosted
+            # generators can be compared on identical populations (exploratory, added in revision).
+            cells = _cells(m, "eval", {"gold", "gold_nocondchk", "top8"})
+            r["on_hosted"] = {cid: x for cid, a, b, pop in (("C2", "gold", "gold_nocondchk", "condition_only"),
+                                                             ("E1", "gold", "top8", "conditional"))
+                              if (x := compare(cells, a, b, population("hosted", pop))) is not None}
             out[m] = r
     for m in HOSTED:
         r = model_results(m, "hosted")

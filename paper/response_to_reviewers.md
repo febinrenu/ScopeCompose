@@ -296,3 +296,40 @@ Exact matching therefore explains little of the measured loss. The abstract now 
 **Every table and figure against the repository.** All tables, figures and in-text numbers are regenerated from the raw model outputs by `python -m study.report` and `python -m study.figures`. `paper/check_paper.py` fails the build if any number is typed by hand, any macro is unresolved, or a page, reference or abstract limit is exceeded.
 
 **Length.** To stay within the journal's 25 pages including references and biographies, the text was tightened throughout without removing any analysis. The review copy is 24 pages.
+
+---
+
+## Fourth round (Reviewer 2, report on the revised review copy)
+
+We thank the reviewer again. The changes follow the reviewer's five tasks.
+
+**1. Gemma-4-31B verification.** GEMMA_VERIFICATION_PENDING
+
+**2. Listwise selection.** Section 4.5 now reads: listwise selection "yields a numerical gain for both generators (+1.4 points, 95% CI 0.0 to +2.9, p = 0.057, and +2.7 points, +1.1 to +4.6, p = 0.002), distinguishable from zero only for Llama-3.1-8B". The RAMDocs section no longer calls it "the one policy that helped", but "the one policy with a gain".
+
+**3. Checkpoint references.** We checked both model cards.
+- The `BAAI/bge-reranker-base` card asks users to cite the C-Pack report and documents the reranker itself only on the card. The text now says the checkpoint is "cited as its model card asks", and its footnote says that the report describes the BGE family while the reranker is documented only on the card.
+- The `cross-encoder/nli-deberta-v3-base` card names no publication. Its footnote now identifies it as a separate resource: fine-tuned on SNLI and MultiNLI with the Sentence-Transformers cross-encoder class. DeBERTa-v3 remains the citation for the architecture.
+
+The reference list is at the journal's limit of 25, so adding the model cards as references would mean removing a cited work; the footnotes, with the revision hashes in the text, identify each checkpoint exactly.
+
+**4. Larger generators.** We followed the reviewer's point about different populations further than the report asked. The local models answered every evaluation question, so their contrasts can be computed on exactly the hosted subsample's questions. On those questions:
+
+| Generator | Condition-only chunks removed (61 questions) | Gold replaced by top 8 (150 questions) |
+|---|---|---|
+| Qwen2.5-7B | +5.3 (+0.3 to +11.6) | +4.7 (+0.9 to +8.9) |
+| Llama-3.1-8B | +7.3 (+2.0 to +14.7) | +7.2 (+2.9 to +12.4) |
+| gpt-oss-20b | +9.0 (+3.1 to +18.0) | +4.7 (+0.6 to +9.4) |
+| Gemma-4-31B | +9.5 (+3.3 to +17.3) | +8.4 (+4.0 to +13.9) |
+| Nemotron-3-Ultra | +9.5 (+3.1 to +17.7) | +5.2 (+1.0 to +10.4) |
+
+The like-for-like comparison does not support "the stages before generation matter more" for the larger generators. The condition-only loss is somewhat larger for them, but the intervals overlap, and the retrieval loss is about the same. Section 4.8 now reports these numbers and says the losses before generation "do not shrink" for the larger generators. It gives the reviewer's reading as a possibility: they "may use condition evidence more when it is present". It adds that this is not evidence that size causes the difference. The conclusion is changed to match:
+- "do not shrink for the larger generators" replaces "cost the stronger generators more";
+- "lose at least as much before generation" replaces "lose more";
+- "did not fall for the larger generators" replaces "grows as generators improve".
+
+The same-question contrasts are listed in the analysis plan's deviations as exploratory.
+
+**5. Numerical audit.** Every number in the text and tables is regenerated from the raw outputs by `python -m study.report`. `paper/check_paper.py` passes except for the Gemma sentence and the biography placeholder. In this round the regenerated tables were unchanged.
+
+**Manual annotation audit (optional).** Not done in this round, for the reason given in the third round; the automatic bound and the limitations paragraph stand.

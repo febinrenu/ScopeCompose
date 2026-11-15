@@ -177,5 +177,8 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
    In the third review round, also from existing outputs: an audit of exact element matching
    (`report.metric_audit`), which credits a missed gold condition when the generator stated another
    element restating it (token F1 >= 0.5, and a loose bound at 1/3), on the gold-context cells.
+   In the fourth round, also from existing outputs: the local models' C2 and E1 contrasts restricted to
+   the hosted subsample's questions (`confirm.confirmatory`, key `on_hosted`), so that local and hosted
+   generators are compared on identical populations.
    Two Qwen2.5-7B `page` answers aborted by the server as repetition loops are scored as
    unanswered, the same rule as for truncated output.
