@@ -84,7 +84,7 @@ def main() -> int:
 
     # -- abstract and keywords --------------------------------------------- #
     abstract = body("abstract")
-    m = re.search(r"\\section\*\{Abstract\}(.*?)\\textbf\{[^}]*Keywords:\}(.*)", abstract, re.DOTALL)
+    m = re.search(r"\\section\*\{Abstract\}(.*?)\\textbf\{.*?Keywords:\}(.*)", abstract, re.DOTALL)
     if not m:
         failures.append("abstract or keywords line not found")
     else:
