@@ -56,8 +56,14 @@
 
 \usepackage{xcolor}
 \usepackage{url}
-% A visible marker for text that waits on results. The submission check fails while any remains.
-\newcommand{\pending}[1]{\textcolor{red}{\textbf{[PENDING: #1]}}}
+% A visible marker for text that waits on results or author details. The submission check fails
+% while any remains. review.tex defines \reviewcopy: the marker's text is then set as plain prose,
+% and the author block is replaced by a note, so reviewers get a clean copy of the same sources.
+\ifdefined\reviewcopy
+  \newcommand{\pending}[1]{#1}
+\else
+  \newcommand{\pending}[1]{\textcolor{red}{\textbf{[PENDING: #1]}}}
+\fi
 
 \input{numbers}
 
@@ -69,6 +75,9 @@
 {Where Do the Conditions Go? Stage-wise Attribution of Condition Loss in Chunked Retrieval-Augmented Generation}
 \end{center}
 \vspace{24pt}
+\ifdefined\reviewcopy
+\begin{center}\fontsize{11}{11}\selectfont\textit{Revised manuscript, review copy. Author names, affiliations and biographies are omitted.}\end{center}
+\else
 \fontsize{16}{16}\selectfont\textbf{
 Author Name$^1$, Author Name$^2$}
 \vspace{16pt}\\
@@ -77,6 +86,7 @@ $^1$Department, College, University, City, Country \\
 $^2$Department, College, University, City, Country
 }\vspace{16pt}\\
 {\fontsize{9}{9}\selectfont\textbf{{E-mail:}} $^1$author1@college.edu, $^2$author2@institute.com}\\
+\fi
 
 \end{singlespace}
 \fontsize{12}{12}\selectfont

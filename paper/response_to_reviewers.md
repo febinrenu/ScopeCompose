@@ -171,7 +171,7 @@ The cross-fitting and threshold protocol is now described step by step in the me
 We thank the reviewer for the second reading, and for withdrawing the numerical-inconsistency point after checking the C† populations. The three experiments the reviewer flagged as outstanding are now complete, for every generator they were run on. The target journal is the *Journal of Trends in Computer Science and Smart Technology* (IRO Journals), which limits papers to 25 pages and 25 references. Some responses below are shaped by those limits.
 
 **Outstanding experiments.**
-- **Verification pass:** results for Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra are in "Inside the generation loss". [Gemma-4-31B to be added.]
+- **Verification pass:** results for Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra are in "Inside the generation loss". (The same pass for Gemma-4-31B is still running; its results will be added to the final version.)
 - **Section-aware chunks end to end:** results for both local generators are in the same subsection.
 - **Oracle completion:** results for all four generators (Qwen2.5-7B, Llama-3.1-8B, Nemotron-3-Ultra, Gemma-4-31B) are in "Why context completion does not help".
 

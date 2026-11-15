@@ -414,8 +414,8 @@ def revision() -> dict:
                 res: dict = {}
                 for pop_name, pop in pops.items():
                     keys = pop & set(a) & set(b)
-                    if not keys:
-                        continue
+                    if not keys or len(keys) != len(pop):
+                        continue        # a cell still running reports nothing, not a partial result
                     r = confirm.compare({"a": a, "b": b}, "a", "b", frozenset(keys))
                     if r is None:
                         continue
@@ -1312,7 +1312,7 @@ DEC_TABLE = "\n".join([
     r"of stated conditions that are not gold conditions (Spur.) and, of those, the share that are lines stating the "
     r"answer (Ans.); answer F1 ignoring conditions (F1) and exact match with conditions (EM$_c$) on the conditional "
     r"questions; and the share of unconditional answers that name any condition (FC). All values in \%.\\\vspace{5pt}",
-    r"{\fontsize{10}{12}\selectfont",
+    r"{\fontsize{10}{12}\selectfont\setlength{\tabcolsep}{4.5pt}",
     r"\begin{tabular}{L{2.7cm}" + r"P{0.78cm}" * 11 + "}",
     r"\toprule",
     r" & \multicolumn{3}{c}{\textbf{gold}} & \multicolumn{3}{c}{\textbf{top-8}} & \multicolumn{5}{c}{\textbf{gold}} \\",

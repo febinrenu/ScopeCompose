@@ -103,7 +103,7 @@ def main() -> int:
             failures.append(f"sections/{s}.tex still has a \\pending marker")
     prose = re.sub(r"\\begin\{(equation|tabular)\}.*?\\end\{\1\}", " ", text, flags=re.DOTALL)
     prose = re.sub(r"\$[^$]*\$|\\cite\{[^}]*\}|\\ref\{[^}]*\}|\\label\{[^}]*\}|\\includegraphics(\[[^]]*\])?\{[^}]*\}"
-                   r"|\\texttt\{[^}]*\}|\\fontsize\{[^}]*\}\{[^}]*\}|\\vspace\{[^}]*\}|\[[0-9.]+(pt|cm|em)\]"
+                   r"|\\texttt\{[^}]*\}|\\fontsize\{[^}]*\}\{[^}]*\}|\\vspace\{[^}]*\}|\\setlength\{[^}]*\}\{[^}]*\}|\[[0-9.]+(pt|cm|em)\]"
                    r"|width=[0-9.]+\\textwidth", " ", prose)
     allowed = re.compile(r"\b(?:Table|Figure|Section|Tables|Figures)~?\s*\d+(?:--\d+)?|\b(?:v[1-4]|k\s*=\s*\d+)\b"
                          r"|\b(?:BM25|F1|DeBERTa-?v?3?|Qwen2\.5-7B(?:-Instruct)?|Llama-3\.1-8B(?:-Instruct)?"

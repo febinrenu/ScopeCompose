@@ -72,3 +72,4 @@ paper/*.log
 paper/*.aux
 paper/*.out
 paper/main.pdf
+paper/review.pdf
