@@ -60,10 +60,12 @@ third_party/normbench_src/
 data/external/
 
 # Study intermediates (rankings, embeddings): regenerable from data/external
-study/artifacts/
+study/artifacts/*
+!study/artifacts/qualifier/
+study/artifacts/qualifier/*
+!study/artifacts/qualifier/*.json
 
 # Model outputs per cell (large; results.json and tables are committed instead)
-study/runs/
 
 # LaTeX build outputs
 paper/*.log
