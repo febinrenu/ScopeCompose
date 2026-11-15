@@ -57,6 +57,13 @@ The metric itself rewards silence. A stated condition scores zero whenever the g
 
 \input{tables/confirm}
 
+\subsection{Why context completion does not help}
+\label{sec:completion}
+
+The completion scorer is weak at the task it was trained for. Over the candidate chunks of the evaluation questions, \qPosPairs{} of which hold a gold condition and \qNegPairs{} of which do not, the trained scorer ranks a condition chunk above a non-condition chunk with probability \qAucTrained, below the \qAucZero{} of the untrained reranker it was meant to improve on. At the threshold chosen on the tuning set it adds \qAddedTrained{} chunks per question, of which \qPrecTrained\% hold a condition, and recovers \qRecTrained\% of the condition chunks that retrieval missed; the untrained reranker adds \qAddedZero, with \qPrecZero\% precision and \qRecZero\% recall. Condition chunks are rare among the candidates, each fold trains on fewer than seven hundred positive pairs, and the cross-fitted model does not learn more than a general relevance model already knows.
+
+Nor does what it learns transfer. On the authors' earlier corpus of gov.uk and UK bank passage pairs, annotated independently by two people for conflict type, the scorer ranks the \oodPosNatural{} refinement pairs (one passage states a rule, the other a condition or exception to it) below the \oodNegNatural{} pairs that are not in conflict, with AUC \oodAucNatural{} (\oodAucProbes{} on the corpus's written probe pairs). It has learned where conditions sit on a ConditionalQA page, not what makes one passage qualify another. With precision this low, the chunks completion adds are mostly distractors, which is consistent with its null or slightly negative effect end to end (Tables~3--5).
+
 \subsection{Larger generators}
 \label{sec:hosted}
 
