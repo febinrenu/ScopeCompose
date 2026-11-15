@@ -468,7 +468,13 @@ def providers() -> dict:
         norm = lambda r: tuple(sorted(x[0].strip().lower() for x in r["answers"]))
         cond = [k for k in keys if a[k].kind == "conditional"]
         from study import stats
+        def tally(cell: dict) -> dict:
+            rs = [cell[k] for k in keys]
+            return {"parse_ok": sum(bool(r.get("ok")) for r in rs), "no_answer": sum(not r["answers"] for r in rs),
+                    "conditions": sum(len(cs) for r in rs for _, cs in r["answers"])}
+
         out.setdefault("oss20b", {})["provider_check"] = {
+            "groq_tally": tally(ga), "nvidia_tally": tally(gb),
             "n": len(keys), "same_answers": st.fmean(norm(ga[k]) == norm(gb[k]) for k in keys) if keys else float("nan"),
             "f1c_groq": st.fmean(a[k].f1_cond for k in cond) if cond else float("nan"),
             "f1c_nvidia": st.fmean(b[k].f1_cond for k in cond) if cond else float("nan"), "n_conditional": len(cond),
@@ -509,6 +515,44 @@ def qualifier_section() -> dict:
         out["ood"] = json.loads(ood.read_text(encoding="utf-8"))
         corpus = settings.REPO_ROOT / "benchmark" / "data" / "corpus.jsonl"
         out["ood"]["corpus_size"] = sum(1 for l in corpus.read_text(encoding="utf-8").splitlines() if l.strip())
+        for g in ("natural", "probes"):
+            d = out["ood"][g]
+            d["ci_low"], d["ci_high"] = _hanley_mcneil(d["auc"], d["n_pos"], d["n_neg"])
+        out["ood"]["natural_pages"] = _ood_pages()
+    return out
+
+
+def _hanley_mcneil(a: float, n_pos: int, n_neg: int) -> tuple[float, float]:
+    """95% interval for an AUC (Hanley and McNeil, 1982)."""
+    q1, q2 = a / (2 - a), 2 * a * a / (1 + a)
+    se = math.sqrt((a * (1 - a) + (n_pos - 1) * (q1 - a * a) + (n_neg - 1) * (q2 - a * a)) / (n_pos * n_neg))
+    return a - 1.96 * se, a + 1.96 * se
+
+
+def _ood_pages() -> int:
+    """Distinct source pages behind the scored natural pairs of the transfer corpus."""
+    from study.ood import Stratum, V7Label, load_corpus, relabel, stratum_of
+
+    scored = {V7Label.CONDITIONAL_CONFLICT, V7Label.NO_CONFLICT, V7Label.TEMPORAL, V7Label.FACTUAL, V7Label.OPINION}
+    pages = {(p.source_url or p.id).split("#")[0]
+             for inst in load_corpus() if len(inst.passages) >= 2 and stratum_of(inst) is not Stratum.S5
+             and relabel(inst).label in scored for p in inst.passages[:2]}
+    return len(pages)
+
+
+def protocol() -> dict:
+    """How close the local generators' inputs came to their context window (8,192 tokens, 768 for output)."""
+    from study.run import RUNS, read_cell
+
+    window, budget = 8192, 768
+    n = near = 0
+    longest = 0
+    for path in sorted((RUNS / "eval").glob("*.jsonl")):
+        for r in read_cell(path).values():
+            pt = int(r.get("prompt_tokens") or 0)
+            n, longest = n + 1, max(longest, pt)
+            near += pt >= window - budget
+    out = {"local_answers": n, "near_window": near, "longest_prompt": longest}
     return out
 
 
@@ -526,6 +570,7 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "providers": providers,
     "diagnostics": diagnostics,
     "revision": revision,
+    "protocol": protocol,
 }
 
 
@@ -921,6 +966,19 @@ MACROS.update({
     "provGroq": ("providers.oss20b.provider_check.f1c_groq", pct),
     "provNvidia": ("providers.oss20b.provider_check.f1c_nvidia", pct),
     "provDiff": ("providers.oss20b.provider_check.paired", effect),
+    "provParseGroq": ("providers.oss20b.provider_check.groq_tally.parse_ok", integer),
+    "provParseNvidia": ("providers.oss20b.provider_check.nvidia_tally.parse_ok", integer),
+    "provNoAnsGroq": ("providers.oss20b.provider_check.groq_tally.no_answer", integer),
+    "provNoAnsNvidia": ("providers.oss20b.provider_check.nvidia_tally.no_answer", integer),
+    "provCondGroq": ("providers.oss20b.provider_check.groq_tally.conditions", integer),
+    "provCondNvidia": ("providers.oss20b.provider_check.nvidia_tally.conditions", integer),
+    "oodAucNaturalLow": ("qualifier.ood.natural.ci_low", lambda x: f"{x:.2f}"),
+    "oodAucNaturalHigh": ("qualifier.ood.natural.ci_high", lambda x: f"{x:.2f}"),
+    "oodAucProbesLow": ("qualifier.ood.probes.ci_low", lambda x: f"{x:.2f}"),
+    "oodAucProbesHigh": ("qualifier.ood.probes.ci_high", lambda x: f"{x:.2f}"),
+    "oodNaturalPages": ("qualifier.ood.natural_pages", integer),
+    "nLocalAnswers": ("protocol.local_answers", integer),
+    "nNearWindow": ("protocol.near_window", integer),
 })
 
 #: revision comparisons, per model: rev<Pair><Population><Model>, plus the condition statistics behind them
@@ -1237,6 +1295,10 @@ def dec_rows(results: dict) -> str:
                      _p(d["not_cited"]) if d else DASH]
         d = gen.get(qset, {}).get(key, {}).get("gold")
         vals += [_p(d["spurious_share"]) if d else DASH, _p(d["spurious_answer_lines"]) if d else DASH]
+        e2e = results.get("end_to_end", {}).get(qset, {}).get(key, {}).get("gold", {})
+        c, u = e2e.get("conditional", {}), e2e.get("unconditional", {})
+        vals += [_p(c["f1"]) if "f1" in c else DASH, _p(c["em_cond"]) if "em_cond" in c else DASH,
+                 _p(u["any_condition"]) if "any_condition" in u else DASH]
         lines.append(f"{name} & " + " & ".join(vals) + r" \\")
     return "\n".join(lines) + "\n"
 
@@ -1248,12 +1310,13 @@ DEC_TABLE = "\n".join([
     r"the local generators, 150 for the hosted ones): the share stated as a condition (Cond.), cited only as "
     r"evidence (Ev.) or not cited at all (None), with gold and with top-8 context; and, with gold context, the share "
     r"of stated conditions that are not gold conditions (Spur.) and, of those, the share that are lines stating the "
-    r"answer (Ans.). All values in \%.\\\vspace{5pt}",
+    r"answer (Ans.); answer F1 ignoring conditions (F1) and exact match with conditions (EM$_c$) on the conditional "
+    r"questions; and the share of unconditional answers that name any condition (FC). All values in \%.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
-    r"\begin{tabular}{L{2.9cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}P{0.95cm}}",
+    r"\begin{tabular}{L{2.7cm}" + r"P{0.78cm}" * 11 + "}",
     r"\toprule",
-    r" & \multicolumn{3}{c}{\textbf{gold}} & \multicolumn{3}{c}{\textbf{top-8}} & \multicolumn{2}{c}{\textbf{gold}} \\",
-    r"\textbf{Generator} & Cond. & Ev. & None & Cond. & Ev. & None & Spur. & Ans. \\",
+    r" & \multicolumn{3}{c}{\textbf{gold}} & \multicolumn{3}{c}{\textbf{top-8}} & \multicolumn{5}{c}{\textbf{gold}} \\",
+    r"\textbf{Generator} & Cond. & Ev. & None & Cond. & Ev. & None & Spur. & Ans. & F1 & EM$_c$ & FC \\",
     r"\midrule",
     "%ROWS%" + r"\bottomrule",
     r"\end{tabular}",

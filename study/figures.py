@@ -57,7 +57,7 @@ def _results() -> dict:
     return json.loads(RESULTS.read_text(encoding="utf-8"))
 
 
-def _bars(ax, groups, series, colours, *, width=0.36, labels=True, fmt="{:.0f}"):
+def _bars(ax, groups, series, colours, *, width=0.36, labels=True, fmt="{:.0f}", label_size=7.5):
     """Grouped bars with a 2pt surface gap between neighbours and value labels above."""
     n = len(series)
     for i, (name, values) in enumerate(series):
@@ -67,7 +67,7 @@ def _bars(ax, groups, series, colours, *, width=0.36, labels=True, fmt="{:.0f}")
         if labels:
             for b, v in zip(bars, values):
                 ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 1.2, fmt.format(v),
-                        ha="center", va="bottom", fontsize=7.5, color=INK2)
+                        ha="center", va="bottom", fontsize=label_size, color=INK2)
     ax.set_xticks(range(len(groups)))
     ax.set_xticklabels(groups)
 
@@ -119,27 +119,30 @@ def fig_operators(r: dict) -> None:
     """Two panels on one percent scale: what reducers remove on ConditionalQA, and what they keep on RAMDocs."""
     cqa_ops = r["operator_survival"]["cqa"]
     ram_ops = r["operator_survival"]["ramdocs"]
-    names = [("rr8to3", "rr3", "Rerank to 3"), ("nli", "nli", "NLI filter"), ("crs", "crs", "ConflictRAG-\nstyle")]
-    fig, (a, b) = plt.subplots(1, 2, figsize=(6.6, 2.7), gridspec_kw={"width_ratios": [1, 1.25]})
-    _bars(a, [n for _, _, n in names],
-          [("Condition chunks", [100 * cqa_ops[k]["condition_dropped"] for k, _, _ in names]),
-           ("Answer chunks", [100 * cqa_ops[k]["answer_dropped"] for k, _, _ in names])],
-          [ORANGE, BLUE])
-    a.set_title("ConditionalQA: retrieved gold chunks removed", loc="left")
-    a.set_ylabel("Share (%)")
-    a.set_ylim(0, 40)
-    a.legend(loc="upper left", fontsize=7.5)
-    _bars(b, [n for _, _, n in names],
-          [("Correct", [100 * ram_ops[k]["correct"] for _, k, _ in names]),
-           ("Misinformation", [100 * ram_ops[k]["misinfo"] for _, k, _ in names]),
-           ("Noise", [100 * ram_ops[k]["noise"] for _, k, _ in names])],
-          [BLUE, ORANGE, AQUA], width=0.27)
-    b.set_title("RAMDocs: documents kept, by type", loc="left")
-    b.set_ylim(0, 100)
-    b.legend(loc="upper center", ncol=3, fontsize=7.5, bbox_to_anchor=(0.5, 1.0))
-    fig.tight_layout(w_pad=1.5)
-    fig.savefig(OUT / "operators.pdf")
-    plt.close(fig)
+    names = [("rr8to3", "rr3", "Rerank\nto 3"), ("nli", "nli", "NLI\nfilter"), ("crs", "crs", "ConflictRAG-\nstyle")]
+    # This figure is printed at 0.85 of the text width, so its text is set larger than the others'.
+    with plt.rc_context({"font.size": 10.5, "axes.titlesize": 10.5}):
+        fig, (a, b) = plt.subplots(1, 2, figsize=(6.6, 2.9), gridspec_kw={"width_ratios": [1, 1.25]})
+        _bars(a, [n for _, _, n in names],
+              [("Condition chunks", [100 * cqa_ops[k]["condition_dropped"] for k, _, _ in names]),
+               ("Answer chunks", [100 * cqa_ops[k]["answer_dropped"] for k, _, _ in names])],
+              [ORANGE, BLUE], label_size=9)
+        a.set_title("ConditionalQA: gold chunks removed", loc="left")
+        a.set_ylabel("Share (%)")
+        a.set_ylim(0, 45)
+        a.legend(loc="upper left", fontsize=9)
+        _bars(b, [n for _, _, n in names],
+              [("Correct", [100 * ram_ops[k]["correct"] for _, k, _ in names]),
+               ("Misinformation", [100 * ram_ops[k]["misinfo"] for _, k, _ in names]),
+               ("Noise", [100 * ram_ops[k]["noise"] for _, k, _ in names])],
+              [BLUE, ORANGE, AQUA], width=0.27, label_size=8.5)
+        b.set_title("RAMDocs: documents kept, by type", loc="left")
+        b.set_ylim(0, 112)
+        b.set_yticks(range(0, 101, 20))
+        b.legend(loc="upper center", ncol=3, fontsize=9, bbox_to_anchor=(0.5, 1.02))
+        fig.tight_layout(w_pad=1.5)
+        fig.savefig(OUT / "operators.pdf")
+        plt.close(fig)
 
 
 FIGURES = (fig_separation, fig_recall, fig_operators)

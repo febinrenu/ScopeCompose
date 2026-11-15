@@ -163,3 +163,95 @@ The cross-fitting and threshold protocol is now described step by step in the me
 - **Resolved:** the repository URL, analysis-plan commits and all result placeholders.
 - **Supplied by the authors at submission:** author names, affiliations, emails, biographies, and confirmation of the funding and conflict-of-interest statements.
 - **AI disclosure:** retained, as the journal's policy requires.
+
+---
+
+## Second round (Reviewer 2, updated report)
+
+We thank the reviewer for the second reading, and for withdrawing the numerical-inconsistency point after checking the C† populations. The three experiments the reviewer flagged as outstanding are now complete, for every generator they were run on. The target journal is the *Journal of Trends in Computer Science and Smart Technology* (IRO Journals), which limits papers to 25 pages and 25 references. Some responses below are shaped by those limits.
+
+**Outstanding experiments.**
+- **Verification pass:** results for Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra are in "Inside the generation loss". [Gemma-4-31B to be added.]
+- **Section-aware chunks end to end:** results for both local generators are in the same subsection.
+- **Oracle completion:** results for Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra are in "Why context completion does not help". [Gemma-4-31B to be added.]
+
+None of the three changes the paper's conclusions, and each sharpens one:
+- A dedicated pass finds more conditions but cannot tell when none applies.
+- A perfect completion scorer gains at most a few points.
+- Structure-aware chunking is at best a small gain end to end.
+
+The abstract, the introduction's fourth finding and the conclusion now state these results.
+
+**Issue 1. Stage contributions are not directly comparable.**
+Agreed. The conclusion now says that generation shows the largest *observed* deficit under gold evidence, while chunking and retrieval add losses upstream. It states explicitly that the stages are measured on different scales (separation, recall, deletion, statement), so the ranking is of observed deficits, not an additive decomposition of the end-to-end loss. The abstract no longer says generation "accounts for" the loss.
+
+**Issue 2. Separate answer correctness, condition correctness, spurious and omitted conditions.**
+Table 7 now gives, for every generator with gold context:
+- conditions stated, cited only as evidence, or omitted;
+- spurious conditions, and the share of those that restate the answer;
+- answer F1 ignoring conditions;
+- exact match with conditions (joint correctness);
+- the share of unconditional answers that name any condition (false conditions).
+
+All of these come from the existing outputs. They show that the generators get much of the answer right while the conditions are lost.
+
+On exact element matching: our generators cite conditions by line number, so paraphrase can never be penalised. Exact matching can still penalise citing a different element that restates the same requirement. The metrics section now says so, and that the reported condition recall is therefore a lower bound on what a generator recognised.
+
+On 2.1 (understood but omitted, versus never recognised): we agree that line citations cannot reveal internal understanding. The verification pass is the closest test we can make. Asked directly, the generators recognise many more of the conditions, which suggests that part of the omission is not a failure to recognise.
+
+**Issue 3. The transfer corpus.**
+The method section now gives:
+- the numbers of positive and negative pairs (18 refinement and 56 non-conflict natural pairs, from 84 pages);
+- the scoring protocol: each pair is scored in both directions by the scorer that sets the threshold, and the higher score counts;
+- that the written probe pairs predate this study, and that the scorer was never tuned on any part of the corpus.
+
+The results now report a Hanley–McNeil 95% interval for each AUC: 0.36 (0.22 to 0.50) on natural pairs and 0.25 (0.10 to 0.40) on probe pairs. We accordingly say the scorer does *not rank refinement pairs above* non-conflict pairs, rather than that it ranks them below. The check remains an exploratory diagnostic, as the reviewer suggests.
+
+**Issue 4. RAMDocs conclusions.**
+The conclusion now uses the reviewer's formulation. Across the two regimes, the tested operators do not reliably select evidence by its role in making an answer correct. The different construction and metrics of ConditionalQA and RAMDocs rule out comparing their scores directly.
+
+**Issue 5. Operator implementation details.**
+The method section now states the consequential parameters:
+- **Reranker:** checkpoint and revision; it keeps the best 3.
+- **NLI filter:** checkpoint and revision. It scores every pair of the eight passages in both directions with a contradiction-probability threshold of 0.5, and always drops the lower-ranked passage, so ties are resolved by retrieval rank and the top passage always survives.
+- **ConflictRAG-style resolver:** resolves the same NLI-detected conflicts by credibility.
+- **Relevance grader:** its criterion is stated, and it keeps the top passage if none is judged useful.
+- **Failures:** an unparseable grade or selection keeps the passage.
+- **Budget:** every operator works within the same eight-chunk budget and can only remove.
+
+The resolver remains labelled a partial reproduction, and no claim is made about the full ConflictRAG method.
+
+**Issue 6. Provider equivalence for gpt-oss-20b.**
+The provider check is reported in full:
+- **Parsing:** both providers returned valid JSON for all 128 questions, with no truncated or degenerate output.
+- **Unanswered:** 7 on Groq and 4 on NVIDIA.
+- **Conditions stated:** 151 and 128.
+- **Same answer set:** 67.2% of questions.
+- **Paired difference** in F1 with conditions: −2.7 points (95% CI −7.7 to +1.7).
+
+We pool the two providers with this qualification stated in the paper: no systematic difference is detectable, one of a few points cannot be excluded, and the gpt-oss-20b figures carry this extra variance.
+
+**Issue 7. Statistical reporting.**
+- Every effect is given as a point estimate with its 95% interval, in the text or in the table beside it (Tables 4 and 5); p-values accompany intervals, never replace them.
+- Exploratory analyses (the hosted comparisons and every diagnostic added in revision) are labelled as such where they are reported and in the limitations.
+- The larger-generators section now says that with 150 conditional questions (61 for C2) the intervals are wide, and that these comparisons are read for direction only.
+
+**Issue 8. Reranker and NLI citations.**
+The journal's 25-reference limit is reached, so we identify both models unambiguously in the text:
+- reranker: Hugging Face checkpoint `BAAI/bge-reranker-base`, revision `2cfc18c`;
+- NLI model: `cross-encoder/nli-deberta-v3-base`, revision `6c749ce`.
+
+The C-Pack reference is kept only as background for the BGE family, which is what it supports. The NLI model is a DeBERTa-v3 cross-encoder and keeps the DeBERTa-v3 citation.
+
+**Issue 9. Reproducibility audit.**
+- **Truncation:** of the 39,106 local generations, only 23 had an input long enough to leave less than the output budget of the 8,192-token window. The paper reports this, so input truncation is negligible; the hosted models' windows are far larger than any input.
+- **Provider:** every answer records the provider that served it.
+- **Scripts:** the verification pass and oracle completion have their own scripts (`study/revision.py`, and the `qcoracle` system in `study/qualifier.py`).
+- **Regeneration:** every table and macro is regenerated from the raw outputs by `python -m study.report`.
+
+**Presentation.**
+- **Table 5:** the text now points explicitly to its last two rows for the C† comparison, and notes that differences are computed from unrounded scores, so they can differ slightly from differences of the rounded entries (e.g. 9.6 versus 9.5).
+- **Figure 2:** set with larger labels and values.
+- **Limitations:** split into experimental limitations and external validity.
+- **Title:** retained, as the reviewer recommends.
+- **Condition types (2.2):** ConditionalQA does not label condition types, and a reliable breakdown would need new annotation. We describe the forms conditions take and state that the analysis does not distinguish them.

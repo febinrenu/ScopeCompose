@@ -5935,24 +5935,29 @@
    }
   }
  },
+ "protocol": {
+  "local_answers": 39106,
+  "longest_prompt": 8129,
+  "near_window": 23
+ },
  "providers": {
   "gemma31b": {
    "counts": {
-    "nvidia": 556,
-    "nvidia2": 498
+    "nvidia": 671,
+    "nvidia2": 612
    },
    "groq": 0,
-   "nvidia": 1054,
-   "total": 1054
+   "nvidia": 1283,
+   "total": 1283
   },
   "nemotron": {
    "counts": {
-    "nvidia": 463,
-    "nvidia2": 537
+    "nvidia": 839,
+    "nvidia2": 1011
    },
    "groq": 0,
-   "nvidia": 1000,
-   "total": 1000
+   "nvidia": 1850,
+   "total": 1850
   },
   "oss20b": {
    "counts": {
@@ -5975,8 +5980,18 @@
    "provider_check": {
     "f1c_groq": 0.16523266965643157,
     "f1c_nvidia": 0.13802416143399965,
+    "groq_tally": {
+     "conditions": 151,
+     "no_answer": 7,
+     "parse_ok": 128
+    },
     "n": 128,
     "n_conditional": 123,
+    "nvidia_tally": {
+     "conditions": 128,
+     "no_answer": 4,
+     "parse_ok": 128
+    },
     "paired": {
      "a": 0.13802416143399965,
      "b": 0.16523266965643157,
@@ -5996,13 +6011,18 @@
    "corpus_size": 128,
    "natural": {
     "auc": 0.3611111111111111,
+    "ci_high": 0.5008832841148622,
+    "ci_low": 0.22133893810736008,
     "mean_neg": 0.22162399161607027,
     "mean_pos": 0.17938869984613526,
     "n_neg": 56,
     "n_pos": 18
    },
+   "natural_pages": 84,
    "probes": {
     "auc": 0.24705882352941178,
+    "ci_high": 0.3972190214580714,
+    "ci_low": 0.09689862560075213,
     "mean_neg": 0.2566392299006967,
     "mean_pos": 0.22540255529539927,
     "n_neg": 17,
