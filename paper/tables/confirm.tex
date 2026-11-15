@@ -7,14 +7,14 @@
  & & & \multicolumn{2}{c}{\textbf{Qwen2.5-7B}} & \multicolumn{2}{c}{\textbf{Llama-3.1-8B}} \\
 \textbf{ID} & \textbf{Comparison} & \textbf{Pop.} & diff.\ [95\% CI] & $p_{\mathrm{Holm}}$ & diff.\ [95\% CI] & $p_{\mathrm{Holm}}$ \\
 \midrule
-C1 & gold vs.\ cond.\ elements deleted & C & -- & -- & -- & -- \\
-C2 & gold vs.\ cond.-only chunks removed & C$^\dagger$ & -- & -- & -- & -- \\
-C3 & gold + distractors vs.\ top-8 & C & -- & -- & -- & -- \\
-C4 & rerank-3 vs.\ top-8 & C & -- & -- & -- & -- \\
-C5 & NLI filter vs.\ top-8 & C & -- & -- & -- & -- \\
-C6 & ConflictRAG-style vs.\ top-8 & C & -- & -- & -- & -- \\
-C7 & completion vs.\ top-8 & C & -- & -- & -- & -- \\
-C8 & completion vs.\ top-8 (non-inferiority) & U & -- & -- & -- & -- \\
+C1 & gold vs.\ cond.\ elements deleted & C & +7.1 [+5.4, +9.1] & $<$0.001 & -- & -- \\
+C2 & gold vs.\ cond.-only chunks removed & C$^\dagger$ & +5.2 [+2.6, +8.3] & 0.004 & -- & -- \\
+C3 & gold + distractors vs.\ top-8 & C & +1.2 [+0.3, +2.0] & 0.025 & -- & -- \\
+C4 & rerank-3 vs.\ top-8 & C & $-$0.0 [$-$1.6, +1.4] & 1.000 & -- & -- \\
+C5 & NLI filter vs.\ top-8 & C & $-$0.3 [$-$1.3, +0.6] & 1.000 & -- & -- \\
+C6 & ConflictRAG-style vs.\ top-8 & C & $-$0.4 [$-$1.4, +0.4] & 1.000 & -- & -- \\
+C7 & completion vs.\ top-8 & C & $-$0.0 [$-$1.2, +1.2] & 1.000 & -- & -- \\
+C8 & completion vs.\ top-8 (non-inferiority) & U & +3.7 [+0.8, +7.3] & yes & -- & -- \\
 \bottomrule
 \end{tabular}
 }

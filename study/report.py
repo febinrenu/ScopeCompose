@@ -275,6 +275,35 @@ def ramdocs_results() -> dict:
     return out
 
 
+def providers() -> dict:
+    """Which provider served each hosted answer (deviations 1-3), and gpt-oss-20b's gold-context F1c by provider."""
+    from collections import Counter
+
+    from study.analysis import score_cell
+    from study.run import RUNS, read_cell
+
+    out: dict = {}
+    for m in HOSTED_MODELS:
+        counts: Counter = Counter()
+        for path in sorted((RUNS / "hosted").glob(f"*__{m}.jsonl")):
+            counts.update(r.get("served_by", "groq:" + str(r.get("model"))).split(":")[0] for r in read_cell(path).values())
+        if counts:
+            out[m] = {"counts": dict(counts), "total": sum(counts.values())}
+    gold = RUNS / "hosted" / "gold__oss20b.jsonl"
+    if gold.exists():
+        recs, scores = read_cell(gold), score_cell(gold)
+        by: dict = {}
+        for qid, s in scores.items():
+            if s.kind == "conditional":
+                prov = recs[qid].get("served_by", "groq").split(":")[0]
+                by.setdefault(prov, []).append(s.f1_cond)
+        out.setdefault("oss20b", {})["gold_f1c_conditional_by_provider"] = {k: {"n": len(v), "f1_cond": st.fmean(v)}
+                                                                          for k, v in by.items()}
+    if not out:
+        raise FileNotFoundError("no hosted cells yet")
+    return out
+
+
 def qualifier_section() -> dict:
     """The completion scorer on its own: the tuned threshold, pair-level recovery of missed condition
     chunks on the evaluation questions, threshold-free AUC over every candidate pair, and the
@@ -317,6 +346,7 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "confirmatory": confirmatory,
     "ramdocs": ramdocs_results,
     "qualifier": qualifier_section,
+    "providers": providers,
 }
 
 
@@ -354,6 +384,24 @@ def integer(x) -> str:
 
 def one(x: float) -> str:
     return f"{x:.1f}"
+
+
+def _pts(x: float) -> str:
+    """A signed difference in F1 points, with a typographic minus."""
+    v = round(100 * x, 1)
+    return "0.0" if v == 0 else f"{v:+.1f}".replace("-", "$-$")
+
+
+def effect(d: dict) -> str:
+    """A paired difference: points, 95% interval, and the Holm-adjusted p when the family was complete."""
+    p = d.get("p_holm", d["p"])
+    pv = "<0.001" if p < 0.001 else f"={p:.3f}"
+    lab = r"p_{\mathrm{Holm}}" if "p_holm" in d else "p"
+    return f"{_pts(d['diff'])} points (95\% CI {_pts(d['low'])} to {_pts(d['high'])}; ${lab}{pv}$)"
+
+
+def lower_bound(d: dict) -> str:
+    return _pts(d["low"])
 
 
 #: macro name -> (path into results.json, formatter)
@@ -420,6 +468,98 @@ MACROS: dict[str, tuple[str, Callable]] = {
     "ramNliMisinfo": ("operator_survival.ramdocs.nli.misinfo", pct),
     "ramCrsCorrect": ("operator_survival.ramdocs.crs.correct", pct),
     "ramCrsMisinfo": ("operator_survival.ramdocs.crs.misinfo", pct),
+    # -- generation results (study.confirm, end_to_end, qualifier) -- #
+    "fcGoldQwen": ("end_to_end.eval.qwen7b.gold.conditional.f1_cond", pct),
+    "fcNoCondElQwen": ("end_to_end.eval.qwen7b.gold_nocondel.conditional.f1_cond", pct),
+    "fcPadQwen": ("end_to_end.eval.qwen7b.goldpad8.conditional.f1_cond", pct),
+    "fcTopQwen": ("end_to_end.eval.qwen7b.top8.conditional.f1_cond", pct),
+    "fcClosedQwen": ("end_to_end.eval.qwen7b.closed.conditional.f1_cond", pct),
+    "fcRerankQwen": ("end_to_end.eval.qwen7b.rr8to3.conditional.f1_cond", pct),
+    "fcNliQwen": ("end_to_end.eval.qwen7b.nli.conditional.f1_cond", pct),
+    "fcCrsQwen": ("end_to_end.eval.qwen7b.crs.conditional.f1_cond", pct),
+    "fcQcQwen": ("end_to_end.eval.qwen7b.qc.conditional.f1_cond", pct),
+    "fcAdjQwen": ("end_to_end.eval.qwen7b.adj.conditional.f1_cond", pct),
+    "fcPageQwen": ("end_to_end.eval.qwen7b.page.conditional.f1_cond", pct),
+    "noticedGoldQwen": ("end_to_end.eval.qwen7b.gold.conditional.cond_noticed", pct),
+    "recallGoldQwen": ("end_to_end.eval.qwen7b.gold.conditional.cond_recall", pct),
+    "noticedTopQwen": ("end_to_end.eval.qwen7b.top8.conditional.cond_noticed", pct),
+    "fcTopUncondQwen": ("end_to_end.eval.qwen7b.top8.unconditional.f1_cond", pct),
+    "fcQcUncondQwen": ("end_to_end.eval.qwen7b.qc.unconditional.f1_cond", pct),
+    "cOneQwen": ("confirmatory.qwen7b.family.C1", effect),
+    "cTwoQwen": ("confirmatory.qwen7b.family.C2", effect),
+    "cThreeQwen": ("confirmatory.qwen7b.family.C3", effect),
+    "cFourQwen": ("confirmatory.qwen7b.family.C4", effect),
+    "cFiveQwen": ("confirmatory.qwen7b.family.C5", effect),
+    "cSixQwen": ("confirmatory.qwen7b.family.C6", effect),
+    "cSevenQwen": ("confirmatory.qwen7b.family.C7", effect),
+    "cEightQwen": ("confirmatory.qwen7b.C8", effect),
+    "cEightLowQwen": ("confirmatory.qwen7b.C8", lower_bound),
+    "fcGoldLlama": ("end_to_end.eval.llama8b.gold.conditional.f1_cond", pct),
+    "fcNoCondElLlama": ("end_to_end.eval.llama8b.gold_nocondel.conditional.f1_cond", pct),
+    "fcPadLlama": ("end_to_end.eval.llama8b.goldpad8.conditional.f1_cond", pct),
+    "fcTopLlama": ("end_to_end.eval.llama8b.top8.conditional.f1_cond", pct),
+    "fcClosedLlama": ("end_to_end.eval.llama8b.closed.conditional.f1_cond", pct),
+    "fcRerankLlama": ("end_to_end.eval.llama8b.rr8to3.conditional.f1_cond", pct),
+    "fcNliLlama": ("end_to_end.eval.llama8b.nli.conditional.f1_cond", pct),
+    "fcCrsLlama": ("end_to_end.eval.llama8b.crs.conditional.f1_cond", pct),
+    "fcQcLlama": ("end_to_end.eval.llama8b.qc.conditional.f1_cond", pct),
+    "fcAdjLlama": ("end_to_end.eval.llama8b.adj.conditional.f1_cond", pct),
+    "fcPageLlama": ("end_to_end.eval.llama8b.page.conditional.f1_cond", pct),
+    "noticedGoldLlama": ("end_to_end.eval.llama8b.gold.conditional.cond_noticed", pct),
+    "recallGoldLlama": ("end_to_end.eval.llama8b.gold.conditional.cond_recall", pct),
+    "noticedTopLlama": ("end_to_end.eval.llama8b.top8.conditional.cond_noticed", pct),
+    "fcTopUncondLlama": ("end_to_end.eval.llama8b.top8.unconditional.f1_cond", pct),
+    "fcQcUncondLlama": ("end_to_end.eval.llama8b.qc.unconditional.f1_cond", pct),
+    "cOneLlama": ("confirmatory.llama8b.family.C1", effect),
+    "cTwoLlama": ("confirmatory.llama8b.family.C2", effect),
+    "cThreeLlama": ("confirmatory.llama8b.family.C3", effect),
+    "cFourLlama": ("confirmatory.llama8b.family.C4", effect),
+    "cFiveLlama": ("confirmatory.llama8b.family.C5", effect),
+    "cSixLlama": ("confirmatory.llama8b.family.C6", effect),
+    "cSevenLlama": ("confirmatory.llama8b.family.C7", effect),
+    "cEightLlama": ("confirmatory.llama8b.C8", effect),
+    "cEightLowLlama": ("confirmatory.llama8b.C8", lower_bound),
+    "hGoldOss": ("end_to_end.hosted.oss20b.gold.conditional.f1_cond", pct),
+    "hNoCondChkOss": ("end_to_end.hosted.oss20b.gold_nocondchk.conditional.f1_cond", pct),
+    "hTopOss": ("end_to_end.hosted.oss20b.top8.conditional.f1_cond", pct),
+    "hQcOss": ("end_to_end.hosted.oss20b.qc.conditional.f1_cond", pct),
+    "hNoticedOss": ("end_to_end.hosted.oss20b.gold.conditional.cond_noticed", pct),
+    "hRecallOss": ("end_to_end.hosted.oss20b.gold.conditional.cond_recall", pct),
+    "hCTwoOss": ("confirmatory.oss20b.family.C2", effect),
+    "hCSevenOss": ("confirmatory.oss20b.family.C7", effect),
+    "hEOneOss": ("confirmatory.oss20b.exploratory.E1", effect),
+    "hGoldGemma": ("end_to_end.hosted.gemma31b.gold.conditional.f1_cond", pct),
+    "hNoCondChkGemma": ("end_to_end.hosted.gemma31b.gold_nocondchk.conditional.f1_cond", pct),
+    "hTopGemma": ("end_to_end.hosted.gemma31b.top8.conditional.f1_cond", pct),
+    "hQcGemma": ("end_to_end.hosted.gemma31b.qc.conditional.f1_cond", pct),
+    "hNoticedGemma": ("end_to_end.hosted.gemma31b.gold.conditional.cond_noticed", pct),
+    "hRecallGemma": ("end_to_end.hosted.gemma31b.gold.conditional.cond_recall", pct),
+    "hCTwoGemma": ("confirmatory.gemma31b.family.C2", effect),
+    "hCSevenGemma": ("confirmatory.gemma31b.family.C7", effect),
+    "hEOneGemma": ("confirmatory.gemma31b.exploratory.E1", effect),
+    "hGoldNemo": ("end_to_end.hosted.nemotron.gold.conditional.f1_cond", pct),
+    "hNoCondChkNemo": ("end_to_end.hosted.nemotron.gold_nocondchk.conditional.f1_cond", pct),
+    "hTopNemo": ("end_to_end.hosted.nemotron.top8.conditional.f1_cond", pct),
+    "hQcNemo": ("end_to_end.hosted.nemotron.qc.conditional.f1_cond", pct),
+    "hNoticedNemo": ("end_to_end.hosted.nemotron.gold.conditional.cond_noticed", pct),
+    "hRecallNemo": ("end_to_end.hosted.nemotron.gold.conditional.cond_recall", pct),
+    "hCTwoNemo": ("confirmatory.nemotron.family.C2", effect),
+    "hCSevenNemo": ("confirmatory.nemotron.family.C7", effect),
+    "hEOneNemo": ("confirmatory.nemotron.exploratory.E1", effect),
+    "qAucTrained": ("qualifier.trained.auc", lambda x: f'{x:.2f}'),
+    "qPrecTrained": ("qualifier.trained.precision", pct),
+    "qRecTrained": ("qualifier.trained.recall", pct),
+    "qAddedTrained": ("qualifier.trained.added_per_q", lambda x: f'{x:.2f}'),
+    "qAucZero": ("qualifier.zeroshot.auc", lambda x: f'{x:.2f}'),
+    "qPrecZero": ("qualifier.zeroshot.precision", pct),
+    "qRecZero": ("qualifier.zeroshot.recall", pct),
+    "qAddedZero": ("qualifier.zeroshot.added_per_q", lambda x: f'{x:.2f}'),
+    "qPosPairs": ("qualifier.trained.n_pos_pairs", integer),
+    "qNegPairs": ("qualifier.trained.n_neg_pairs", integer),
+    "oodAucNatural": ("qualifier.ood.natural.auc", lambda x: f'{x:.2f}'),
+    "oodAucProbes": ("qualifier.ood.probes.auc", lambda x: f'{x:.2f}'),
+    "oodPosNatural": ("qualifier.ood.natural.n_pos", integer),
+    "oodNegNatural": ("qualifier.ood.natural.n_neg", integer),
 }
 
 
