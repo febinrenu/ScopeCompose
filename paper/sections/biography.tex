@@ -1,3 +1,11 @@
 \ifdefined\reviewcopy\else
-\pending{biography}
+% Biographies shortened from paper/authors/biographies.txt to fit the last page; photos cropped from paper/authors.
+\newcommand{\bio}[2]{\par\noindent
+  \begin{minipage}[t]{2.3cm}\vspace{0pt}\includegraphics[width=2.3cm]{authors/#1}\end{minipage}\hfill
+  \begin{minipage}[t]{\dimexpr\textwidth-2.75cm\relax}\vspace{0pt}\setlength{\parskip}{0pt}#2\end{minipage}\par\vspace{8pt}}
+\section*{\fontsize{12}{12}\selectfont\textbf{Author's biography}}
+\bio{author1}{\textbf{Febin K. Renu} is an undergraduate researcher pursuing a B.Tech.\ in Computer Science and Engineering at Karunya Institute of Technology and Sciences, India. His research interests include machine learning, multi-agent systems, natural language processing and trustworthy AI. He has built systems for retrieval-augmented generation and multimodal intelligence, contributed to research in Industry 5.0, and is active in the IEEE Computer Society.}
+\bio{author2}{\textbf{Johann Shoni George} is a final-year undergraduate student pursuing a B.Tech.\ in Computer Science and Engineering at Karunya Institute of Technology and Sciences, India. His interests include machine learning, generative AI, computer vision and retrieval-augmented generation. His work explores trustworthy AI, evidence-based reasoning, conflict-aware knowledge systems and scalable software architectures.}
+\bio{author3}{\textbf{Dr.\ G. Naveen Sundar} is an Associate Professor in the Division of Computer Science and Engineering at Karunya Institute of Technology and Sciences, where he has worked since 2006. He holds a Ph.D.\ from Anna University. His research interests include computer vision, data science, medical image processing and deep learning. He has published 35 international journal papers and supervises seven Ph.D.\ scholars.}
+\bio{author4}{\textbf{Dr.\ D. Narmadha} is an Associate Professor in the Division of Artificial Intelligence and Machine Learning at Karunya Institute of Technology and Sciences. She holds a Ph.D.\ in Computer Science and Engineering from Sathyabama Institute of Science and Technology. Her research interests include machine learning, deep learning and computer vision. She has 21 international journal publications and supervises doctoral and undergraduate scholars.}
 \fi

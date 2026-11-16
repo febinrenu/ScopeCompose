@@ -73,3 +73,6 @@ paper/*.aux
 paper/*.out
 paper/main.pdf
 paper/review.pdf
+
+# Raw author photos and biographies (cropped copies used by the paper are in paper/figures/authors)
+paper/authors/
