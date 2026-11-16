@@ -59,8 +59,12 @@ third_party/normbench_src/
 # Public benchmarks fetched by study/fetch_data.py (redistributed by their authors, pinned by hash)
 data/external/
 
-# Study intermediates (rankings, embeddings): regenerable from data/external
+# Study intermediates. Embeddings and the trained scorer checkpoints are large and regenerable;
+# the rankings, operator decisions and qualifier scores are small and committed, so that
+# `python -m study.report` reproduces every number from a fresh clone without a GPU.
 study/artifacts/*
+!study/artifacts/rankings/
+!study/artifacts/operators/
 !study/artifacts/qualifier/
 study/artifacts/qualifier/*
 !study/artifacts/qualifier/*.json
