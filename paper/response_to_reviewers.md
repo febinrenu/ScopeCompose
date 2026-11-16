@@ -343,3 +343,31 @@ The same-question contrasts are listed in the analysis plan's deviations as expl
 **5. Numerical audit.** Every number in the text and tables is regenerated from the raw outputs by `python -m study.report`. `paper/check_paper.py` passes except for the biography placeholder, which the authors will fill. In this round the regenerated tables were unchanged.
 
 **Manual annotation audit (optional).** Not done in this round, for the reason given in the third round; the automatic bound and the limitations paragraph stand.
+
+---
+
+## Fifth round (Reviewer 2, report on the latest review copy)
+
+We thank the reviewer for the fifth report. We followed the reviewer's advice to stop expanding the research: this round changes references, notation, wording and checks only, and no result.
+
+**1. Reranker reference.** The reranker checkpoint is now a reference of its own, as a software resource: Beijing Academy of Artificial Intelligence (2023), *bge-reranker-base* (Revision 2cfc18c), Hugging Face. We confirmed on Hugging Face that `2cfc18c` is the checkpoint's current revision; it was created on 11 September 2023 and is MIT-licensed. The resource replaces the C-Pack report, which describes the BGE embedding family and not this reranker, so the list stays at the journal's limit of 25. Because the model card asks users to cite C-Pack, a footnote names the report and says it does not describe the reranker. The NLI checkpoint keeps its footnote (model card URL, revision, SNLI and MultiNLI training data), which the reviewer found improved.
+
+**2. Notation.** The source already wrote the empty set as `\emptyset`, which this font draws much like a slashed zero, so PDF text extraction can read it as "0". It is now `\varnothing` (∅), in the definition of a conditional question (C_i ≠ ∅) and in the definition of F1 with conditions. We rendered the typeset equations as images and checked them by eye:
+- Equation (1): the indicator **1**[·], the union over i of C_i ∪ E_i, and the cardinality bars.
+- Equation (2): the set difference.
+- Equation (4): the cases for C = ∅.
+
+**3. Unstated versus uncited.**
+- Section 4.8 now reads, as the reviewer suggested: "Even the 550B-parameter model fails to state about two thirds of the gold conditions as conditions on the answer, although it cites some of them as evidence".
+- Two further sentences that said a generator "leaves most conditions unstated" now say it "fails to state most of those it is given as conditions".
+- The abstract now reads "fail to state roughly two thirds to four fifths of the gold conditions as conditions, and most of those are never cited at all". This states the range across the five generators: from 67.9% for Nemotron-3-Ultra to 81.8% for Llama-3.1-8B are not stated as conditions.
+
+**4. Tables against the saved outputs.** Beyond regenerating every table with `python -m study.report`, which left all tables unchanged, we added an independent check, `paper/check_tables.py`. It does not use the study's scoring code. It reads the raw model outputs and the raw ConditionalQA files, scores each question with the official `evaluate.py` (its per-question `compute_metrics`), and compares the result with every F1-with-conditions entry in Tables 3 and 5. All 81 entries match exactly (60 in Table 3, 21 in Table 5).
+
+**5. Journal requirements** (TCSST author guidelines):
+- **Length:** 25 pages at most and 25 references at most: both met.
+- **Abstract:** 150–250 words. It now uses "the benchmark's F1 score with conditions" instead of a bare "F1", since the guidelines forbid undefined abbreviations in the abstract.
+- **Keywords:** four to six; there are six.
+- **Statements:** funding, ethical statement, conflict of interest and acknowledgement come before the references.
+- **References:** APA format.
+- **AI use:** the guidelines ask authors to name the tool, explain how it was used, identify the content it created, and acknowledge it at the end. The acknowledgement now does all four. It names Claude (Anthropic) through Claude Code and lists how it was used, including proposing the study design, which the authors approved. It identifies the content created with it: the code and scripts, the drafts of every section, and the tables and figures those scripts generate.
