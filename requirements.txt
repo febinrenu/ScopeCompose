@@ -29,3 +29,8 @@ openai>=1.40
 
 # Testing
 pytest>=8.0
+
+# Paper tooling (paper/make_docx.py: Word version of the manuscript)
+pymupdf>=1.24
+pypandoc_binary>=1.13
+python-docx>=1.1
