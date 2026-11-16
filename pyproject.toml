@@ -1,7 +1,7 @@
 [project]
 name = "conflict-rag"
 version = "0.1.0"
-description = "Detecting and resolving conditional knowledge conflicts in RAG"
+description = "Where Do the Conditions Go? Stage-wise attribution of condition loss in chunked retrieval-augmented generation"
 requires-python = ">=3.11"
 
 [tool.pytest.ini_options]

@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import settings  # noqa: E402
 
 RESULTS = settings.REPO_ROOT / "results" / "results.json"
+PDF_META = {"CreationDate": None}  # no timestamp, so a rebuild is byte-identical
 OUT = settings.REPO_ROOT / "paper" / "figures"
 
 BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
@@ -85,7 +86,7 @@ def fig_separation(r: dict) -> None:
     ax.set_ylabel("Gold split across chunks (%)")
     ax.set_ylim(0, 100)
     ax.legend(loc="upper right", ncol=2, bbox_to_anchor=(1.0, 1.12))
-    fig.savefig(OUT / "separation.pdf")
+    fig.savefig(OUT / "separation.pdf", metadata=PDF_META)
     plt.close(fig)
 
 
@@ -111,7 +112,7 @@ def fig_recall(r: dict) -> None:
     ax.axvline(8, color=INK2, lw=0.6, ls=(0, (2, 2)), zorder=1)
     ax.text(8.3, 23, "$k$ = 8", fontsize=7.5, color=INK2)
     ax.legend(loc="lower right")
-    fig.savefig(OUT / "recall.pdf")
+    fig.savefig(OUT / "recall.pdf", metadata=PDF_META)
     plt.close(fig)
 
 
@@ -141,7 +142,7 @@ def fig_operators(r: dict) -> None:
         b.set_yticks(range(0, 101, 20))
         b.legend(loc="upper center", ncol=3, fontsize=9, bbox_to_anchor=(0.5, 1.02))
         fig.tight_layout(w_pad=1.5)
-        fig.savefig(OUT / "operators.pdf")
+        fig.savefig(OUT / "operators.pdf", metadata=PDF_META)
         plt.close(fig)
 
 

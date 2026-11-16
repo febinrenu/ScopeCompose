@@ -1,522 +1,445 @@
-# conflict-rag
+# Where Do the Conditions Go?
 
-**Beyond Source Selection: Detecting and Resolving Conditional Knowledge Conflicts in Retrieval-Augmented Generation**
+**Stage-wise Attribution of Condition Loss in Chunked Retrieval-Augmented Generation**
 
-Implementation repository for the two-member final-year project. This file is the **plan of record**:
-what we are building, why, how it is split, and in what order. For a log of what has actually been
-done, see [`PROGRESS.md`](PROGRESS.md).
+Febin K. Renu, Johann Shoni George, G. Naveen Sundar and D. Narmadha.
+Karunya Institute of Technology and Sciences, Coimbatore, India.
 
-Source documents (one directory up):
-
-- `conditional-conflict-rag-proposal-v6.md` — research proposal, Revision 6
-- `implementation-plan-two-person-v2.md` — the two-person build plan
-
-Section references below (§5.4, §6.3, …) point into those two documents.
+This repository has everything behind the paper: the code, the fixed question splits, every model output, the
+analysis plan committed before the evaluation, and the scripts that turn the saved outputs into every number,
+table and figure in the manuscript. The manuscript is prepared for the *Journal of Trends in Computer Science
+and Smart Technology* (IRO Journals).
 
 ---
 
-## 1. The problem
+## Contents
 
-RAG retrieves several passages and assumes they can be reconciled into one answer. Conflict-aware
-RAG systems detect disagreements, classify them (factual / temporal / opinion), and resolve factual
-ones by **selecting the most credible source**.
-
-That is the wrong operation for a large and common class of disagreement:
-
-> **Passage A (general rule):** "International transactions incur a 3% fee."
->
-> **Passage B (exception):** "Fees are waived for premium-tier cardholders."
-
-These do not contradict each other. Both are true, under **different scopes**. A selection-based
-system detects a conflict, ranks the two sources, emits the winner — and silently deletes the other
-branch along with the condition that governs it. If the user holds a premium card, the
-"most credible" answer is wrong for them.
-
-**The failure is invisible to standard evaluation.** Answer-correctness scores the emitted answer
-against a reference; it has no way to register that *a valid, separately-scoped branch of the truth
-was dropped*. A system can post strong correctness numbers while systematically erasing exceptions —
-exactly the behaviour that is most dangerous in the rule-governed domains where conflict-aware RAG
-matters most.
-
-**What we build instead.** A pipeline that detects conditional conflicts as a first-class type,
-extracts the governing conditions, and **composes** a scoped answer preserving every valid branch —
-plus the metric suite (**Suppression Rate**) that makes the deletion measurable, and a benchmark of
-naturally-occurring cases to measure it on.
+1. [The question](#1-the-question)
+2. [What the study measures](#2-what-the-study-measures)
+3. [Main findings](#3-main-findings)
+4. [Data](#4-data)
+5. [Method](#5-method)
+6. [Pre-registration and deviations](#6-pre-registration-and-deviations)
+7. [Repository layout](#7-repository-layout)
+8. [Reproducing the results](#8-reproducing-the-results)
+9. [Building the paper](#9-building-the-paper)
+10. [Tests](#10-tests)
+11. [Limitations](#11-limitations)
+12. [Project history and legacy code](#12-project-history-and-legacy-code)
+13. [Citation, licences and contact](#13-citation-licences-and-contact)
 
 ---
 
-## 2. Ownership split
+## 1. The question
 
-Two members, one paper, meeting at one frozen JSON contract.
+Many answers about public services hold only under a condition. *Can I bring my other child on this visa?*
+Yes, **if** that child also has or is applying for a Child Student visa. Without its condition the answer is
+wrong for everyone the condition excludes, yet it sounds as confident as a correct one.
 
+Retrieval-augmented generation (RAG) answers such questions from official guidance. A typical pipeline does
+not read whole pages. It reads **chunks**, retrieves some of them, often filters or reranks them, and passes
+what survives to a language model. Each step can separate an answer from the condition that limits it.
+
+Many recent RAG modules are also built to *remove* evidence: relevance graders, contradiction filters and
+conflict resolvers (for example CRAG, Astute RAG and ConflictRAG). They are evaluated where removing a passage
+is right, such as misinformation. They are rarely tested where the passage that looks least relevant, or most
+contradictory, is an exception to the rule beside it.
+
+The study asks a measurement question: **where, in a chunked RAG pipeline, are the conditions of an answer
+lost?**
+
+## 2. What the study measures
+
+A condition can be lost at four stages. The study measures each one separately:
+
+```mermaid
+flowchart LR
+    P[gov.uk page] --> C[1 Chunking<br/>condition lands in a<br/>chunk apart from the answer]
+    C --> R[2 Retrieval<br/>that chunk ranks<br/>below the cut-off k]
+    R --> O[3 Evidence reduction<br/>reranker / NLI filter /<br/>conflict resolver drops it]
+    O --> G[4 Generation<br/>condition is in context<br/>but not stated]
+    G --> A[answer without<br/>its condition]
 ```
-                     +----------------------------------------------+
-                     |            MEMBER A  (Front-End)             |
-                     |  Conflict Analysis & Scope-Relation Decision |
-  query ---> A1 Hybrid Retrieval --> A2 Pairwise Conflict Detection  |
-                     |        A3 Five-Class Classification          |
-                     |           (3 architectures, compared) ------>|
-                     |        A4 Four-Way Scope-Relation Analysis   |
-                     |           refinement / disjoint /            |
-                     |           redundant / opposed                |
-                     |           + order-invariance check           |
-                     +---------------------+------------------------+
-                                           |  INTERFACE CONTRACT
-                                           v
-                     +----------------------------------------------+
-                     |            MEMBER B  (Back-End)              |
-                     |   Condition Extraction, Composition, Gen     |
-                     | B1 Contrastive Scope Probing + grounding gate|
-                     | B2 Composition Operator                      |
-                     |    (nested / crossed multi-exception flags)  |
-                     | B3 Conflict-Aware Generation --> scoped answer|
-                     +----------------------------------------------+
-```
 
-| | Member A | Member B |
+ConditionalQA's human annotation marks every condition as an exact HTML element of its page. Chunking,
+retrieval and evidence reduction can therefore be measured directly, with no language model involved.
+Generation is measured with the benchmark's official metric, using **one prompt shared by every system**,
+so two systems differ only in the evidence they pass to the generator.
+
+## 3. Main findings
+
+All figures are on English UK government guidance. Every number below is generated by
+`python -m study.report` into [`results/results.json`](results/results.json) and
+[`paper/numbers.tex`](paper/numbers.tex). Those files, not this README, are the authoritative record.
+
+| Stage | Finding |
+|---|---|
+| **Chunking** | With 150-word chunks, the gold evidence of **72.1%** of conditional questions spans more than one chunk (42.2% of unconditional ones). For **38.7%**, some condition sits in a chunk holding nothing else the answer needs. Removing those condition-only chunks from the gold context costs **5.2** (Qwen2.5-7B) and **5.7** (Llama-3.1-8B) points of F1 with conditions. |
+| **Retrieval** | No bias against conditions as such. At k = 8 the hybrid retriever finds **74.5%** of condition chunks and **74.0%** of answer chunks, but only **67.7%** of condition-only chunks. |
+| **Evidence reduction** | The reranker, NLI contradiction filter and ConflictRAG-style resolver remove condition chunks as readily as answer chunks. For example, reranking the top 8 down to 3 removes 17.5% of condition chunks and 19.2% of answer chunks. On RAMDocs, where discarding is right, they do not single out misinformation either: reranking keeps 66.8% of misinformation documents and 57.4% of correct ones. |
+| **Generation** | Gives the largest observed deficit. With every gold condition in context, the generators state only **21.0%** (Qwen2.5-7B), **18.2%** (Llama-3.1-8B), 21.1% (gpt-oss-20b), 27.9% (Gemma-4-31B) and **32.1%** (Nemotron-3-Ultra, 550B) of the gold conditions as conditions, and most of the rest are never cited at all. A second pass asking only for conditions roughly doubles recall (21.0% → 44.0% for Qwen), but attaches conditions to 77.8% and 96.8% of unconditional answers. |
+| **A remedy** | *Qualifier-aware context completion* adds the same-page chunks that a cross-fitted DeBERTa-v3 scorer predicts state a condition. It helps none of the five generators. Its scorer ranks condition chunks worse than the untrained reranker (AUC 0.70 vs 0.78) and does not transfer to the project's own corpus (AUC 0.36). The paper reports this as a pre-registered negative result. |
+
+### Confirmatory family
+
+Holm-corrected within each local model on the evaluation set: 560 conditional and 400 unconditional
+questions. Each entry is the paired difference in F1 with conditions, with a page-clustered BCa 95% interval.
+
+| ID | Comparison | Qwen2.5-7B | Llama-3.1-8B |
+|---|---|---|---|
+| C1 | gold vs gold with condition elements deleted | +7.1 [+5.4, +9.1], p < 0.001 | +9.9 [+7.6, +12.3], p < 0.001 |
+| C2 | gold vs gold without condition-only chunks | +5.2 [+2.6, +8.3], p = 0.004 | +5.7 [+2.6, +9.4], p = 0.005 |
+| C3 | gold + distractors vs top-8 | +1.2 [+0.3, +2.0], p = 0.025 | +1.1 [+0.5, +1.9], p = 0.013 |
+| C4 | rerank-3 vs top-8 | 0.0 [−1.6, +1.4], p = 1.000 | +1.0 [−0.5, +2.6], p = 0.690 |
+| C5 | NLI filter vs top-8 | −0.3 [−1.3, +0.6], p = 1.000 | +0.6 [−0.5, +1.6], p = 0.690 |
+| C6 | ConflictRAG-style vs top-8 | −0.4 [−1.4, +0.4], p = 1.000 | −0.4 [−1.5, +0.7], p = 0.690 |
+| C7 | completion vs top-8 (conditional) | 0.0 [−1.2, +1.2], p = 1.000 | +1.3 [−0.1, +2.7], p = 0.390 |
+| C8 | completion vs top-8 (unconditional, non-inferiority, margin 2 points) | +3.7 [+0.8, +7.3]: non-inferior | −2.5 [−6.1, +1.2]: not shown |
+
+The three larger hosted generators repeat the key systems on a 300-question subsample. Every main effect
+keeps its direction, and the losses before generation do not shrink for them (paper, Section 4.8).
+
+## 4. Data
+
+| Dataset | Role | What it provides |
 |---|---|---|
-| **Module title** | *Retrieval-Coupled Detection and Scope-Relation Analysis of Conditional Knowledge Conflicts in RAG* | *Contrastive Scope Probing and Compositional Resolution of Conditional Knowledge Conflicts in RAG* |
-| **Owns** | `retrieval/` `detection/` `scope/` | `extraction/` `composition/` `generation/` |
-| **Metrics** | binary detection F1; five-class accuracy + per-type F1; **factual/conditional confusion cell**; four-way scope-relation accuracy; order-invariance pass rate | condition-extraction accuracy (explicit/implicit separately); grounding-gate rejection rate; **PR / SR / HCR / SCR**; nested & crossed flag rates; metric-judge validation vs. human labels |
-| **Baselines** | standard RAG, rerank, NLI-filter | credibility selection, CoT, full-context, taxonomy-aware, **structured long-context** |
+| [ConditionalQA v1.0](https://github.com/haitian-sun/ConditionalQA) (Sun et al., ACL 2022) | primary testbed | 652 gov.uk pages; questions with a user scenario; answers with the conditions under which each holds, annotated as exact HTML elements |
+| [RAMDocs](https://huggingface.co/datasets/HanNight/RAMDocs) (Wang et al., COLM 2025) | secondary diagnostic: the regime where discarding is right | 500 questions; each document labelled correct, misinformation or noise |
+| `benchmark/data/corpus.jsonl` (this project's earlier work) | out-of-distribution check of the completion scorer | 128 passage-pair instances from gov.uk immigration guidance and UK bank terms, labelled independently by two of the authors |
 
-**Joint:** the contract, the API budget layer, the benchmark, the evaluation harness, end-to-end
-answer correctness, and the structured long-context baseline (the decisive experiment).
+The benchmarks are **not** redistributed here. `python -m study.fetch_data` downloads them into
+`data/external/` (gitignored) and checks every file against the SHA-256 hashes in
+[`study/data_manifest.json`](study/data_manifest.json). The official ConditionalQA scorer is vendored
+unchanged, with its licence, in [`third_party/conditionalqa/`](third_party/conditionalqa/).
 
----
+**Question sets** (fixed before any system ran; [`study/splits.json`](study/splits.json), seed 0):
 
-## 3. The interface contract — freeze it, then build against it
+- **Tuning:** every question on 40 random training pages (209 questions). Prompts, thresholds and operator
+  settings were chosen only here.
+- **Evaluation:** from all other pages of the train and dev splits (the test answers are not public): all 560
+  conditional and 101 unanswerable questions, plus 400 random unconditional ones. That is 1,061 questions on
+  416 pages.
+- **Hosted subsample:** 300 evaluation questions (150 conditional, 100 unconditional, 50 unanswerable), drawn
+  with seed 0.
 
-One JSON record per query. This is the only thing both members must agree on; everything else can
-change independently.
+## 5. Method
 
-```json
-{
-  "query_id": "fin_00142",
-  "query": "Do I pay an international transaction fee?",
-  "domain": "financial_terms",
-  "construction": "natural",
-  "passages": [
-    {"id": "p0", "text": "...", "source_type": "official_policy", "date": "2024-03"},
-    {"id": "p1", "text": "...", "source_type": "product_terms",   "date": "2025-01"}
-  ],
-  "conflict_pairs": [
-    {"doc_i": "p0", "doc_j": "p1", "is_conflict": true,
-     "type": "conditional", "scope_relation": "refinement", "confidence": 0.86}
-  ],
-  "multi_exception_flags": {"nested": false, "crossed": false}
+### Chunking and retrieval
+
+- **Chunking** (`study/cqa.py`): each page is cut into runs of whole HTML elements, packed greedily up to 150
+  words, giving 6,365 chunks with a mean of 134 words. Because elements are never split, the chunk holding
+  each gold condition is known exactly. Each chunk is prefixed with its page title and nearest heading for
+  retrieval. Ablations use 100- and 300-word chunks, section-aware chunks (a new chunk at every top-level
+  heading) and size-matched 70-word chunks.
+- **Retrieval** (`study/retrieve.py`): BM25 and Contriever, fused by reciprocal rank, over all chunks of all
+  pages. The ranked lists are computed once and saved, so every system and analysis reads the same rankings.
+
+### Systems
+
+Every system differs only in **which chunks reach the generator** (`study/systems.py`,
+`study/operators.py`, `study/qualifier.py`):
+
+| Family | System | Evidence given to the generator |
+|---|---|---|
+| Oracle ladder | `closed` | none (memory only) |
+| | `gold` | exactly the chunks holding the annotated evidence and conditions |
+| | `gold_nocondel` | the same chunks with the condition elements deleted |
+| | `gold_nocondchk` | the gold chunks minus those holding only conditions |
+| | `goldpad8` | all gold chunks, padded to 8 with top-ranked non-gold chunks |
+| Retrieval | `top3`, `top8` | the retriever's top k (top-8 is the reference) |
+| Evidence-reducing operators | `rr8to3` | cross-encoder reranker (BAAI/bge-reranker-base) keeps the best 3 of the top 8 |
+| | `nli` | NLI contradiction filter (cross-encoder/nli-deberta-v3-base): drops the lower-ranked passage of a contradictory pair |
+| | `crs` | ConflictRAG-style resolution: NLI-detected conflicts resolved by Entropy-TOPSIS credibility selection |
+| | `grade` | relevance grading by the generator, one call per passage (RAMDocs only) |
+| | `select` | listwise selection by the generator, one call (Astute-RAG style) |
+| Context completion | `adj`, `page` | top 5 plus adjacent chunks, or every chunk of the top-ranked page |
+| | `qc0`, `qc` | top 5 plus same-page chunks scored by the untrained reranker, or by the trained scorer |
+| Revision diagnostics | `*_verify`, `qcoracle` | a second call that asks only for conditions; completion with a perfect scorer |
+
+### Generator, metric and statistics
+
+- **Generator** (`study/reader.py`): one prompt and one JSON output contract for every system. The context is
+  given as numbered lines (one per HTML element). The model returns short answers, each with the lines that
+  state an unresolved condition. Those line numbers map back to the exact element strings that the official
+  metric scores. Decoding is greedy (temperature 0), and the prompt hash is recorded in every output file.
+- **Primary metric:** ConditionalQA's official **F1 with conditions**, computed by the authors' `evaluate.py`,
+  unchanged (`study/scoring.py`). It multiplies answer token F1 by the F1 of exact condition-element matches.
+  A condition stated where the gold has none scores zero, and extra answers are penalised, so verbosity
+  cannot raise the score.
+- **Secondary measures:** answer F1 and exact match, condition precision and recall, how each gold condition
+  in context is handled (stated as a condition, cited only as evidence, or not cited), false conditions on
+  unconditional answers, and RAMDocs strict accuracy.
+- **Statistics** (`study/stats.py`, `study/confirm.py`): questions on one page share chunks and retrieval
+  behaviour, so the **page** is the resampling unit. Paired differences get page-clustered BCa intervals
+  (2,000 resamples) and page-level sign-flip permutation tests (20,000 flips). The confirmatory family is
+  Holm-corrected within each model.
+
+### Models
+
+| Generator | Where it runs | Role |
+|---|---|---|
+| Qwen2.5-7B-Instruct (Q4_K_M) | local, Ollama | full matrix |
+| Llama-3.1-8B-Instruct (Q4_K_M) | local, Ollama | full matrix |
+| gpt-oss-20b | Groq, then NVIDIA's API once Groq's daily quota is spent | replication on the hosted subsample |
+| Gemma-4-31B | NVIDIA's API | replication |
+| Nemotron-3-Ultra (550B MoE, 55B active, reasoning off) | NVIDIA's API | replication |
+| Qwen3.8-27B | Groq | prompt tuning only |
+
+The local generators ran on a laptop with an 8 GB RTX 4060 and 16 GB of RAM. Every hosted answer records the
+provider that served it. A provider-agreement check (gpt-oss-20b answered again on NVIDIA) is in
+`study/runs/provider_check/`.
+
+## 6. Pre-registration and deviations
+
+[`study/ANALYSIS_PLAN.md`](study/ANALYSIS_PLAN.md) fixes the question sets, pipeline settings, metrics,
+models, statistics and the confirmatory family C1–C8. It and the tuning-set decisions were committed as
+`b435681` and `1ed2e83`, before the first evaluation answer was generated. Every later change is listed there
+as a dated deviation, with its reason:
+
+1. **Serving providers.** When Groq's daily quota for gpt-oss-20b is spent, the same open-weight model is
+   called on NVIDIA's API with identical settings.
+2. **Hosted models.** gpt-oss-120b and Qwen 27B would each have needed about twelve more days on Groq alone,
+   so they were replaced by models that NVIDIA serves, before any hosted analysis.
+3. **Third hosted rung.** Mistral-Large-4's reasoning used up the token limit without answering, so the rung
+   became Nemotron-3-Ultra with its reasoning off. This was decided before any of its answers were scored.
+4. **Revision diagnostics** (exploratory). These are:
+   - a condition-verification second pass;
+   - oracle completion;
+   - section-aware chunks end to end;
+   - the provider-agreement check;
+   - an audit of exact element matching;
+   - local versus hosted contrasts on identical questions.
+
+The diagnostics are exploratory, and none changes a confirmatory result.
+[`paper/response_to_reviewers.md`](paper/response_to_reviewers.md) records five rounds of review and the
+response to each point.
+
+## 7. Repository layout
+
+### The study
+
+```
+study/
+  ANALYSIS_PLAN.md       analysis plan, committed before the evaluation; deviations at the end
+  fetch_data.py          download ConditionalQA and RAMDocs, verify by SHA-256 (data_manifest.json)
+  cqa.py                 ConditionalQA as chunked open retrieval: pages, elements, chunks, splits
+  splits.json            the fixed tuning / evaluation / hosted question sets
+  retrieve.py            BM25, Contriever and hybrid rankings (saved in artifacts/rankings/)
+  systems.py             oracle ladder and retrieval systems
+  operators.py           reranker, NLI filter, ConflictRAG-style, grading, listwise selection
+  qualifier.py           cross-fitted DeBERTa-v3 qualifier scorer and context completion
+  reader.py              the single generator prompt, output contract and parser
+  run.py                 run one cell (system x model x question set); resumable
+  schedule.py            run the local matrix or the hosted replication
+  revision.py            diagnostics added in revision
+  probe.py               small tuning sample for checking a model before spending quota
+  ramdocs.py, ram.py     RAMDocs loader and runner (documents always in reranker order)
+  ood.py                 out-of-distribution check on the project's own corpus
+  scoring.py             wraps the official ConditionalQA evaluate.py
+  stats.py, confirm.py   page-clustered inference; the confirmatory family C1-C8
+  analysis.py            per-cell score tables
+  report.py              every reported number -> results/results.json, paper/numbers.tex, paper/tables/
+  figures.py             the paper's figures, from results.json only
+  runs/                  every model output: one JSON line per question per cell
+    eval/  hosted/  ramdocs/  provider_check/  tuning*/
+  artifacts/
+    rankings/            saved ranked lists
+    operators/           saved decisions of the model-free operators
+    qualifier/           out-of-fold scorer outputs, threshold and OOD scores (checkpoints not committed)
+results/results.json     the record of every number
+third_party/conditionalqa/  official scorer, unchanged, with licence
+```
+
+### The paper
+
+```
+paper/
+  main.tex, sections/, tables/, figures/   manuscript sources (tables and numbers.tex are generated)
+  numbers.tex             one LaTeX macro per reported number; nothing in the text is typed by hand
+  review.tex              anonymised review copy (no authors or biographies)
+  check_paper.py          journal limits and project rules (pages, references, abstract, hand-typed numbers)
+  check_tables.py         rescoring of Tables 3 and 5 from the raw outputs with the official evaluate.py
+  make_docx.py            Word version built from the same sources
+  make_submission.py      LaTeX source .zip for the journal, test-compiled from the unpacked package
+  references_verified.md  every reference checked against its primary source, and what it may be cited for
+  response_to_reviewers.md  five review rounds and the response to each point
+```
+
+### Modules reused from the earlier project
+
+| Module | Used for |
+|---|---|
+| `retrieval/` | BM25, Contriever and reciprocal-rank fusion (`HybridRetriever`) |
+| `detection/nli.py` | the cross-encoder NLI model behind the contradiction filter |
+| `baselines/conflictrag_topsis.py` | Entropy-TOPSIS credibility selection for the ConflictRAG-style resolver |
+| `metrics/cluster.py`, `metrics/stats.py` | BCa intervals, Holm correction |
+| `api_budget/` | one client for Ollama, Groq and NVIDIA: response cache, retries that honour rate-limit hints, cost log, provider fallback |
+| `settings.py`, `config/models.yaml`, `config/ollama/` | model tiers, providers and the two local Ollama Modelfiles |
+| `benchmark/`, `contract/` | the 128-instance corpus and its loaders, used only for the out-of-distribution check |
+
+Everything else at the top level belongs to the earlier project; see [Section 12](#12-project-history-and-legacy-code).
+
+## 8. Reproducing the results
+
+There are two levels. Level 1 recomputes every number from the saved outputs in minutes, without a GPU,
+models or API keys. Level 2 reruns the models.
+
+### Setup
+
+Python 3.11.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
+pip install torch --index-url https://download.pytorch.org/whl/cu124   # Level 2 only; CPU torch works for Level 1
+pip install -r requirements.txt
+python -m study.fetch_data           # downloads ConditionalQA and RAMDocs, verifies hashes
+```
+
+### Level 1: every number from the saved outputs
+
+```bash
+python -m study.report       # results/results.json, paper/numbers.tex, paper/tables/*.tex
+python -m study.figures      # paper/figures/*.pdf
+python -m study.confirm      # prints the confirmatory family
+python paper/check_tables.py # independent rescoring of Tables 3 and 5 with the official evaluate.py
+```
+
+This uses only the committed model outputs (`study/runs/`), rankings and operator decisions
+(`study/artifacts/`) and the fetched benchmarks. On a fresh clone, `study.report`, `study.figures` and
+`check_tables.py` reproduce the committed `results.json`, `numbers.tex`, tables and figures byte for byte;
+`git status` stays clean. The table check reports 81 of 81 values matching.
+
+### Level 2: rerunning the models
+
+Local generators: install [Ollama](https://ollama.com) and create the two tagged models (temperature 0,
+seed 0, 8,192-token context):
+
+```bash
+ollama pull qwen2.5:7b-instruct-q4_K_M
+ollama pull llama3.1:8b-instruct-q4_K_M
+ollama create scopecompose-qwen7b -f config/ollama/backbone7b.Modelfile
+ollama create scopecompose-reader -f config/ollama/reader.Modelfile
+```
+
+Hosted generators: copy `.env.example` to `.env` and fill in `GROQ_API_KEY`, `NVIDIA_API_KEY` and,
+optionally, a standby `NVIDIA_API_KEY_2`. Free tiers suffice but are slow. `.env` is gitignored.
+
+Then, in order:
+
+```bash
+python -m study.retrieve                       # rankings (Contriever on the GPU)
+python -m study.retrieve --strategy section    # section-aware chunks, for the ablation
+python -m study.operators --dataset cqa        # model-free operator decisions on ConditionalQA
+python -m study.operators --dataset ramdocs    # ... and on RAMDocs
+python -m study.schedule local                 # trains and scores the qualifier folds, then every
+                                               # ConditionalQA and RAMDocs cell for both local models
+python -m study.schedule hosted                # replication cells, paced to the providers' quotas
+python -m study.revision local                 # revision diagnostics, local
+python -m study.revision hosted                # revision diagnostics, hosted, and the provider check
+python -m study.ood                            # out-of-distribution check of the scorer
+python -m study.report && python -m study.figures
+```
+
+- **Resuming:** every cell is resumable. An interrupted run continues where it stopped, and a cell file that
+  already holds answers from a different model, prompt or chunking is refused. Because the committed outputs
+  are complete, rerunning a cell is a no-op. To regenerate from scratch, move `study/runs/` aside first.
+- **Single cells:** for example `python -m study.run --system top8 --model qwen7b --set eval`, or
+  `python -m study.ram --system full oracle --model qwen7b`.
+- **Expected variation:** local decoding is greedy with a fixed seed, but hosted APIs are not guaranteed to be
+  deterministic, so hosted reruns may differ slightly.
+
+## 9. Building the paper
+
+The manuscript compiles with [Tectonic](https://tectonic-typesetting.github.io) (or any XeLaTeX or pdfLaTeX
+installation):
+
+```bash
+cd paper
+tectonic -X compile main.tex       # main.pdf, 25 pages, with authors and biographies
+tectonic -X compile review.tex     # review.pdf, anonymised review copy
+python check_paper.py              # pages <= 25, references <= 25, abstract 150-250 words,
+                                   # citation order, no hand-typed numbers, no overfull lines
+python check_tables.py             # tables against the raw outputs
+python make_docx.py                # submission/Where_Do_the_Conditions_Go.docx (25 pages in Word)
+python make_submission.py          # submission/..._LaTeX_source.zip, test-compiled
+```
+
+`paper/submission/` is gitignored, since both files are rebuilt from the sources. `make_docx.py` uses a
+bundled pandoc (`pypandoc_binary`) and `python-docx`, both in `requirements.txt`.
+
+## 10. Tests
+
+```bash
+pytest -m "not slow and not network"
+```
+
+The full suite (2,003 tests) passes. `slow` tests need a model download or a GPU, and `network` tests call a
+live API. The study's own tests are `tests/test_study.py`, `tests/test_study_confirm.py`,
+`tests/test_study_routes.py` and `tests/test_pivot_regressions.py`. They cover the chunker's element
+preservation, splits, scoring against the official script, cell resumption and refusal, the confirmatory
+statistics, and regression tests for bugs fixed before the study.
+
+## 11. Limitations
+
+These are stated in the paper too:
+
+- ConditionalQA's own human agreement is 56.6 F1 with conditions, so part of the gap is annotation noise.
+  Its metric credits a condition only when the exact element is cited.
+- The two primary generators are small and 4-bit quantised. The larger hosted ones replicate direction on a
+  subsample and differ in architecture, training and serving as well as size. They are not a controlled
+  scaling experiment.
+- Each operator is an implementation of a published method's evidence-reducing step, not the complete
+  system. The ConflictRAG-style resolver implements three of the original five credibility criteria.
+- RAMDocs mixes conflict with ambiguity, and its misinformation is synthetic.
+- All texts are English UK government guidance. Healthcare, financial and legal documents are structured
+  differently, and the conclusions are claims about structured policy guidance.
+
+The systems' answers concern eligibility for public services. They are not legal or official advice, and
+neither are the benchmark's own answers.
+
+## 12. Project history and legacy code
+
+The repository began as **ScopeCompose**, a final-year project titled *Beyond Source Selection: Detecting and
+Resolving Conditional Knowledge Conflicts in RAG*. It built a pipeline to detect conditional conflicts,
+extract their conditions and compose scoped answers. That design depended on cross-document rule/exception
+pairs, which proved rare (14 natural instances), on an unvalidated headline metric, and on new human
+annotation. Its one head-to-head comparison had the pipeline below plain full-context generation.
+
+In November 2026 the project pivoted to the measurement study above, which needs no new annotation and is
+large enough for proper statistics. The reasons are recorded in [`PROGRESS.md`](PROGRESS.md), under
+2026-11-14.
+
+The earlier code is kept because the study reuses parts of it (Section 7) and as the record of that work. It is
+**not** part of the paper's pipeline:
+
+| Path | What it is |
+|---|---|
+| `detection/`, `scope/`, `extraction/`, `composition/`, `generation/`, `pipelines/`, `qnfa/` | the ScopeCompose pipeline (detection, scope relations, condition extraction, composition) |
+| `benchmark/`, `contract/` | the earlier benchmark: corpus, annotation manual, mining, splits, the frozen JSON contract |
+| `experiments/`, `reporting/`, `release/`, `prereg/`, `scripts/` | experiment runners, reporting, release bundle and pre-registration of the earlier design |
+| `service/`, `site/`, `start.bat`, `start.sh`, `start.command` | a local demo service and a project website (the GitHub workflow builds the site; deployment is disabled) |
+| `plan_v7/`, `docs/`, `review.txt` | earlier proposals, reviews, decision records and a probe-verification sheet (see [`docs/README.md`](docs/README.md)) |
+| `CONVENTIONS.md` | working conventions; the study-relevant rules are summarised there |
+
+## 13. Citation, licences and contact
+
+The paper is not yet published. Until it is, please cite it as:
+
+```bibtex
+@unpublished{renu2026conditions,
+  title  = {Where Do the Conditions Go? Stage-wise Attribution of Condition Loss in
+            Chunked Retrieval-Augmented Generation},
+  author = {Renu, Febin K. and George, Johann Shoni and Sundar, G. Naveen and Narmadha, D.},
+  note   = {Manuscript prepared for the Journal of Trends in Computer Science and Smart Technology},
+  year   = {2026}
 }
 ```
 
-Three fields carry the weight:
-
-- **`construction`** — `natural` (Tier 1, mined from genuinely separate documents) or `split`
-  (Tier 2, a single-document rule/exception pair split across two synthetic documents). Tier 1 and
-  Tier 2 results are **never blended** in headline reporting. The tag rides along on every record so
-  the metrics library can always break results out.
-- **`scope_relation`** — four-way: `refinement | disjoint | redundant | opposed`. This is Member A's
-  hardest output and the one Member B's composition depends on. Confusing `redundant` with
-  `refinement` makes B compose two branches that should have merged; confusing `refinement` with
-  `opposed` makes B fall back to selection on a real exception. Both directions get their own
-  confusion-matrix cell in reporting.
-- **`multi_exception_flags`** — populated by **B**, not A, because it requires comparing extracted
-  branches to each other rather than to the default.
-
-**Routing logic B applies:**
-
-| type | scope_relation | action |
-|---|---|---|
-| `conditional` | `refinement` or `disjoint` | compose |
-| `conditional` | `redundant` | merge into one branch |
-| `conditional` | `opposed` | genuine conflict, fall back to selection |
-| `factual` / `temporal` / `opinion` | — | matching prior-work strategy |
-
-Then: if two or more surviving exception branches are pairwise overlapping, B sets `nested` or
-`crossed` and routes to selection with the flag recorded.
-
-> **Freeze rule.** Once Member B signs off, any schema change requires bumping `CONTRACT_VERSION`
-> **and** updating `contract/mock.py` in the same commit. See `CONVENTIONS.md`.
-
----
-
-## 4. Hardware and provider decisions
-
-The original plan assumed an RTX 3050 with 4–6 GB VRAM. This machine is an **RTX 4060 Laptop, 8 GB**
-(16 GB RAM, 20 logical cores). Shared code therefore targets a **6 GB floor** so it runs unmodified
-on Member B's machine, with an opt-in 8 GB profile in `config/hardware.yaml`.
-
-### What runs locally (the GPU's job: classification and scoring, never generation)
-
-| Component | Model class | Settings |
-|---|---|---|
-| Dense retrieval embeddings (A1) | Contriever, base-size | fp16, batch 32, seq <= 256 |
-| Stage-1 conflict filter (A2) | DeBERTa-v3-base MNLI cross-encoder | fp16, batch 16, seq <= 256 |
-| Detector variant (i) lexical+NLI | reuses Stage-1 encoder + small head | trains in minutes |
-| Detector variant (ii) fine-tuned | DeBERTa-v3-base, end-to-end | fp16, batch 8 x grad-accum 4, seq <= 384, 3–5 epochs |
-| Detector variant (iii) structured | same encoder, called twice | as above |
-| Grounding-gate NLI scorer (B1) | DeBERTa-v3-class cross-encoder | fp16 |
-
-### What runs via API
-
-**Provider: Groq** (OpenAI-compatible endpoint), with local **Ollama / Qwen 2.5 7B Instruct Q4_K_M**
-as an offline and rate-limit fallback. Both are reached through one `openai`-SDK code path with a
-configurable `base_url`, so swapping providers is a config change, not a code change.
-
-| Step | Tier | Notes |
-|---|---|---|
-| Stage-2 conflict judgement (A2) | `BULK` | only low-confidence pairs escalate |
-| Applicability-descriptor extraction (A4) | `BULK` | structured JSON output |
-| Counterfactual question generation (B1) | `BULK` | |
-| Candidate-condition proposal (B1) | `BULK` | |
-| Metric judge, PR/SR/HCR/SCR | `JUDGE` | validated against human labels before trusted |
-| Final scoped-answer generation (B3) | `JUDGE` | |
-| Structured long-context baseline | `LONG_CONTEXT` | the decisive experiment |
-| Second-backbone robustness | `SECOND_BACKBONE` | a different model family |
-
-Model IDs are **not hardcoded** — `scripts/discover_models.py` queries Groq's `/openai/v1/models`
-and writes `config/models.yaml`, so the tier map reflects what the account can actually reach.
-
-### Budget-control tactics (non-negotiable)
-
-1. **Cache every LLM call** keyed on `(provider, model, messages, temperature, max_tokens, …)`.
-   The second run of any script is free. Built in Week 1, not bolted on later.
-2. **Tier by step, not by habit.** Bulk steps get the fast cheap model; load-bearing steps get the
-   strongest available.
-3. **Run every new component on the ~50-instance WP1 pilot first.** Only scale to the full benchmark
-   once it is stable.
-4. **Log every call** (model, step, tokens, cache hit, backend actually used) and review weekly.
-
----
-
-## 5. Named risk: the zero-spend constraint and the open-weights asymmetry
-
-**Decision: no frontier-API spend. Everything runs on Groq-hosted open weights or locally.**
-
-This is a real constraint with a real consequence, and it must be stated in the paper rather than
-discovered by a reviewer.
-
-Proposal §6.3 specifies the **structured long-context baseline** — a strong model given the full
-concatenated passage set and asked for an explicit SG-DT-style branch parse, scored with our own
-PR/SR/HCR/SCR — as the paper's decisive experiment. §6.5 says outright that if that baseline matches
-our Preservation Rate, the central architectural claim **does not hold as stated**.
-
-Two observations:
-
-- **Context length was never the binding constraint.** At K = 5 passages the baseline's input is only
-  ~2–5K tokens. Every candidate model fits it comfortably. What open weights cost us is *parsing
-  capability*, not window size.
-- **The result is therefore interpretable in only one direction:**
-
-  | Outcome | Interpretation |
-  |---|---|
-  | Open-weights baseline **matches or beats** the pipeline | **Decisive falsification.** Fully valid, still publishable — a weak baseline winning is strong evidence against us. |
-  | Open-weights baseline **loses** | **Weak evidence.** A reviewer will attribute the gap to model tier rather than architecture. |
-
-So the experiment stays worth running: it can falsify the claim but cannot confirm it. The write-up
-must say this plainly. `config/models.yaml` keeps the tier map as configuration precisely so a single
-line swaps in a frontier model if credits ever materialise.
-
-The same caveat applies, more mildly, to the **metric judge**, which Cattan et al. validated at 0.89
-accuracy against human labels. Our judge gets the same validation treatment — and if the open-weights
-judge fails to track human labels, that is a finding to report, not a number to bury.
-
-**Other named risks** (proposal §8), owners in brackets:
-
-- **Novelty** [joint] — Chen et al. (SG-DT / NormBench, KDD 2026) named the same failure mode first,
-  in a different setting. Mitigation is the structured baseline, not positioning prose. WP0 gates.
-- **Tier-1 scarcity** [joint] — genuinely multi-source rule/exception pairs may be rare. Mitigation:
-  the named Tier 1 / Tier 2 split plus a WP1 mining pilot that measures real yield before committing.
-- **Extraction ceiling** [B] — if Contrastive Scope Probing does not beat direct extraction by a
-  useful margin, the method contribution shifts to the grounding gate and metric suite.
-- **Annotation boundary** [joint] — refinement-vs-opposed is the hardest judgement; explicit decision
-  procedure, kappa reported for that axis specifically, third-reviewer adjudication.
-- **Integration drift** [joint] — mitigated by the frozen contract and the shared mock generator.
-
----
-
-## 6. Module build order
-
-Status legend: **DONE** (built, tested, verified by running) / **PENDING**
-(needs data or a human).
-
-A status that lies is worse than no status, so these are kept honest: several
-say DONE for the *harness* while the run itself is PENDING real data.
-
-### Phase 0–2 — foundations (Week 1, must come first)
-
-| Module | Owner | What | Status |
-|---|---|---|---|
-| `contract/` | A leads | Pydantic schema, gold-instance schema, routing table, **seeded mock generator**, JSON Schema export, validator CLI | DONE |
-| `api_budget/` | joint | SQLite request cache, tiered provider-agnostic client, cost log, offline mock backend | DONE |
-| `config/` | joint | `hardware.yaml` (6 GB / 8 GB profiles), `models.yaml` (tier map) | DONE |
-
-The mock generator is what lets Member B build before A's detector exists. The cache is what keeps
-development iteration free instead of metered. Both are due end of Week 1.
-
-### Phase 3 — Member A's modules
-
-| Module | What | Status |
-|---|---|---|
-| `retrieval/` **A1** | BM25 (`rank_bm25`) + dense (Contriever, fp16 local) fused by reciprocal-rank fusion, K = 5. Kept deliberately identical to prior systems so comparisons isolate analysis, not retrieval. | DONE |
-| `detection/` **A2** | Two-stage. Stage 1: local DeBERTa-v3-base NLI cross-encoder + learned head over embedding interaction features, resolving most of the 10 pairs per query at zero API cost. Stage 2: only pairs below tau_c escalate to a cached `BULK` call. | DONE |
-| `detection/variants/` **A3** | Three architectures, compared head-to-head: (i) lexical cues + NLI features, (ii) fine-tuned DeBERTa-v3-base, (iii) structured entailment (condition- and outcome-entailment scored separately, combined by the A4 rule). **The reported headline is the factual/conditional confusion cell** — that is what decides which variant is "the" detector. | DONE |
-| `scope/` **A4** | Four-way relation. Extract an applicability descriptor and outcome per claim, decide the set relation (subset / disjoint / overlapping-non-nested) via entailment plus a typed attribute algebra for ranges, tiers and categories, **and separately** decide outcome agreement on the overlap. Both determinations are required — conflating "do scopes overlap" with "is this a conflict" is the exact bug Revision 4/5 fixed. | DONE |
-| `scope/order_invariance.py` | Permutation harness: reshuffle passage order and assert the relation, the branch roles, and downstream scores are unchanged. Branch roles derive **solely** from the applicability-and-outcome relation, never from retrieval order — whichever branch has the superset applicability is the default, full stop. | DONE |
-
-### Phase 4 — baselines and scorers
-
-| Module | Owner | What | Status |
-|---|---|---|---|
-| `baselines/standard_rag.py` | A | concatenate top-K | DONE |
-| `baselines/rerank.py` | A | single top passage | DONE |
-| `baselines/nli_filter.py` | A | drop the passage judged inconsistent — the vivid, directly demonstrable suppression case | DONE |
-| `metrics/` | B leads | A contributes the detection, classification, scope and order-invariance scorers; B owns PR/SR/HCR/SCR and the judge validation | A's part DONE, B's stubbed |
-
-### Tooling (built alongside the modules)
-
-| Tool | What it answers | Status |
-|---|---|---|
-| `scripts/discover_models.py` | what does my account actually serve? | DONE |
-| `scripts/smoke_test.py` | is every tier reachable, does JSON parse, does the cache work? | DONE |
-| `scripts/budget_estimate.py` | does this run fit the daily caps, and in how many days? | DONE |
-| `scripts/eval_descriptors.py` | how often does A4 decide scope arithmetically rather than by entailment? | DONE |
-| `detection/train.py` | fit and persist the stage-1 head; does it beat the rule fallback? | DONE |
-| `detection/threshold.py` | what escalation band, at what cost/accuracy trade-off? | DONE, **needs real data** |
-| `experiments/run_baselines.py` | do the baselines still have the exception passage at generation time? | DONE |
-| `experiments/run_retrieval_eval.py` | recall@k, and **exception** recall@k | DONE, **needs real data** |
-| `benchmark/wp1_probe_set.py` | 54 probe cases for Member B | DONE, **needs verification** |
-| `experiments/run_cost_latency.py` | cost and latency per query by stage, and what stage-2 escalation costs | DONE, **needs live run** |
-| `experiments/error_analysis.py` | do the confused instances share a cause? | DONE, **needs real data** |
-| `benchmark/annotation/` | the labelling tool: blind passes, kappa per axis, adjudication | DONE |
-| `docs/kappa_pilot_1.md` | pilot 1: type kappa 0.326 (fails), scope 0.775 (provisional). Manual revised, re-run pending | **pilot 2 pending** |
-| `benchmark/corpus_plan.py` | the 300-instance WP2 target + stratification, with progress reporting | DONE |
-| `benchmark/splits.py` | train/dev/test by document group; leakage + provenance audit | DONE |
-| `metrics/power.py` | corpus sizing; what the current corpus can and cannot detect | DONE |
-| `extraction/` **B1** | Contrastive Scope Probing + the grounding gate | DONE, **needs live run** |
-| `composition/` **B2** | composition operator, nested/crossed flagging | DONE |
-| `generation/` **B3** | scoped answer with per-branch attribution, faithfulness check | DONE |
-| `metrics/preservation.py` | PR / SR / HCR / SCR, three judging paths with provenance | DONE |
-| `experiments/wp1_probe/` | **WP1 go/no-go.** Probe vs direct extraction, plus the gate-scorer ablation | DONE, **needs live run** |
-| `detection/llm_nli.py` | API-backed entailment, drop-in for the local cross-encoder | DONE |
-| `benchmark/mining/split_constructor.py` | Tier-2 construction: split a rule and its carve-out | DONE |
-| `benchmark/mining/relation_author.py` | author `redundant` / `opposed`, structurally verified | DONE, **needs human review** |
-
-Two of these currently produce fixture artifacts rather than results, and say
-so in their own output: the threshold curve saturates on templated data, and
-exception recall is floored by near-duplicate mock passages. Both need the WP2
-corpus before anything they print is quotable.
-
-### Phase 5 — gating work packages
-
-| Item | Owner | What | Status |
-|---|---|---|---|
-| `docs/wp0_positioning_memo.md` | joint | **WP0, gating.** Citations verified; SG-DT read against the source; closed-venue sweep done. Claim narrowed to the operationalisation + benchmark, not the taxonomy. Three confirmed anchors to work outward from: SG-DT / NormBench (Chen et al., arXiv:2606.08932, KDD 2026), ConditionalQA (Sun et al., ACL 2022, arXiv:2110.06884), Defeasible NLI (Rudinger et al., EMNLP 2020). Plus direct searches of KR, IJCAI, TPLP, AAAI, AIJ, JAR and the ACL Anthology, which general web search does not reach. | Template ready, review pending |
-| `benchmark/mining/tier1_pilot.py` | A | **WP1, gating.** ~20-document Tier-1 mining trial to measure real yield of genuinely multi-source pairs before committing to the 250-instance target. | Harness DONE, run pending |
-| `benchmark/wp1_probe_set.py` | B | **WP1, gating.** 54-case Contrastive Scope Probing feasibility probe. Human-verified 2026-09-25; see `docs/wp1_probe_verification.md`. | **DONE — gate closed**, `055` needs verification |
-| `benchmark/manual/annotation_manual.md` | joint | Includes the explicit refinement-vs-opposed decision procedure and worked examples. | Draft ready, co-author pending |
-
-Both gating items must close by **end of Week 4** — not Week 14. Either can reshape the paper, and
-both are cheap now and expensive late.
-
-### Phase 6 — the v7/v8 extension (contract v1.3.0)
-
-Same legend. DONE means built, tested and run on fixtures or a small live check; **PENDING** means it needs
-human labels or the frozen test split. Reasoning is in `docs/v7_decisions.md`.
-
-| Piece | What | Status |
-|---|---|---|
-| `contract/` v1.3.0 | additive: opposition, personas and counterfactual pairs, signatures and normative frames | DONE |
-| `benchmark/strata.py`, `relabel_v7.py` | strata S1-S5, grouped stratified re-split, S1 quota and narrowing rule | DONE; **re-split not applied** (needs labels) |
-| `benchmark/chunker.py`, `contexts.py` | K = 6 contexts, length-matched hard negatives | DONE |
-| `benchmark/mining/` (gov.uk search, retrieval miner) | S1 candidate mining | DONE; yield is low (3 verified of 110 candidates) |
-| `benchmark/review.py`, `manual/review_guide_v7.md` | timed, independent review of candidates, branches, personas, VACS, entailment | DONE; **humans have not started** |
-| `metrics/case_accuracy.py`, `values.py`, `counterfactual.py` | CCA strict and lenient, value matcher, counterfactual pairs | DONE |
-| `metrics/scoped.py`, `validity.py` | scoped precision; V1 battery of eight gameable outputs | DONE on fixtures; **not yet run with the real reader** |
-| `experiments/validity_battery.py`, `reader_audit.py` | V1 driver (dev only); V2 entailment audit and threshold calibration | DONE; V2 **needs the human audit** |
-| `detection/signature.py`, `frames.py`, `qnfa.py`, `composition/partition.py` | QNFA and partition composition (Propositions 2-3) | DONE |
-| `baselines/`, `pipelines/scopecompose.py` | B0, B3, B7c, B8, O3 | DONE; **matrix not run** |
-| `experiments/` (matrix, scheduler, G1, analysis, oracle cascade) | resumable cells, quota-aware scheduling, exact tests | DONE; **G1 and the matrix not run** |
-| `prereg/`, `reporting/` | freeze (hash, tag, committed test file), claims ledger | DONE; **freeze not taken** |
-| `release/bundle.py` | withhold non-open passage text, rehydrate with hash and drift checks | DONE; 48 of 256 corpus passages withheld, 6 unrestorable |
-| `benchmark/datasheet_v7.py` | strata, provenance, agreement, hours and release counts generated from the data | DONE |
-
----
-
-## 7. Timeline (maps to WP0–WP5)
-
-| Weeks | Work | A | B |
-|---|---|---|---|
-| 1 | Freeze contract, mock generator, API cost cache | lead | co |
-| 1–3 | **WP0 prior-art review (gating)** | RAG / conflict-aware lit | SG-DT, ConditionalQA, Defeasible NLI, classical defeasible lit |
-| 2–4 | **WP1 feasibility probe + Tier-1 mining pilot (gating, go/no-go)** | ~50 labelled cases; ~20-doc mining trial | extraction probe; NLI-vs-judge ablation |
-| 4–11 | Benchmark construction (Tier 1 + Tier 2, three-stage annotation, datasheet) | type / scope / distractor labels | branch / scoped-answer labels / `construction` tag |
-| 6–13 | Module implementation | retrieval, detection x3, scope, order-invariance | extraction, composition, generation |
-| 13–19 | Baselines, experiments, all ablations incl. **structured long-context** | owned metrics | owned metrics |
-| 17–22 | Writing + benchmark/harness release | leads detection/scope sections | leads extraction/eval sections |
-
----
-
-## 8. Setup
-
-```bash
-# Python 3.11 (not 3.13 — parts of the ML stack lag behind it)
-py -3.11 -m venv .venv
-.venv\Scripts\Activate.ps1        # PowerShell
-
-# PyTorch with CUDA first, then the rest
-pip install torch --index-url https://download.pytorch.org/whl/cu124
-pip install -r requirements.txt
-
-copy .env.example .env            # then put your GROQ_API_KEY in .env  (never commit it)
-python scripts/discover_models.py # writes config/models.yaml from your account's real model list
-```
-
-Verify the GPU is actually being used — if this prints `False`, the CPU-only wheel got installed and
-nothing below is worth running until it is fixed:
-
-```bash
-python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
-```
-
-### Running things
-
-**Everyday**
-
-```bash
-pytest                                                   # full suite, offline, zero API spend
-python -m contract.mock --n 50 --seed 0 -o mock.jsonl    # deterministic mock records for Member B
-python -m contract.validate mock.jsonl                   # validate any JSONL against the contract
-python -m contract.export_schema                         # regenerate contract/schema/v1.0.0.json
-python -m experiments.run_pipeline --data mock.jsonl     # end-to-end A1->A4 (add --live for real calls)
-```
-
-**The correctness gate** — run this before any commit that touches `scope/`.
-It exits non-zero on failure, so it can gate CI, and it must pass at 1.0000:
-
-```bash
-python -m scope.order_invariance --sample 60 --heuristic-nli
-```
-
-**Provider and budget** — run the smoke test after any change to
-`config/models.yaml`, and the estimator before any full-corpus pass:
-
-```bash
-python scripts/discover_models.py --show      # what your account actually serves
-python scripts/smoke_test.py --all-tiers      # every tier reachable, JSON parses, cache works
-python scripts/budget_estimate.py --judge-batched --ablation-instances 100
-python -m api_budget.report                   # weekly spend review
-```
-
-**Training and tuning** — in this order; the threshold sweep is meaningless
-against the untrained rule-based fallback, which scores near chance:
-
-```bash
-python -m detection.train --data train.jsonl              # fit + persist the stage-1 head
-python -m detection.threshold --data dev.jsonl --min-accuracy 0.95 --write
-```
-
-`--write` stores the chosen band in `config/hardware.yaml` and marks it
-`tuned: true`. Until then the shipped band is a **placeholder**, and any
-escalation rate quoted from it is describing two invented constants.
-
-**Evaluation**
-
-```bash
-python -m detection.variants.compare --data gold.jsonl    # three-architecture comparison
-python -m experiments.run_baselines --data gold.jsonl --show-examples 2
-python -m experiments.run_retrieval_eval --data gold.jsonl --k 5
-python scripts/eval_descriptors.py                        # A4 typed-attribute rate
-```
-
-**Benchmark**
-
-```bash
-python -m benchmark.wp1_probe_set --review                # WP1 verification sheet
-python -m benchmark.wp1_probe_set -o benchmark/data/wp1_probe.jsonl
-python -m benchmark.mining.tier1_pilot --docs docs.jsonl  # WP1 Tier-1 yield trial
-```
-
----
-
-## 9. Repository layout
-
-```
-conflict-rag/
-├── README.md              # this file — the plan of record
-├── PROGRESS.md            # session log: what has actually been done
-├── CONVENTIONS.md         # working conventions for this repo
-├── config/                # hardware.yaml (VRAM profiles), models.yaml (tier map)
-├── contract/              # interface schema + mock generator        [Week 1, joint, A leads]
-├── api_budget/            # request cache, cost log, tiered client   [Week 1, joint]
-├── retrieval/             # A1                                       [A]
-├── detection/             # A2, A3 (three architectures)             [A]
-├── scope/                 # A4 (four-way relation, order-invariance) [A]
-├── extraction/            # B1 Contrastive Scope Probing             [B]
-├── composition/           # B2 composition operator                  [B]
-├── generation/            # B3 conflict-aware generation             [B]
-├── metrics/               # shared scoring library                   [B lead, A contributes]
-├── baselines/             # A: standard, rerank, nli-filter
-│                          # B: credibility, cot, full-context, taxonomy-aware, structured-long-context
-├── benchmark/             # data, annotation tooling, manual, datasheet [joint]
-├── experiments/           # end-to-end runners, ablations            [joint]
-├── scripts/               # setup and maintenance utilities
-├── docs/                  # WP0 positioning memo, design notes
-├── site/                  # project site — a 3D scroll story that runs the detector in the browser
-└── tests/                 # pytest
-```
-
-### The project site
-
-`site/` is a Vite + TypeScript + Three.js site that **runs** the detector rather
-than describing it: the scope algebra, the four-way relation, the routing table,
-the stage-1 detector, the composition operator and the power analysis are ported
-to JavaScript and execute on the real corpus, which ships with the page.
-
-```bash
-cd site && npm ci && npm run build && npm run preview   # then http://localhost:4173
-```
-
-It no longer opens from `file://` (Three.js is ES-modules only); any static
-server over `site/dist` works offline. The port is not trusted on faith —
-`site/tools/verify_engines.js` replays Python's answers across the corpus and
-fails on any disagreement, and CI also checks the build ships those engine files
-byte-identical. Publishing is disabled in CI pending supervisor sign-off. See
-`site/README.md`.
-
-### The Studio and the engine server
-
-`service/` runs the whole pipeline on one query, end to end, and reports every
-step as it happens: retrieval, detection, A3/A4, B1 extraction with its
-grounding gate, composition, generation, verification, baselines on the same
-input, and gold scoring. It is a local API (FastAPI) and the engine behind the
-site's **Studio** (`#/studio`): a live console, your own document collections,
-a conflict audit, batch evaluation, run history with replay and export, and API
-docs.
-
-```bash
-start.bat studio                     # or ./start.sh studio: engine + site, opens the Studio
-python -m service                    # just the engine: http://localhost:8008, docs at /docs
-python -m service.record --live      # re-record the runs the static site replays
-```
-
-Offline mode needs only `requirements-service.txt` (no PyTorch). Live mode uses
-the full stack in `requirements.txt` and the LLM tiers in `config/models.yaml`.
-Two pieces exist only here: the default branch is assembled from A4's default
-side (B1 extracts exceptions only), and a detector miss can be continued under a
-labelled **override** policy so the rest of the pipeline can be shown. Both are
-reported in every run, never applied silently.
-
----
-
-## 10. One honesty guardrail
-
-Carried over in spirit from §12 of the implementation plan, because it applies to every slide and
-every commit:
-
-> **Do not put target percentages into slides or the paper as if they were results.** Every number is
-> a hypothesis until the experiment runs, and the design is meant to be *able to disprove the central
-> claim*. The strength of this project is a sharp, evidenced failure analysis, an architectural
-> distinction that is **tested rather than argued**, and a released benchmark — not a grand framing.
-> The genuinely open items — the WP0 prior-art result, the WP1 extraction feasibility and Tier-1
-> mining yield, and above all whether the structured long-context baseline wins or loses — are the
-> honest risks, and naming them in a review is a strength, not a weakness.
+**Licences:**
+- ConditionalQA is distributed by its authors under its own licence. Its scorer is vendored with that licence
+  in `third_party/conditionalqa/`.
+- RAMDocs is distributed under the MIT licence.
+- The models are used under their providers' terms.
+
+**Contact:** Johann Shoni George (corresponding author), johannshoni@karunya.edu.in.

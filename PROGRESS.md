@@ -1,15 +1,46 @@
 # Progress log
 
-Session-by-session record of what was actually done, newest first. `README.md`
-is the plan; this file is the history.
-
-**Append an entry before ending any working session.** The reasoning behind a
-decision is what gets lost over 22 weeks, not the code — so write down *why*,
-not just *what*. The entry format is in `CONVENTIONS.md`.
+Dated record of the work, newest first. [`README.md`](README.md) describes the study and how to reproduce it;
+[`study/ANALYSIS_PLAN.md`](study/ANALYSIS_PLAN.md) is the analysis plan. Entries before 2026-11-14 belong to
+the earlier ScopeCompose design (README, Section 12) and are kept as its history; they refer to plans, files
+and targets that the study no longer uses.
 
 ---
 
 ## Sessions
+
+### 2026-11-16 — five review rounds, authors, submission package, documentation
+
+- Five rounds of strict review answered in `paper/response_to_reviewers.md` (the last two rated 8.2 and 8.5 out of 10). Analyses
+  added in revision are exploratory and listed as deviation 4 in `study/ANALYSIS_PLAN.md`: condition
+  verification pass, oracle completion, section-aware chunks end to end, provider agreement, exact-match
+  audit, and local versus hosted contrasts on identical questions (`confirm.confirmatory`, key `on_hosted`).
+- Gemma-4-31B verification pass complete (250 gold, 300 top-8 questions): recall 27.9% -> 46.6%, precision
+  55.7% -> 50.9%, conditions on 51% of unconditional answers.
+- `paper/check_tables.py`: every F1-with-conditions value in Tables 3 and 5 (81) rescored from the raw
+  outputs with the official `evaluate.py`, independently of the study's scoring code: all match.
+- Reranker checkpoint cited as its own reference (BAAI bge-reranker-base, revision 2cfc18c).
+- Authors, affiliations, biographies and photos added (`paper/main.tex`, `paper/sections/biography.tex`,
+  `paper/figures/authors/`); main.pdf 25 pages, review.pdf 24 pages; `check_paper.py` passes.
+- Submission files: `paper/make_submission.py` (LaTeX .zip, test-compiled from the unpacked package) and
+  `paper/make_docx.py` (Word version, 25 pages; all 708 decimal numbers match the PDF).
+- Rankings and operator decisions committed (`study/artifacts/rankings/`, `operators/`); figure PDFs
+  written without a timestamp. From a fresh clone, `study.report`, `study.figures` and `check_tables.py`
+  reproduce every committed number, table and figure byte for byte.
+- README, CONVENTIONS, docs index and `.env.example` rewritten for the study.
+
+### 2026-11-15 — all runs complete; paper complete except author-supplied items
+
+- Every cell complete: local matrix (Qwen2.5-7B, Llama-3.1-8B; 30 ConditionalQA + 14 RAMDocs cells),
+  hosted replication (gpt-oss-20b, Gemma-4-31B, Nemotron-3-Ultra; deviations 1-3 in study/ANALYSIS_PLAN.md).
+- Confirmatory family (Holm): C1-C3 significant for both local models; C4-C7 null; C8 non-inferior for
+  Qwen only. Completion scorer AUC 0.70 < untrained reranker 0.78; does not transfer (OOD AUC 0.36/0.25).
+- `python -m study.report` rebuilds results/results.json, paper/numbers.tex (241 macros) and Tables 2-6.
+- `python paper/check_paper.py` passes except the \pending markers in statements.tex and biography.tex,
+  which need: author names/affiliations/emails/biographies/photos, funding and COI confirmation,
+  repository URL. Paper: 23 pages, 25 references.
+- Model outputs and qualifier scores are now committed (study/runs/, study/artifacts/qualifier/*.json).
+
 
 ### 2026-11-14 - the pivot: condition loss in chunked RAG, on public human-annotated data
 
@@ -2065,15 +2096,3 @@ correctly skips until `SECOND_BACKBONE` is assigned.
    confirmed anchors in `docs/wp0_positioning_memo.md`.
 5. Collect ~20 real documents and run `benchmark.mining.tier1_pilot` for the
    actual Tier-1 yield. Due end of week 4.
-
-## 2026-11-15 — all runs complete; paper complete except author-supplied items
-
-- Every cell complete: local matrix (Qwen2.5-7B, Llama-3.1-8B; 30 ConditionalQA + 14 RAMDocs cells),
-  hosted replication (gpt-oss-20b, Gemma-4-31B, Nemotron-3-Ultra; deviations 1-3 in study/ANALYSIS_PLAN.md).
-- Confirmatory family (Holm): C1-C3 significant for both local models; C4-C7 null; C8 non-inferior for
-  Qwen only. Completion scorer AUC 0.70 < untrained reranker 0.78; does not transfer (OOD AUC 0.36/0.25).
-- `python -m study.report` rebuilds results/results.json, paper/numbers.tex (241 macros) and Tables 2-6.
-- `python paper/check_paper.py` passes except the \pending markers in statements.tex and biography.tex,
-  which need: author names/affiliations/emails/biographies/photos, funding and COI confirmation,
-  repository URL. Paper: 23 pages, 25 references.
-- Model outputs and qualifier scores are now committed (study/runs/, study/artifacts/qualifier/*.json).

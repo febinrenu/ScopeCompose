@@ -1,3 +1,6 @@
+> **Archived.** These documents planned the earlier ScopeCompose design, which was set aside on 2026-11-14 for the
+> measurement study described in the repository's [README](../README.md). They are kept as history.
+
 # v7 package: what is in here and what to do first
 
 **Date:** 2026-10-30.

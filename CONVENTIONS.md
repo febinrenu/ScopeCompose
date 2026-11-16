@@ -1,119 +1,82 @@
 # Conventions for this repository
 
-Read `README.md` first — it is the plan of record. Read `PROGRESS.md` for what has actually been
-done so far. The two research documents live one directory up and are the authority on *why*
-anything here exists:
-
-- `../conditional-conflict-rag-proposal-v6.md`
-- `../implementation-plan-two-person-v2.md`
-
----
-
-## Session protocol
-
-**Before finishing any working session, append an entry to `PROGRESS.md`.** Newest entry goes at the
-top, directly under the `## Sessions` heading. Use this shape:
-
-```markdown
-### YYYY-MM-DD — short title
-
-**Done**
-- bullet per completed item, with file paths
-
-**Decisions**
-- decision, and the reason behind it (the reason is the part that is expensive to reconstruct later)
-
-**Blocked / open**
-- anything waiting on Member B, a supervisor, data access, or an unanswered question
-
-**Next up**
-- the concrete next action, specific enough to start from cold
-```
-
-This is not optional bookkeeping. The project runs 22 weeks across two people; the reasoning behind
-a decision is what gets lost, not the code.
-
-Also update the **status column** in `README.md` §6 when a module changes state. A status that lies
-is worse than no status.
-
----
-
-## Ownership
-
-This repo is Member A's working copy. Member A owns `retrieval/`, `detection/`, `scope/`, and leads
-`contract/`. Member B owns `extraction/`, `composition/`, `generation/`, and leads `metrics/`.
-
-**Do not implement Member B's modules.** They are a separately assessed research artifact. B's
-directories hold typed stubs and an ownership note; leave them that way unless Member A explicitly
-says otherwise. Filling them in would erase the split that both zeroth-review presentations depend
-on.
-
----
-
-## The contract is frozen
-
-`contract/models.py` defines the schema both members build against. Changing it breaks the other
-person's work silently.
-
-Any schema change requires **all three** in the same commit:
-
-1. bump `CONTRACT_VERSION` in `contract/models.py`
-2. update `contract/mock.py` so generated records still validate
-3. regenerate `contract/schema/v<version>.json` via `python -m contract.export_schema`
-
-And tell Member B. A schema change that only one person knows about is the integration-drift failure
-the frozen contract exists to prevent.
-
----
-
-## Hardware rules
-
-Target a **6 GB VRAM floor** so shared code runs unmodified on Member B's machine. This machine has
-8 GB (RTX 4060 Laptop); the extra is opt-in through `config/hardware.yaml` profiles, never assumed.
-
-- **Local GPU is for classification and scoring only** — cross-encoders, embeddings, the fine-tuned
-  detector. Never a generative model in the reported pipeline.
-- **All generation goes through `api_budget.client`.** Never call an LLM provider SDK directly from a
-  module; that bypasses the cache and the cost log, which is how a budget problem gets discovered
-  after a full-corpus run instead of before one.
-- Read device, precision, batch size and sequence length from `config/hardware.yaml`. Do not hardcode
-  `cuda`, `fp16`, or a batch size in a module.
-
----
-
-## API rules
-
-- Every LLM call goes through `api_budget.client.complete()`, tagged with a `step` name so the cost
-  log can attribute spend.
-- Model IDs are **never hardcoded**. Ask for a logical tier (`BULK`, `JUDGE`, `LONG_CONTEXT`,
-  `SECOND_BACKBONE`); `config/models.yaml` maps tiers to concrete IDs, and
-  `scripts/discover_models.py` writes that file from the provider's live model list.
-- Tests use the `mock` backend and must never touch the network. `pytest` should run offline at zero
-  cost, always.
-- Before scaling anything to the full benchmark, run it on the ~50-instance WP1 pilot first.
-
----
-
-## Code conventions
-
-- Python 3.11, type hints throughout, Pydantic v2 for anything crossing a module boundary.
-- Modules are importable as `python -m <module>` where a CLI makes sense.
-- Determinism matters: seed everything. `contract/mock.py` with the same seed must produce a
-  byte-identical file, because it is the fixture both members test against.
-- `pytest` from the repo root. New module, new test file.
+Read [`README.md`](README.md) first: it describes the study, the repository and how to reproduce every result.
+[`study/ANALYSIS_PLAN.md`](study/ANALYSIS_PLAN.md) is the plan of record for the analysis, and
+[`PROGRESS.md`](PROGRESS.md) is the dated history of the work.
 
 ---
 
 ## Research-integrity rules
 
-These come from §12 of the implementation plan and apply to code, commits, slides and the paper:
+These rules apply to the code, the commits and the paper.
 
-- **No target percentages presented as results.** Every number is a hypothesis until its experiment
-  runs.
-- **Never silently substitute a cheaper model** where the design flags one as load-bearing (the
-  metric judge; the structured long-context baseline). If a substitution happens — including an
-  automatic fallback from Groq to local Ollama after rate-limiting — the cost log records it and it
-  gets reported, not buried.
-- **Tier 1 and Tier 2 benchmark results are never blended** in headline numbers.
-- **Report the falsifying outcome as prominently as a positive one.** The structured long-context
-  baseline is designed to be able to disprove the central claim; that is the point of it.
+- **No number is typed by hand.** Every number in the manuscript comes from a macro in `paper/numbers.tex`,
+  which `python -m study.report` generates from the saved model outputs. `paper/check_paper.py` fails on a
+  digit in running text that is not on its short allow-list of design constants.
+- **Planned before run.** The question sets, pipeline settings, metrics and confirmatory tests were committed
+  in `study/ANALYSIS_PLAN.md` before the first evaluation answer. Any later change is added there as a dated
+  deviation with its reason, and the paper reports it. Analyses added afterwards are labelled exploratory.
+- **Tune on the tuning set only.** Prompts, thresholds and operator settings are chosen on the tuning
+  questions (`study/splits.json`). The evaluation questions are never used to choose anything.
+- **Report the negative result as prominently as a positive one.** The completion remedy failed, and the
+  paper says so.
+- **Never silently substitute a model.** Every answer records the model and the provider that served it
+  (`served_by`). A fallback is a deviation, not a detail.
+- **A cell never mixes runs.** `study/run.py` refuses to append to a cell file whose answers came from a
+  different model, prompt or chunking.
+- **Partial results are not results.** Holm correction is applied only to a complete confirmatory family, and
+  `study.report` renders a missing number as a visible marker rather than a stale value.
+
+---
+
+## API and model rules
+
+- Every model call goes through `api_budget.client`, which provides the response cache, retries that honour
+  rate-limit hints, provider fallback and the cost log (`logs/api_cost.jsonl`). Never call a provider SDK
+  directly from a module.
+- Model IDs are never hard-coded in a module. Ask for a logical tier (for example `STUDY_QWEN7B` or
+  `STUDY_NEMOTRON`); `config/models.yaml` maps tiers to providers and concrete model IDs.
+- API keys live only in `.env`, which is gitignored. `.env.example` lists the variables.
+- Tests use the mock backend and never touch the network. `pytest` runs offline, at no cost.
+
+---
+
+## Hardware rules
+
+- The reference machine has an 8 GB RTX 4060 Laptop GPU and 16 GB of RAM. Run one heavy job at a time:
+  two local generators plus the GPU scorers do not fit in memory together. `study/schedule.py` unloads each
+  local model before loading the next.
+- Read device, precision and batch size from `config/hardware.yaml`; do not hard-code `cuda`, `fp16` or a
+  batch size in a module.
+
+---
+
+## Code conventions
+
+- Python 3.11, with type hints throughout.
+- Modules run as `python -m <module>` where a command-line interface makes sense; each has a docstring that
+  shows its usage.
+- Determinism: seed everything. Saved rankings, operator decisions and model outputs are what every analysis
+  reads, so two analyses can never disagree about the same run.
+- Run `pytest` from the repository root, and add a test file for each new module.
+
+---
+
+## Commits
+
+- Commit to `master` with a message that says what changed and why.
+- Before committing a change to the paper, run `python -m study.report`, compile `paper/main.tex` and run
+  `python paper/check_paper.py`.
+
+---
+
+## Earlier conventions
+
+The earlier ScopeCompose project (see README, Section 12) had rules that no longer apply to the study:
+- the two-member ownership split of `retrieval/`, `detection/` and `scope/` versus `extraction/`,
+  `composition/` and `generation/`;
+- the frozen JSON contract in `contract/` (bump `CONTRACT_VERSION`, update `contract/mock.py` and regenerate
+  `contract/schema/` together);
+- the Tier 1 / Tier 2 benchmark separation.
+
+They still hold for anyone changing that legacy code.
