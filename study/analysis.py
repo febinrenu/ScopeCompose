@@ -44,8 +44,10 @@ class QScore:
 def _conditions_in_context(rec: dict, q: cqa.Question, words: int, strategy: str) -> set[str]:
     from study.retrieve import chunk_index
 
+    from study.baselines import span_elements
+
     idx = chunk_index(words, strategy)
-    shown = {el for cid in rec.get("chunks", []) for el in idx[cid].elements}
+    shown = {el for cid in rec.get("chunks", []) for el in (span_elements(cid) or idx[cid].elements)}
     if rec.get("system") == "gold_nocondel":          # the oracle rung that deletes condition elements
         shown -= set(q.conditions)
     return shown & set(q.conditions)

@@ -19,8 +19,8 @@ import zipfile
 from pathlib import Path
 
 PAPER = Path(__file__).resolve().parent
-OUT = PAPER / "submission" / "Where_Do_the_Conditions_Go_LaTeX_source.zip"
-README = """Where Do the Conditions Go? Stage-wise Attribution of Condition Loss in Chunked Retrieval-Augmented Generation
+OUT = PAPER / "submission" / "Conditional_Answer_Fidelity_in_RAG_LaTeX_source.zip"
+README = """Conditional-Answer Fidelity in Retrieval-Augmented Generation: Attributing Condition Loss to Chunk Segmentation, Hybrid Sparse-Dense Retrieval, Evidence-Reducing Operators and LLM Generation
 LaTeX source for submission to the Journal of Trends in Computer Science and Smart Technology.
 
 Main file: main.tex. Compile with pdfLaTeX or XeLaTeX (run twice for references):

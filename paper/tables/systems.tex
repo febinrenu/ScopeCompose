@@ -1,6 +1,6 @@
 \begin{table}[!htbp]\centering
-\textbf{Table 1.} The systems. Each differs only in which chunks reach the same generator.\\\vspace{5pt}
-{\fontsize{10}{12}\selectfont
+\textbf{Table 2.} The systems. Each differs only in which chunks reach the same generator. Operators are marked by how closely they follow the method they are named after: [S] a standard component, not a reproduction; [P] a partial reproduction; [R] a reduction of the method to its evidence-reducing step. $^\dagger$\,Exploratory in the analysis plan; $^\ddagger$\,added in revision, exploratory.\\\vspace{5pt}
+{\fontsize{9}{11}\selectfont
 \begin{tabular}{L{4.3cm}L{10.6cm}}
 \toprule
 \textbf{System} & \textbf{Chunks given to the generator} \\
@@ -16,17 +16,24 @@
 \texttt{top-$k$} & the $k$ highest-ranked chunks, $k\in\{3,8\}$ (recall alone is measured up to $k=50$); \texttt{top-8} is the reference \\
 \midrule
 \multicolumn{2}{l}{\emph{Evidence-reducing operators (applied to the top 8)}}\\
-\texttt{rerank-3} & the 3 chunks a cross-encoder reranker scores highest \\
-\texttt{NLI filter} & drops the lower-ranked chunk of each pair judged contradictory \\
-\texttt{ConflictRAG-style} & resolves each detected conflict by Entropy-TOPSIS credibility selection \\
-\texttt{relevance grading} & keeps the chunks the generator model grades as useful, one call each (RAMDocs only) \\
-\texttt{listwise selection} & keeps the chunks the generator model selects, one call in total \\
+\texttt{rerank-3} & [S] the 3 chunks a cross-encoder reranker scores highest \\
+\texttt{NLI filter} & [S] drops the lower-ranked chunk of each pair judged contradictory \\
+\texttt{ConflictRAG-style} & [P] resolves each detected conflict by Entropy-TOPSIS credibility selection (3 of 5 criteria) \\
+\texttt{relevance grading}$^\dagger$ & [R] corrective RAG's grading: keeps the chunks the generator model grades as useful, one call each (RAMDocs only) \\
+\texttt{listwise selection}$^\dagger$ & [R] Astute RAG's consolidation in one call: keeps the chunks the generator model selects \\
 \midrule
 \multicolumn{2}{l}{\emph{Context completion (budget of 8 chunks)}}\\
-\texttt{adjacent} & the top 5 plus the chunks next to them on their pages \\
-\texttt{page} & every chunk of the top-ranked chunk's page \\
-\texttt{completion (untrained)} & the top 5 plus same-page chunks scored by an off-the-shelf reranker \\
+\texttt{adjacent}$^\dagger$ & the top 5 plus the chunks next to them on their pages \\
+\texttt{page}$^\dagger$ & every chunk of the top-ranked chunk's page \\
+\texttt{completion (untrained)}$^\dagger$ & the top 5 plus same-page chunks scored by an off-the-shelf reranker \\
 \texttt{completion} (ours) & the top 5 plus same-page chunks a trained scorer predicts state a condition \\
+\texttt{completion (clean $\tau$)}$^\ddagger$ & the same, with each fold's scorer and threshold set without any evaluation label \\
+\midrule
+\multicolumn{2}{l}{\emph{Context-preserving retrieval$^\ddagger$ (budget: the words of the top 8)}}\\
+\texttt{sentence window} & single elements retrieved, each passed with two neighbours on either side \\
+\texttt{parent-child} & single elements retrieved, each passed with its top-level section \\
+\texttt{hierarchical} & the top 2 pages retrieved first, then their 8 highest-ranked chunks \\
+\texttt{query expansion} & the top 8 chunks for the query extended with condition cue words \\
 \bottomrule
 \end{tabular}
 }

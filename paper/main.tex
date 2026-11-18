@@ -65,6 +65,12 @@
   \newcommand{\pending}[1]{\textcolor{red}{\textbf{[PENDING: #1]}}}
 \fi
 
+% Let tables and figures share pages with text, rather than leave half-empty pages before them.
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.85}
+
 \input{numbers}
 
 \begin{document}
@@ -72,7 +78,7 @@
  \begin{singlespace}
  \begin{center}
 \fontsize{24}{24}\selectfont\textbf
-{Where Do the Conditions Go? Stage-wise Attribution of Condition Loss in Chunked Retrieval-Augmented Generation}
+{Conditional-Answer Fidelity in Retrieval-Augmented Generation: Attributing Condition Loss to Chunk Segmentation, Hybrid Sparse--Dense Retrieval, Evidence-Reducing Operators and LLM Generation}
 \end{center}
 \vspace{24pt}
 \ifdefined\reviewcopy

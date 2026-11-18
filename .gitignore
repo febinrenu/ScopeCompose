@@ -65,6 +65,7 @@ data/external/
 study/artifacts/*
 !study/artifacts/rankings/
 !study/artifacts/operators/
+!study/artifacts/semantic/
 !study/artifacts/qualifier/
 study/artifacts/qualifier/*
 !study/artifacts/qualifier/*.json

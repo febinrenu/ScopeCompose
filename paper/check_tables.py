@@ -1,4 +1,4 @@
-"""Rescore every cell in Tables 3 and 5 with the official ConditionalQA evaluate.py, from the raw cell files and
+"""Rescore every cell in Tables 4 and 7 with the official ConditionalQA evaluate.py, from the raw cell files and
 the raw benchmark files, without the study's scoring code, and compare with the generated LaTeX tables.
 
     python paper/check_tables.py
@@ -23,13 +23,14 @@ LABEL = {"closed": "closed-book", "gold": "gold", "gold_nocondel": r"gold\,$-$\,
          "gold_nocondchk": r"gold\,$-$\,cond.-only chunks", "goldpad8": r"gold\,+\,distractors", "top3": "top-3",
          "top8": "top-8", "rr8to3": "rerank-3", "nli": "NLI filter", "crs": "ConflictRAG-style",
          "select": "listwise selection", "adj": "adjacent", "page": "page", "qc0": "completion (untrained)",
-         "qc": "completion"}
+         "qc": "completion", "qcclean": r"completion (clean $\tau$)", "sentwin": "sentence window",
+         "parentchild": "parent-child"}
 
 
 def table_rows(path):
     rows = {}
     for line in Path(path).read_text(encoding="utf-8").splitlines():
-        m = re.match(r"\\texttt\{(.+?)\}(?: \(ours\))?((?:, C\$\^\\dagger\$ only)?) & (.*)\\\\", line)
+        m = re.match(r"\\texttt\{(.+?)\}(?: \(ours\))?(?:\$\^\\d?dagger\$)?((?:, C\$\^\\dagger\$ only)?) & (.*)\\\\", line)
         if m:
             rows[(m.group(1), bool(m.group(2)))] = [c.strip() for c in m.group(3).split("&")]
     return rows

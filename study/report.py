@@ -630,6 +630,9 @@ SECTIONS: dict[str, Callable[[], dict]] = {
     "protocol": protocol,
     "metric_audit": metric_audit,
 }
+from study import round6 as _round6  # noqa: E402  (sixth review round: deviation 5)
+
+SECTIONS.update(_round6.SECTIONS)
 
 
 def build(sections: dict[str, Callable[[], dict]] | None = None) -> dict:
@@ -1068,7 +1071,76 @@ for _qs, _ms in _REV_MODELS.items():
                     MACROS[f"rev{_pn}{_popn}{_mn}PerQ{_sn}"] = (f"{_base}.{_side}.conditions_per_question", one)
 
 
-# A short form of every confirmatory effect, for prose beside Table 4 (which gives intervals and p-values).
+#: Sixth review round (deviation 5): prompts, retrieval designs, clean threshold, semantic matching.
+_PR_MODELS = {"qwen7b": "Qwen", "llama8b": "Llama", "nemotron": "Nemo"}
+_PR_PROMPTS = {"v4": "VFour", "extract": "Extract", "pairing": "Pairing", "coc": "Coc", "applicability": "Applic",
+               "evidence": "Evidence"}
+for _m, _mn in _PR_MODELS.items():
+    for _p_, _pn in _PR_PROMPTS.items():
+        _b = f"prompt_robustness.{_m}.{_p_}"
+        MACROS[f"prRecall{_mn}{_pn}"] = (f"{_b}.conditional.cond_recall", pct)
+        MACROS[f"prPrec{_mn}{_pn}"] = (f"{_b}.conditional.cond_precision", pct)
+        MACROS[f"prAny{_mn}{_pn}"] = (f"{_b}.unconditional.any_condition", pct)
+        MACROS[f"prFcCond{_mn}{_pn}"] = (f"{_b}.conditional.f1_cond", pct)
+        MACROS[f"prFcUncond{_mn}{_pn}"] = (f"{_b}.unconditional.f1_cond", pct)
+        MACROS[f"prFcAll{_mn}{_pn}"] = (f"{_b}.all.f1_cond", pct)
+        MACROS[f"prCTwo{_mn}{_pn}"] = (f"{_b}.c2", short_effect)
+        if _p_ != "v4":
+            MACROS[f"prVsCond{_mn}{_pn}"] = (f"{_b}.vs_v4_conditional", short_effect)
+            MACROS[f"prVsUncond{_mn}{_pn}"] = (f"{_b}.vs_v4_unconditional", short_effect)
+MACROS.update({
+    "prMaxRecall": ("prompt_robustness.max_recall", pct),
+    "prMinRecall": ("prompt_robustness.min_recall", pct),
+    "prMaxAny": ("prompt_robustness.max_any_uncond", pct),
+    "prMinAny": ("prompt_robustness.min_any_uncond", pct),
+    "prCTwoPos": ("prompt_robustness.c2_positive", integer),
+    "prCTwoN": ("prompt_robustness.c2_n", integer),
+    "blCondMin": ("baselines.conditional_min", lambda x: f"{100 * x:+.1f}".replace("-", "$-$")),
+    "blCondMax": ("baselines.conditional_max", lambda x: f"{100 * x:+.1f}".replace("-", "$-$")),
+    "blCondNSig": ("baselines.conditional_n_sig", integer),
+    "blUncondNSig": ("baselines.unconditional_n_sig", integer),
+    "blNRuns": ("baselines.conditional_n", integer),
+    "tunFcUncondVTwo": ("tuning.v2.qwen7b.unconditional.f1_cond", pct),
+    "tunFcCondVTwo": ("tuning.v2.qwen7b.conditional.f1_cond", pct),
+    "tunAnyCondUncondVTwo": ("tuning.v2.qwen7b.unconditional.any_condition", pct),
+    "tunFcUncondVFour": ("tuning.v4.qwen7b.unconditional.f1_cond", pct),
+    "tunAnyCondUncondVFour": ("tuning.v4.qwen7b.unconditional.any_condition", pct),
+    "prNRuns": ("prompt_robustness.n_variant_runs", integer),
+    "prNSigGain": ("prompt_robustness.n_sig_gain_cond", integer),
+    "prNSigLoss": ("prompt_robustness.n_sig_loss_cond", integer),
+    "prMaxGain": ("prompt_robustness.max_gain_cond", lambda x: f"{100 * x:+.1f}".replace("-", "$-$")),
+    "prNSigLossUncond": ("prompt_robustness.n_sig_loss_uncond", integer),
+    "prMaxRecallLocal": ("prompt_robustness.max_recall_local", pct),
+    "clThMin": ("clean_threshold.threshold_min", lambda x: f"{x:.2f}"),
+    "clThMax": ("clean_threshold.threshold_max", lambda x: f"{x:.2f}"),
+    "clAuc": ("clean_threshold.auc", lambda x: f"{x:.2f}"),
+    "clPrec": ("clean_threshold.precision", pct),
+    "clRec": ("clean_threshold.recall", pct),
+    "clAdded": ("clean_threshold.added_per_q", lambda x: f"{x:.2f}"),
+    "semMutualMax": ("semantic.mutual_added_max", pct),
+    "semEitherMax": ("semantic.either_added_max", pct),
+    "semEitherRecallMax": ("semantic.either_recall_max", pct),
+})
+for _m, _mn in (("qwen7b", "Qwen"), ("llama8b", "Llama")):
+    MACROS[f"clCSeven{_mn}"] = (f"clean_threshold.e2e.{_m}.vs_top8_conditional", effect)
+    MACROS[f"clCSeven{_mn}Pt"] = (f"clean_threshold.e2e.{_m}.vs_top8_conditional", short_effect)
+    MACROS[f"clCEightLow{_mn}"] = (f"clean_threshold.e2e.{_m}.vs_top8_unconditional", lower_bound)
+    MACROS[f"clVsQc{_mn}Pt"] = (f"clean_threshold.e2e.{_m}.vs_qc_conditional", short_effect)
+    for _d, _dn in (("sentwin", "Sentwin"), ("parentchild", "Parent"), ("hier", "Hier"), ("qexp", "Qexp")):
+        for _pop, _popn in (("conditional", "Cond"), ("unconditional", "Uncond")):
+            MACROS[f"bl{_dn}{_popn}{_mn}"] = (f"baselines.e2e.{_m}.{_d}.{_pop}", effect)
+            MACROS[f"bl{_dn}{_popn}{_mn}Pt"] = (f"baselines.e2e.{_m}.{_d}.{_pop}", short_effect)
+        MACROS[f"bl{_dn}Ctx{_mn}"] = (f"baselines.e2e.{_m}.{_d}.conditional.a_stats.cond_in_context", pct)
+    MACROS[f"blTopCtx{_mn}"] = (f"baselines.e2e.{_m}.sentwin.conditional.b_stats.cond_in_context", pct)
+for _d, _dn in (("top8", "Top"), ("top8_section", "Section"), ("sentwin", "Sentwin"), ("parentchild", "Parent"),
+                ("hier", "Hier"), ("qexp", "Qexp")):
+    MACROS[f"blRecall{_dn}"] = (f"baselines.recall.{_d}.cond_recall", pct)
+    MACROS[f"blAnsRecall{_dn}"] = (f"baselines.recall.{_d}.answer_recall", pct)
+    MACROS[f"blComplete{_dn}"] = (f"baselines.recall.{_d}.complete", pct)
+    MACROS[f"blWords{_dn}"] = (f"baselines.recall.{_d}.words", lambda x: f"{x:.0f}")
+
+
+# A short form of every confirmatory effect, for prose beside Table 5 (which gives intervals and p-values).
 MACROS.update({f"{n}Pt": (path, short_effect) for n, (path, fmt) in list(MACROS.items())
                if fmt is effect and ((path.startswith("confirmatory.")
                                       and (".family." in path or ".on_hosted." in path or path.endswith(".E1")))
@@ -1122,11 +1194,11 @@ def tuning_rows(results: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-#: Table 2, written whole: \input cannot sit between rows of a tabular.
+#: Table 3, written whole: \input cannot sit between rows of a tabular.
 TUNING_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
     r"\begin{table}[!htbp]\centering",
-    r"\textbf{Table 2.} Generator wording on the tuning set with the gold chunks in context: F1 with conditions (\%) "
+    r"\textbf{Table 3.} Generator wording on the tuning set with the gold chunks in context: F1 with conditions (\%) "
     r"on conditional (C) and unconditional (U) questions, and the share of unconditional answers that name any "
     r"condition. Qwen3.8-27B on a fixed 60-question sample of the tuning set.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
@@ -1145,7 +1217,7 @@ TUNING_TABLE = "\n".join([
 ])
 
 
-#: Display names, as in Table 1.
+#: Display names, as in Table 2.
 LABEL = {
     "closed": r"\texttt{closed-book}", "gold": r"\texttt{gold}",
     "gold_nocondel": r"\texttt{gold\,$-$\,cond.\ elements}", "gold_nocondchk": r"\texttt{gold\,$-$\,cond.-only chunks}",
@@ -1154,12 +1226,18 @@ LABEL = {
     "grade": r"\texttt{relevance grading}", "select": r"\texttt{listwise selection}", "adj": r"\texttt{adjacent}",
     "page": r"\texttt{page}", "qc0": r"\texttt{completion (untrained)}", "qc": r"\texttt{completion} (ours)",
     "full": r"\texttt{full context}", "oracle": r"\texttt{oracle discard}", "rr3": r"\texttt{rerank-3}",
+    "qcclean": r"\texttt{completion (clean $\tau$)}", "sentwin": r"\texttt{sentence window}",
+    "parentchild": r"\texttt{parent-child}", "hier": r"\texttt{hierarchical}", "qexp": r"\texttt{query expansion}",
 }
+#: Marks in the end-to-end table: exploratory in the plan, and added in revision.
+E2E_MARK = {"top3": r"$^\dagger$", "select": r"$^\dagger$", "adj": r"$^\dagger$", "page": r"$^\dagger$",
+            "qc0": r"$^\dagger$", "qcclean": r"$^\ddagger$"}
+DESIGN_ROWS = ("sentwin", "parentchild", "hier", "qexp")
 E2E_GROUPS = (
     ("Oracle ladder", ("closed", "gold", "gold_nocondel", "gold_nocondchk", "goldpad8")),
     ("Retrieval", ("top3", "top8")),
     ("Evidence-reducing operators", ("rr8to3", "nli", "crs", "select")),
-    ("Context completion", ("adj", "page", "qc0", "qc")),
+    ("Context completion", ("adj", "page", "qc0", "qc", "qcclean")),
 )
 DASH = "--"
 
@@ -1184,10 +1262,15 @@ def e2e_rows(results: dict) -> str:
         for s in systems_:
             vals = []
             for m in LOCAL_MODELS:
-                row = cells.get(m, {}).get(s)
-                c, u = (row or {}).get("conditional", {}), (row or {}).get("unconditional", {})
+                if s in DESIGN_ROWS:
+                    d = results.get("baselines", {}).get("e2e", {}).get(m, {}).get(s, {})
+                    c = d.get("conditional", {}).get("a_stats", {})
+                    u = d.get("unconditional", {}).get("a_stats", {})
+                else:
+                    row = cells.get(m, {}).get(s)
+                    c, u = (row or {}).get("conditional", {}), (row or {}).get("unconditional", {})
                 vals += [_p(c.get("f1_cond")), _p(c.get("cond_noticed")), _p(u.get("f1_cond"))]
-            lines.append(f"{LABEL[s]} & " + " & ".join(vals) + r" \\")
+            lines.append(f"{LABEL[s]}{E2E_MARK.get(s, '')} & " + " & ".join(vals) + r" \\")
         lines.append(r"\midrule")
     return "\n".join(lines[:-1]) + "\n"
 
@@ -1195,10 +1278,11 @@ def e2e_rows(results: dict) -> str:
 E2E_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
     r"\begin{table}[!htbp]\centering",
-    r"\textbf{Table 3.} End-to-end results on the evaluation set: F1 with conditions (\%) on conditional (C) and "
+    r"\textbf{Table 4.} End-to-end results on the evaluation set: F1 with conditions (\%) on conditional (C) and "
     r"unconditional (U) questions, and the share of gold condition elements in the context that the generator "
-    r"cites anywhere (cited, \%). C: \nEvalCond{} questions; U: \nEvalUncond{}. The C2 test in Table 4 uses "
-    r"only the \nCondOnlyEval{} conditional questions with a condition-only gold chunk.\\\vspace{5pt}",
+    r"cites anywhere (cited, \%). C: \nEvalCond{} questions; U: \nEvalUncond{}. The C2 test in Table 5 uses "
+    r"only the \nCondOnlyEval{} conditional questions with a condition-only gold chunk. "
+    r"$^\dagger$\,Exploratory in the analysis plan; $^\ddagger$\,added in revision, exploratory.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
     r"\begin{tabular}{L{4.6cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}}",
     r"\toprule",
@@ -1243,7 +1327,7 @@ def confirm_rows(results: dict) -> str:
 CONFIRM_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
     r"\begin{table}[!htbp]\centering",
-    r"\textbf{Table 4.} The pre-registered confirmatory family: paired difference in F1 with conditions (points), "
+    r"\textbf{Table 5.} The pre-registered confirmatory family: paired difference in F1 with conditions (points), "
     r"95\% BCa interval over pages, and Holm-adjusted page-level sign-flip $p$. C: conditional questions; "
     r"C$^\dagger$: those with a condition-only gold chunk; U: unconditional. C8 asks whether the lower bound "
     r"exceeds $-2$ points.\\\vspace{5pt}",
@@ -1291,9 +1375,9 @@ def hosted_rows(results: dict) -> str:
 HOSTED_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
     r"\begin{table}[!htbp]\centering",
-    r"\textbf{Table 5.} Larger hosted generators on the stratified subsample (150 conditional, 100 unconditional "
+    r"\textbf{Table 7.} Larger hosted generators on the stratified subsample (150 conditional, 100 unconditional "
     r"questions): F1 with conditions (\%) on conditional (C) and unconditional (U) questions, and gold "
-    r"conditions cited (N, \%) as in Table 3; differences quoted in the text use unrounded scores. The first four rows cover all 150 conditional questions; the last two only "
+    r"conditions cited (N, \%) as in Table 4; differences quoted in the text use unrounded scores. The first four rows cover all 150 conditional questions; the last two only "
     r"the \hCondOnlyN{} of them with a condition-only gold chunk (C$^\dagger$), the population of the C2 "
     r"comparison.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
@@ -1331,7 +1415,7 @@ def ram_rows(results: dict) -> str:
 RAM_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
     r"\begin{table}[!htbp]\centering",
-    r"\textbf{Table 6.} The same operators on RAMDocs, where discarding is correct: strict accuracy (\%) on all "
+    r"\textbf{Table 8.} The same operators on RAMDocs, where discarding is correct: strict accuracy (\%) on all "
     r"questions and on those with misinformation (MI), and the share of MI answers that state a wrong answer.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
     r"\begin{tabular}{L{4.0cm}P{1.45cm}P{1.45cm}P{1.45cm}P{1.45cm}P{1.45cm}P{1.45cm}}",
@@ -1373,7 +1457,7 @@ def dec_rows(results: dict) -> str:
 DEC_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
     r"\begin{table}[!htbp]\centering",
-    r"\textbf{Table 7.} What happens to the gold conditions in the context (conditional questions: \nEvalCond{} for "
+    r"\textbf{Table 6.} What happens to the gold conditions in the context (conditional questions: \nEvalCond{} for "
     r"the local generators, 150 for the hosted ones): the share stated as a condition (Cond.), cited only as "
     r"evidence (Ev.) or not cited at all (None), with gold and with top-8 context; and, with gold context, the share "
     r"of stated conditions that are not gold conditions (Spur.) and, of those, the share that are lines stating the "
@@ -1393,9 +1477,61 @@ DEC_TABLE = "\n".join([
 ])
 
 
+PROMPT_ROWS = {
+    "v4": "frozen: the benchmark's definition",
+    "extract": "direct condition extraction",
+    "pairing": "answer--condition pairing",
+    "coc": "chain-of-condition reasoning",
+    "applicability": "applicability check per line",
+    "evidence": "evidence first, roles labelled",
+}
+PROMPT_MODELS = (("qwen7b", "Qwen2.5-7B"), ("llama8b", "Llama-3.1-8B"), ("nemotron", "Nemotron-3-Ultra"))
+
+
+def prompt_rows(results: dict) -> str:
+    pr = results.get("prompt_robustness", {})
+    lines = []
+    for p, label in PROMPT_ROWS.items():
+        cells = []
+        for m, _ in PROMPT_MODELS:
+            row = pr.get(m, {}).get(p)
+            if row is None:
+                cells += [DASH, DASH, DASH]
+                continue
+            c, u = row["conditional"], row["unconditional"]
+            cells += [_p(c["cond_recall"]), _p(u["any_condition"]), f"{_p(c['f1_cond'])} / {_p(u['f1_cond'])}"]
+        lines.append(f"{label} & " + " & ".join(cells) + r" \\")
+    return "\n".join(lines) + "\n"
+
+
+PROMPT_TABLE = "\n".join([
+    r"% Generated by study/report.py. Do not edit by hand.",
+    r"\begin{table}[!htbp]\centering",
+    r"\textbf{Table 3.} The generation deficit under six prompts, with the gold chunks in context (hosted subsample: "
+    r"150 conditional, 100 unconditional questions). Rec.: share of gold conditions stated as conditions (\%); "
+    r"on U: share of unconditional answers that name any condition (\%); F1c: F1 with conditions on conditional / "
+    r"unconditional questions (\%). The first row is the frozen prompt; the other five were added in revision "
+    r"(exploratory) and share its lines, worked examples and output format.\\\vspace{5pt}",
+    r"{\fontsize{9}{11}\selectfont",
+    r"\setlength{\tabcolsep}{3.5pt}",
+    r"\begin{tabular}{L{3.3cm}P{0.8cm}P{0.8cm}P{1.75cm}P{0.8cm}P{0.8cm}P{1.75cm}P{0.8cm}P{0.8cm}P{1.75cm}}",
+    r"\toprule",
+    r" & \multicolumn{3}{c}{\textbf{Qwen2.5-7B}} & \multicolumn{3}{c}{\textbf{Llama-3.1-8B}} "
+    r"& \multicolumn{3}{c}{\textbf{Nemotron-3-Ultra}} \\",
+    r"\textbf{Prompting strategy} & Rec. & on U & F1c C / U & Rec. & on U & F1c C / U & Rec. & on U & F1c C / U \\",
+    r"\midrule",
+    "%ROWS%" + r"\bottomrule",
+    r"\end{tabular}",
+    r"}",
+    r"\end{table}",
+    "",
+])
+
+
 def write_tables(results: dict) -> None:
     TABLES.mkdir(parents=True, exist_ok=True)
-    for name, template, rows in (("tuning", TUNING_TABLE, tuning_rows), ("endtoend", E2E_TABLE, e2e_rows),
+    for name, template, rows in (("tuning", TUNING_TABLE, tuning_rows), ("prompts", PROMPT_TABLE, prompt_rows),
+                                 ("endtoend", E2E_TABLE, e2e_rows),
                                  ("confirm", CONFIRM_TABLE, confirm_rows), ("hosted", HOSTED_TABLE, hosted_rows),
                                  ("ramdocs", RAM_TABLE, ram_rows), ("decomposition", DEC_TABLE, dec_rows)):
         (TABLES / f"{name}.tex").write_text(template.replace("%ROWS%", rows(results)), encoding="utf-8")

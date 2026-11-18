@@ -146,7 +146,64 @@ def fig_operators(r: dict) -> None:
         plt.close(fig)
 
 
-FIGURES = (fig_separation, fig_recall, fig_operators)
+def fig_pipeline(r: dict) -> None:
+    """Figure 1: the four stages, what is measured at each, on which denominator, and how."""
+    from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+
+    sep = r["separation"]["fixed150"]["conditional"]
+    ret = r["retrieval"]["hybrid_fixed150"]["8"]
+    ops = r["operator_survival"]["cqa"]
+    e2e = r["end_to_end"]["eval"]
+    host = r["end_to_end"]["hosted"]
+    n_cond = r["dataset"]["eval_conditional"]
+    pr = r.get("prompt_robustness", {})
+    pc = lambda x: f"{100 * x:.1f}%"  # noqa: E731
+    gen = [("Qwen2.5-7B", pc(e2e["qwen7b"]["gold"]["conditional"]["cond_recall"])),
+           ("Llama-3.1-8B", pc(e2e["llama8b"]["gold"]["conditional"]["cond_recall"])),
+           ("Nemotron-3-Ultra", pc(host["nemotron"]["gold"]["conditional"]["cond_recall"]))]
+    if "max_recall" in pr:
+        gen.append(("best of six prompts", pc(pr["max_recall"])))
+    stages = [
+        ("1  Chunking", "150-word chunks",
+         [("split over chunks", pc(sep["separated"])), ("cond.-only chunk", pc(sep["condition_only"]))],
+         f"of {n_cond} conditional questions", "annotation only"),
+        ("2  Retrieval", "hybrid retrieval, top 8",
+         [("condition chunks", pc(ret["condition_recall"])), ("answer chunks", pc(ret["answer_recall"])),
+          ("cond.-only chunks", pc(ret["condition_only_recall"]))],
+         "of gold chunks, retrieved", "annotation only"),
+        ("3  Evidence reduction", "condition chunks removed",
+         [("rerank-3", pc(ops["rr8to3"]["condition_dropped"])), ("NLI filter", pc(ops["nli"]["condition_dropped"])),
+          ("ConflictRAG-style", pc(ops["crs"]["condition_dropped"]))],
+         "of retrieved condition chunks", "annotation only"),
+        ("4  Generation", "gold conditions stated", gen,
+         "of gold conditions in context", "LLM, oracle context"),
+    ]
+    with plt.rc_context({"axes.grid": False}):
+        fig, ax = plt.subplots(figsize=(6.6, 2.15))
+        ax.set_xlim(0, 4)
+        ax.set_ylim(0, 1)
+        ax.axis("off")
+        w, gap = 0.9, 0.1
+        for i, (title, sub, lines, denom, how) in enumerate(stages):
+            x = i * (w + gap) + 0.02
+            ax.add_patch(FancyBboxPatch((x, 0.03), w, 0.93, boxstyle="round,pad=0.005,rounding_size=0.03",
+                                        linewidth=0.7, edgecolor=INK2, facecolor="#ffffff" if i < 3 else "#f3f2ee"))
+            ax.text(x + 0.035, 0.9, title, fontsize=8.4, fontweight="bold", va="top", color=INK)
+            ax.text(x + 0.035, 0.78, sub, fontsize=6.6, va="top", color=INK2, style="italic")
+            for k, (label, value) in enumerate(lines):
+                y = 0.64 - 0.1 * k
+                ax.text(x + 0.035, y, label, fontsize=6.8, va="top", color=INK)
+                ax.text(x + w - 0.035, y, value, fontsize=6.8, va="top", ha="right", color=INK, fontweight="bold")
+            ax.text(x + 0.035, 0.17, denom, fontsize=6.1, va="top", color=INK2)
+            ax.text(x + 0.035, 0.09, how, fontsize=6.1, va="top", color=ORANGE if i == 3 else BLUE, fontweight="bold")
+            if i < 3:
+                ax.add_patch(FancyArrowPatch((x + w + 0.008, 0.5), (x + w + gap - 0.008, 0.5), arrowstyle="-|>",
+                                             mutation_scale=7, linewidth=0.7, color=INK2))
+        fig.savefig(OUT / "pipeline.pdf", metadata=PDF_META)
+        plt.close(fig)
+
+
+FIGURES = (fig_pipeline, fig_separation, fig_recall, fig_operators)
 
 
 def main() -> int:

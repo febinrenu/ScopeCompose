@@ -9,6 +9,27 @@ and targets that the study no longer uses.
 
 ## Sessions
 
+### 2026-11-18 — sixth review round, new title
+
+- Title changed to *Conditional-Answer Fidelity in Retrieval-Augmented Generation: Attributing Condition Loss
+  to Chunk Segmentation, Hybrid Sparse–Dense Retrieval, Evidence-Reducing Operators and LLM Generation*;
+  submission files renamed `Conditional_Answer_Fidelity_in_RAG*`.
+- Four exploratory analyses (deviation 5 in `study/ANALYSIS_PLAN.md`), answered in `paper/response_to_reviewers.md`:
+  - prompt robustness (`study/prompts.py`): five more strategies on the hosted subsample for Qwen2.5-7B,
+    Llama-3.1-8B and Nemotron-3-Ultra. Condition recall 11.2–42.5% across all 18 prompt–generator pairs;
+    1 of 15 variant runs gains significantly on conditional questions, 8 lose on unconditional ones;
+    removing condition-only chunks lowers F1c in 18 of 18;
+  - context-preserving retrieval (`study/baselines.py`): sentence window, parent–child, hierarchical, query
+    expansion. Condition recall 70.0–73.4% against 72.7% for top-8; end to end on the hosted subsample
+    +0.3 to +1.9 on conditional questions, 0 of 16 comparisons significant;
+  - clean threshold protocol (`python -m study.qualifier clean`, system `qcclean`): AUC 0.72; against
+    top-8, −0.7 (Qwen) and +1.6 (Llama, unadjusted p = 0.033); Llama still not non-inferior;
+  - semantic matching (`study/semantic.py`): at most +0.3 recall (mutual entailment), +3.6 (either way).
+- Paper: Table 1 (closest work), Figure 1 (stages and denominators), Table 3 (prompts) replaces the
+  tuning-wording table; operator fidelity labels in Table 2; one reference added (Joren et al., ICLR 2025),
+  gpt-oss model card moved to a footnote; methods and results condensed. main.pdf 25 pages, review.pdf 24,
+  Word 25; `check_paper.py`, `check_tables.py` (85 values) and 2,017 tests pass.
+
 ### 2026-11-16 — five review rounds, authors, submission package, documentation
 
 - Five rounds of strict review answered in `paper/response_to_reviewers.md` (the last two rated 8.2 and 8.5 out of 10). Analyses

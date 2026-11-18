@@ -16,6 +16,10 @@ fold *f* is trained on the other four folds plus the tuning set. The tuning set
 is scored by a model trained on all five evaluation folds, and is the only
 place the inclusion threshold is chosen.
 
+A clean variant (``python -m study.qualifier clean``, added in revision) trains each fold's model
+without the tuning set and chooses that fold's threshold on the tuning questions under the same
+model, so no evaluation label shapes the threshold (see ``clean_protocol``).
+
     python -m study.qualifier train      # five fold models + the tuning model (GPU)
     python -m study.qualifier score      # out-of-fold scores for every candidate pair
 
@@ -133,6 +137,8 @@ def fold_plan() -> dict[str, list[str]]:
 
 
 def train_ids_for(fold: str, plan: dict[str, list[str]]) -> list[str]:
+    if fold.startswith("c"):        # clean protocol: the other four evaluation folds only, no tuning question
+        return [i for f, ids in plan.items() if f not in ("tuning", f"f{fold[1:]}") for i in ids]
     if fold == "tuning":
         return [i for f, ids in plan.items() if f != "tuning" for i in ids]
     return [i for f, ids in plan.items() if f != fold for i in ids]
@@ -229,8 +235,8 @@ def train_fold(fold: str, *, epochs: int = 2, batch: int = 4, accum: int = 8, lr
 # --------------------------------------------------------------------------- #
 
 
-def score_fold(fold: str, plan: dict[str, list[str]]) -> dict[str, dict[str, float]]:
-    """``qid -> {candidate chunk id: P(qualifies)}`` for the questions this fold scores."""
+def score_fold(fold: str, plan: dict[str, list[str]], qids: Sequence[str] | None = None) -> dict[str, dict[str, float]]:
+    """``qid -> {candidate chunk id: P(qualifies)}`` for the questions this fold scores (or ``qids``)."""
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -241,7 +247,7 @@ def score_fold(fold: str, plan: dict[str, list[str]]) -> dict[str, dict[str, flo
     tok = AutoTokenizer.from_pretrained(path)
     model = AutoModelForSequenceClassification.from_pretrained(path, dtype=torch.float32).to(device).eval()
     out: dict[str, dict[str, float]] = {}
-    for qid in plan[fold]:
+    for qid in (plan[fold] if qids is None else qids):
         q = idx[qid]
         pairs = candidate_pairs(q, env)
         out[qid] = {}
@@ -350,6 +356,67 @@ systems.register("adj")(adjacent)
 systems.register("page")(fullpage)
 
 
+# --------------------------------------------------------------------------- #
+# Clean threshold protocol (revision, round 6; deviation 5)
+# --------------------------------------------------------------------------- #
+#
+# In the pre-registered protocol the fold models are trained on the other four folds *and the
+# tuning set*, so the tuning questions cannot choose a fold's threshold; tau was chosen on the
+# tuning questions scored by a model trained on all five evaluation folds. Evaluation labels thus
+# shaped the model that set tau, though never the model that scored their own question.
+# The clean protocol removes that path: the model for fold k (``c<k>``) is trained on the other
+# four evaluation folds only, scores both fold k and the tuning questions, and fold k's threshold
+# tau_k is the one that maximises pair-level F1 on the tuning questions under that same model.
+# No label of fold k reaches either its scorer or its threshold.
+
+CLEAN_FOLDS = tuple(f"c{i}" for i in range(K_FOLDS))
+CLEAN_SCORES = MODELS / "scores_clean.json"
+
+
+def clean_protocol() -> dict:
+    plan = fold_plan()
+    tuning = plan["tuning"]
+    env, idx = systems.Env(), cqa.by_id()
+    gold_of = {qid: {p.candidate for p in candidate_pairs(idx[qid], env) if p.label} for qid in tuning}
+    out: dict = {"scores": {}, "threshold": {}, "tuning_f1": {}}
+    grid = [round(0.05 * i, 2) for i in range(1, 20)]
+    for i, fold in enumerate(CLEAN_FOLDS):
+        train_fold(fold)
+        ev = score_fold(fold, plan, plan[f"f{i}"])
+        tu = score_fold(fold, plan, tuning)
+        out["scores"].update(ev)
+
+        def f1_at(t: float) -> float:
+            tp = fp = fn = 0
+            for qid in tuning:
+                s = tu.get(qid, {})
+                picked = {cid for _, cid in sorted(((v, k) for k, v in s.items() if v >= t), reverse=True)[: BUDGET - ANCHOR_K]}
+                tp, fp, fn = tp + len(picked & gold_of[qid]), fp + len(picked - gold_of[qid]), fn + len(gold_of[qid] - picked)
+            return 2 * tp / (2 * tp + fp + fn) if tp else 0.0
+
+        best = max(grid, key=lambda t: (f1_at(t), -t))
+        out["threshold"][f"f{i}"] = best
+        out["tuning_f1"][f"f{i}"] = f1_at(best)
+        print(fold, best, round(f1_at(best), 3), flush=True)
+    CLEAN_SCORES.write_text(json.dumps(out), encoding="utf-8")
+    return out
+
+
+@lru_cache(maxsize=None)
+def _clean() -> tuple[dict, dict[str, str]]:
+    if not CLEAN_SCORES.exists():
+        raise FileNotFoundError(f"{CLEAN_SCORES} is missing; run `python -m study.qualifier clean`")
+    data = json.loads(CLEAN_SCORES.read_text(encoding="utf-8"))
+    fold_of = {qid: f for f, ids in fold_plan().items() if f != "tuning" for qid in ids}
+    return data, fold_of
+
+
+@systems.register("qcclean")
+def clean_completion(q: cqa.Question, env: systems.Env) -> systems.Context:
+    data, fold_of = _clean()
+    return complete(q, env, data["scores"].get(q.id, {}), float(data["threshold"][fold_of[q.id]]))
+
+
 @systems.register("qcoracle", oracle=False)
 def oracle_completion(q: cqa.Question, env: systems.Env) -> systems.Context:
     """Completion with a perfect scorer (revision, exploratory): the same top-``ANCHOR_K`` and the same
@@ -398,7 +465,7 @@ def choose_threshold(kind: str) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=("train", "score", "threshold", "report"))
+    ap.add_argument("action", choices=("train", "score", "threshold", "report", "clean"))
     ap.add_argument("--fold", default=None, help="train only this fold")
     args = ap.parse_args(argv)
     plan = fold_plan()
@@ -415,6 +482,8 @@ def main(argv: list[str] | None = None) -> int:
         zs = zero_shot_scores([idx[i] for ids in plan.values() for i in ids])
         SCORES.parent.mkdir(parents=True, exist_ok=True)
         SCORES.write_text(json.dumps({"trained": trained, "zeroshot": zs}), encoding="utf-8")
+    elif args.action == "clean":
+        clean_protocol()
     elif args.action == "threshold":
         chosen = {k: choose_threshold(k) for k in ("trained", "zeroshot")}
         THRESHOLD_FILE.write_text(json.dumps({k: v["threshold"] for k, v in chosen.items()}, indent=1), encoding="utf-8")

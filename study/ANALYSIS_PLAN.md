@@ -182,3 +182,22 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
    generators are compared on identical populations.
    Two Qwen2.5-7B `page` answers aborted by the server as repetition loops are scored as
    unanswered, the same rule as for truncated output.
+5. **Analyses added in the sixth review round (2026-11-18, after every earlier result was
+   computed).** All exploratory and unadjusted; none changes or replaces a planned test.
+   (i) *Prompt robustness* (`study/prompts.py`): with the gold context and with the condition-only
+   chunks removed (C2's ablation), the hosted subsample is answered under five condition-aware
+   prompting strategies besides the frozen v4 wording (direct condition extraction, explicit
+   answer-condition pairing, chain-of-condition reasoning, scenario-condition applicability checks,
+   structured evidence first), by Qwen2.5-7B, Llama-3.1-8B and Nemotron-3-Ultra. The five prompts
+   reuse the frozen lines, worked examples and output contract, were written before any of them was
+   run on evaluation questions, and were checked on 12 tuning questions for valid JSON only; none
+   was tuned. (ii) *Context-preserving retrieval designs* (`study/baselines.py`): sentence window,
+   parent-child, hierarchical (page then chunk) retrieval and query expansion with condition cue
+   words, at the top 8's word budget, measured model-free and end to end with both local
+   generators on the evaluation set. (iii) *Clean threshold protocol* for completion
+   (`study.qualifier clean`, system `qcclean`): each fold's scorer is trained on the other four
+   evaluation folds only and its threshold is chosen on the tuning questions under that same
+   scorer, so no evaluation label shapes any threshold; the pre-registered C7 and C8 stay as run.
+   (iv) *Semantic condition matching* (`study/semantic.py`): a missed gold condition is credited
+   when a stated non-gold condition and it entail each other under the study's NLI model (and, as a
+   lenient bound, when either entails the other).

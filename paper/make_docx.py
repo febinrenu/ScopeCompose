@@ -21,7 +21,7 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 PAPER = Path(__file__).resolve().parent
-OUT = PAPER / "submission" / "Where_Do_the_Conditions_Go.docx"
+OUT = PAPER / "submission" / "Conditional_Answer_Fidelity_in_RAG.docx"
 FONT = "Times New Roman"
 
 
@@ -171,7 +171,8 @@ def enumerate_labels(m) -> str:
 
 def front_matter() -> str:
     main = (PAPER / "main.tex").read_text(encoding="utf-8")
-    title = re.search(r"\\textbf\s*\{(Where Do.*?)\}", main, re.S).group(1).strip()
+    title = re.search(r"\\fontsize\{24\}\{24\}\\selectfont\\textbf\s*\{(.*?)\}\s*\\end\{center\}", main, re.S).group(1).strip()
+    title = title.replace("--", "\u2013")
     block = main[main.index("\\else", main.index("\\ifdefined\\reviewcopy\n\\begin{center}")):]
     block = block[:block.index("\\fi")]
     names = re.search(r"\\textbf\{%?\s*(Febin.*?)\}\s*\\vspace", block, re.S).group(1).strip()
@@ -272,7 +273,8 @@ def postprocess(path: Path) -> None:
                     p.paragraph_format.space_after = Pt(0 if not bio else 4)
                     p.paragraph_format.line_spacing = 1.0 if not bio else 1.15
                     if not bio:
-                        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if p.text[:1].isdigit() or p.text in ("--",) else None
+                        num = p.text[:1].isdigit() or p.text[:1] in "+−-" or p.text in ("--",)
+                        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if num else WD_ALIGN_PARAGRAPH.LEFT
                     for r in p.runs:
                         r.font.size = Pt(9 if not bio else 12)
         if bio:  # no borders on the biography layout table

@@ -8,7 +8,7 @@ The documents for the paper's study live next to the code they describe:
 |---|---|
 | [`../README.md`](../README.md) | the study, its findings, the repository layout, and how to reproduce every result and build the paper |
 | [`../study/ANALYSIS_PLAN.md`](../study/ANALYSIS_PLAN.md) | the analysis plan, committed before the evaluation, with dated deviations |
-| [`../paper/response_to_reviewers.md`](../paper/response_to_reviewers.md) | five rounds of review and the response to each point |
+| [`../paper/response_to_reviewers.md`](../paper/response_to_reviewers.md) | six rounds of review and the response to each point |
 | [`../paper/references_verified.md`](../paper/references_verified.md) | every reference checked against its primary source, and the claim it may support |
 | [`../PROGRESS.md`](../PROGRESS.md) | the dated history of the work |
 

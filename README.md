@@ -1,6 +1,7 @@
-# Where Do the Conditions Go?
+# Conditional-Answer Fidelity in Retrieval-Augmented Generation
 
-**Stage-wise Attribution of Condition Loss in Chunked Retrieval-Augmented Generation**
+**Attributing Condition Loss to Chunk Segmentation, Hybrid Sparse–Dense Retrieval, Evidence-Reducing Operators and
+LLM Generation**
 
 Febin K. Renu, Johann Shoni George, G. Naveen Sundar and D. Narmadha.
 Karunya Institute of Technology and Sciences, Coimbatore, India.
@@ -75,10 +76,10 @@ All figures are on English UK government guidance. Every number below is generat
 | Stage | Finding |
 |---|---|
 | **Chunking** | With 150-word chunks, the gold evidence of **72.1%** of conditional questions spans more than one chunk (42.2% of unconditional ones). For **38.7%**, some condition sits in a chunk holding nothing else the answer needs. Removing those condition-only chunks from the gold context costs **5.2** (Qwen2.5-7B) and **5.7** (Llama-3.1-8B) points of F1 with conditions. |
-| **Retrieval** | No bias against conditions as such. At k = 8 the hybrid retriever finds **74.5%** of condition chunks and **74.0%** of answer chunks, but only **67.7%** of condition-only chunks. |
+| **Retrieval** | No bias against conditions as such. At k = 8 the hybrid retriever finds **74.5%** of condition chunks and **74.0%** of answer chunks, but only **67.7%** of condition-only chunks. Sentence-window, parent–child, hierarchical retrieval and condition-expanded queries pass on no more conditions at the same word budget (70.0–73.4% against 72.7%), and change F1 with conditions end to end by +0.3 to +1.9 points, none significantly. |
 | **Evidence reduction** | The reranker, NLI contradiction filter and ConflictRAG-style resolver remove condition chunks as readily as answer chunks. For example, reranking the top 8 down to 3 removes 17.5% of condition chunks and 19.2% of answer chunks. On RAMDocs, where discarding is right, they do not single out misinformation either: reranking keeps 66.8% of misinformation documents and 57.4% of correct ones. |
-| **Generation** | Gives the largest observed deficit. With every gold condition in context, the generators state only **21.0%** (Qwen2.5-7B), **18.2%** (Llama-3.1-8B), 21.1% (gpt-oss-20b), 27.9% (Gemma-4-31B) and **32.1%** (Nemotron-3-Ultra, 550B) of the gold conditions as conditions, and most of the rest are never cited at all. A second pass asking only for conditions roughly doubles recall (21.0% → 44.0% for Qwen), but attaches conditions to 77.8% and 96.8% of unconditional answers. |
-| **A remedy** | *Qualifier-aware context completion* adds the same-page chunks that a cross-fitted DeBERTa-v3 scorer predicts state a condition. It helps none of the five generators. Its scorer ranks condition chunks worse than the untrained reranker (AUC 0.70 vs 0.78) and does not transfer to the project's own corpus (AUC 0.36). The paper reports this as a pre-registered negative result. |
+| **Generation** | Gives the largest observed deficit. With every gold condition in context, the generators state only **21.0%** (Qwen2.5-7B), **18.2%** (Llama-3.1-8B), 21.1% (gpt-oss-20b), 27.9% (Gemma-4-31B) and **32.1%** (Nemotron-3-Ultra, 550B) of the gold conditions as conditions, and most of the rest are never cited at all. A second pass asking only for conditions roughly doubles recall (21.0% → 44.0% for Qwen), but attaches conditions to 77.8% and 96.8% of unconditional answers. Five other prompting strategies, including chain-of-condition reasoning, leave recall between 11.2% and 42.5% across three generators; those that state more conditions mostly attach them to unconditional answers too. |
+| **A remedy** | *Qualifier-aware context completion* adds the same-page chunks that a cross-fitted DeBERTa-v3 scorer predicts state a condition. It helps none of the five generators. Its scorer ranks condition chunks worse than the untrained reranker (AUC 0.70 vs 0.78) and does not transfer to the project's own corpus (AUC 0.36). The paper reports this as a pre-registered negative result. Under a clean threshold protocol, in which no evaluation label shapes any threshold, the result is the same. |
 
 ### Confirmatory family
 
@@ -154,7 +155,11 @@ Every system differs only in **which chunks reach the generator** (`study/system
 | | `select` | listwise selection by the generator, one call (Astute-RAG style) |
 | Context completion | `adj`, `page` | top 5 plus adjacent chunks, or every chunk of the top-ranked page |
 | | `qc0`, `qc` | top 5 plus same-page chunks scored by the untrained reranker, or by the trained scorer |
+| | `qcclean` | `qc` with each fold's scorer and threshold set without any evaluation label (clean protocol) |
+| Context-preserving retrieval | `sentwin`, `parentchild` | single elements retrieved, passed with ±2 neighbours or with their top-level section, at the top 8's word budget (`study/baselines.py`) |
+| | `top8` under rankers `hier`, `qexp` | pages first then their best chunks; or the query expanded with condition cue words |
 | Revision diagnostics | `*_verify`, `qcoracle` | a second call that asks only for conditions; completion with a perfect scorer |
+| | `gold_p<variant>` | the gold context under five other prompting strategies (`study/prompts.py`) |
 
 ### Generator, metric and statistics
 
@@ -210,8 +215,17 @@ as a dated deviation, with its reason:
    - an audit of exact element matching;
    - local versus hosted contrasts on identical questions.
 
+5. **Sixth review round** (exploratory, 2026-11-18):
+   - prompt robustness: five condition-aware prompting strategies besides the frozen one, with the gold
+     context and with the condition-only chunks removed (`study/prompts.py`);
+   - context-preserving retrieval: sentence window, parent–child, hierarchical and query expansion
+     (`study/baselines.py`);
+   - a clean threshold protocol for completion, in which no evaluation label shapes any threshold
+     (`python -m study.qualifier clean`);
+   - semantic condition matching with the NLI model (`study/semantic.py`).
+
 The diagnostics are exploratory, and none changes a confirmatory result.
-[`paper/response_to_reviewers.md`](paper/response_to_reviewers.md) records five rounds of review and the
+[`paper/response_to_reviewers.md`](paper/response_to_reviewers.md) records six rounds of review and the
 response to each point.
 
 ## 7. Repository layout
@@ -232,6 +246,10 @@ study/
   run.py                 run one cell (system x model x question set); resumable
   schedule.py            run the local matrix or the hosted replication
   revision.py            diagnostics added in revision
+  prompts.py             prompt robustness: five more prompting strategies (sixth review round)
+  baselines.py           context-preserving retrieval designs (sixth review round)
+  semantic.py            NLI-based semantic matching of missed conditions (sixth review round)
+  round6.py              results of the sixth-round analyses, for report.py
   probe.py               small tuning sample for checking a model before spending quota
   ramdocs.py, ram.py     RAMDocs loader and runner (documents always in reranker order)
   ood.py                 out-of-distribution check on the project's own corpus
@@ -245,6 +263,7 @@ study/
   artifacts/
     rankings/            saved ranked lists
     operators/           saved decisions of the model-free operators
+    semantic/            saved NLI scores for semantic condition matching
     qualifier/           out-of-fold scorer outputs, threshold and OOD scores (checkpoints not committed)
 results/results.json     the record of every number
 third_party/conditionalqa/  official scorer, unchanged, with licence
@@ -258,7 +277,7 @@ paper/
   numbers.tex             one LaTeX macro per reported number; nothing in the text is typed by hand
   review.tex              anonymised review copy (no authors or biographies)
   check_paper.py          journal limits and project rules (pages, references, abstract, hand-typed numbers)
-  check_tables.py         rescoring of Tables 3 and 5 from the raw outputs with the official evaluate.py
+  check_tables.py         rescoring of Tables 4 and 7 from the raw outputs with the official evaluate.py
   make_docx.py            Word version built from the same sources
   make_submission.py      LaTeX source .zip for the journal, test-compiled from the unpacked package
   references_verified.md  every reference checked against its primary source, and what it may be cited for
@@ -302,7 +321,7 @@ python -m study.fetch_data           # downloads ConditionalQA and RAMDocs, veri
 python -m study.report       # results/results.json, paper/numbers.tex, paper/tables/*.tex
 python -m study.figures      # paper/figures/*.pdf
 python -m study.confirm      # prints the confirmatory family
-python paper/check_tables.py # independent rescoring of Tables 3 and 5 with the official evaluate.py
+python paper/check_tables.py # independent rescoring of Tables 4 and 7 with the official evaluate.py
 ```
 
 This uses only the committed model outputs (`study/runs/`), rankings and operator decisions
@@ -338,6 +357,13 @@ python -m study.schedule hosted                # replication cells, paced to the
 python -m study.revision local                 # revision diagnostics, local
 python -m study.revision hosted                # revision diagnostics, hosted, and the provider check
 python -m study.ood                            # out-of-distribution check of the scorer
+python -m study.qualifier clean                # sixth round: clean-protocol scorers (GPU), then
+python -m study.run --system qcclean --model qwen7b llama8b --set eval
+python -m study.baselines rank                 # element, page and expanded-query rankings
+python -m study.baselines run                  # the four retrieval designs, both local models
+python -m study.prompts local                  # five prompting strategies, local models
+python -m study.prompts hosted --model nemotron
+python -m study.semantic                       # NLI scores for semantic matching
 python -m study.report && python -m study.figures
 ```
 
@@ -361,7 +387,7 @@ tectonic -X compile review.tex     # review.pdf, anonymised review copy
 python check_paper.py              # pages <= 25, references <= 25, abstract 150-250 words,
                                    # citation order, no hand-typed numbers, no overfull lines
 python check_tables.py             # tables against the raw outputs
-python make_docx.py                # submission/Where_Do_the_Conditions_Go.docx (25 pages in Word)
+python make_docx.py                # submission/Conditional_Answer_Fidelity_in_RAG.docx (25 pages in Word)
 python make_submission.py          # submission/..._LaTeX_source.zip, test-compiled
 ```
 
@@ -391,6 +417,10 @@ These are stated in the paper too:
   scaling experiment.
 - Each operator is an implementation of a published method's evidence-reducing step, not the complete
   system. The ConflictRAG-style resolver implements three of the original five credibility criteria.
+- One generator prompt was frozen for every system. Six prompting strategies were compared in revision, but
+  they do not span every reasonable prompt, so the generation finding is a claim about those strategies.
+- No human-validated sample of the metric's false negatives was drawn; token-overlap and NLI-based matching
+  both leave the conclusion unchanged.
 - RAMDocs mixes conflict with ambiguity, and its misinformation is synthetic.
 - All texts are English UK government guidance. Healthcare, financial and legal documents are structured
   differently, and the conclusions are claims about structured policy guidance.
@@ -428,8 +458,9 @@ The paper is not yet published. Until it is, please cite it as:
 
 ```bibtex
 @unpublished{renu2026conditions,
-  title  = {Where Do the Conditions Go? Stage-wise Attribution of Condition Loss in
-            Chunked Retrieval-Augmented Generation},
+  title  = {Conditional-Answer Fidelity in Retrieval-Augmented Generation: Attributing Condition
+            Loss to Chunk Segmentation, Hybrid Sparse-Dense Retrieval, Evidence-Reducing Operators
+            and {LLM} Generation},
   author = {Renu, Febin K. and George, Johann Shoni and Sundar, G. Naveen and Narmadha, D.},
   note   = {Manuscript prepared for the Journal of Trends in Computer Science and Smart Technology},
   year   = {2026}
