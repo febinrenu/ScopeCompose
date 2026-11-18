@@ -9,6 +9,15 @@ and targets that the study no longer uses.
 
 ## Sessions
 
+### 2026-11-18 — eighth review round (proofreading and audit)
+
+- Missing space in the introduction fixed; "largest measured deficit" used throughout.
+- Abstract separates the frozen-prompt maximum (32.1%, computed over the five generators) from the
+  six-strategy maximum (42.5%).
+- Condition recall, condition coverage and chunk recall defined in Section 3.6 and used consistently.
+- Reference audit: all DOIs (Crossref) and arXiv IDs resolved and compared with each entry; all match (the
+  BM25 monograph's Crossref record is wrong, the publisher's page confirms the citation).
+
 ### 2026-11-18 — seventh review round (reporting corrections)
 
 - "Zero-shot" replaced by four in-context demonstrations (paper Section 3.2, `study/cqa.py`).

@@ -1111,6 +1111,7 @@ MACROS.update({
     "prMaxGain": ("prompt_robustness.max_gain_cond", lambda x: f"{100 * x:+.1f}".replace("-", "$-$")),
     "prNSigLossUncond": ("prompt_robustness.n_sig_loss_uncond", integer),
     "prMaxRecallLocal": ("prompt_robustness.max_recall_local", pct),
+    "prMaxRecallFrozen": ("prompt_robustness.max_recall_frozen", pct),
     "clThMin": ("clean_threshold.threshold_min", lambda x: f"{x:.2f}"),
     "clThMax": ("clean_threshold.threshold_max", lambda x: f"{x:.2f}"),
     "clAuc": ("clean_threshold.auc", lambda x: f"{x:.2f}"),

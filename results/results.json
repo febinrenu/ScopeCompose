@@ -10076,6 +10076,7 @@
   "max_any_uncond": 0.47,
   "max_gain_cond": 0.0526362011029572,
   "max_recall": 0.4246575342465753,
+  "max_recall_frozen": 0.32054794520547947,
   "max_recall_local": 0.2821917808219178,
   "min_any_uncond": 0.15,
   "min_recall": 0.11232876712328767,

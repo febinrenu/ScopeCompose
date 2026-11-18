@@ -87,6 +87,13 @@ def prompt_robustness() -> dict:
     out["n_sig_loss_uncond"] = sum(r["vs_v4_unconditional"]["high"] < 0 for r in variants if "vs_v4_unconditional" in r)
     local = [r["conditional"]["cond_recall"] for m in LOCAL for r in out.get(m, {}).values()]
     out["max_recall_local"] = max(local)
+    # the frozen prompt's best generator, over all five (local on the evaluation set, hosted on the subsample)
+    frozen = []
+    for qset, models in (("eval", LOCAL), ("hosted", ("oss20b", "gemma31b", "nemotron"))):
+        for m in models:
+            sc = score_cell(cell_path("gold", m, qset, systems.Env()))
+            frozen.append(_stats(sc, [q for q, v in sc.items() if v.kind == "conditional"])["cond_recall"])
+    out["max_recall_frozen"] = max(frozen)
     return out
 
 

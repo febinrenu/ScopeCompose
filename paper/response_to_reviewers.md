@@ -429,3 +429,26 @@ We thank the reviewer. This round changes reporting, terminology and claims; it 
   - all at temperature 0.
   The method now also states the larger output budget (up to 1,536 tokens) given to the reasoning prompt variants.
 - The references were checked against their sources (`paper/references_verified.md`). The statements (funding, ethics, conflict of interest, acknowledgement with the AI-use disclosure) precede the references, as the journal requires.
+
+---
+
+## Eighth round (journal-style review, 8.9/10, minor corrections)
+
+We thank the reviewer. This round corrects text only; no analysis changed.
+
+**1. Missing space.** Corrected in the introduction ("…under every prompt we tried. With every condition…"). A scan of the extracted text of both PDFs for a full stop, colon or semicolon followed directly by a capital letter now finds none. The introduction, results and conclusion now say "largest measured deficit", consistent with the abstract.
+
+**2. The abstract's generation sentence.** It now distinguishes the two maxima: "with every condition in context, the generators state at most 32.1% of the gold conditions as conditions under the frozen prompt, rising to at most 42.5% across six prompting strategies; strategies that state more conditions also attach conditions to unconditional answers." The 32.1% is computed as the maximum over all five generators under the frozen prompt (`prompt_robustness.max_recall_frozen`), not copied from one model.
+
+**3. Terminology.** Section 3.6 now defines three quantities and keeps them apart:
+- **condition recall:** the share of gold conditions a generator states as conditions, with condition precision as its counterpart;
+- **condition coverage:** the share of gold condition elements present in the context;
+- **chunk recall:** the share of gold chunks retrieved.
+
+Every use was checked. The retrieval comparison in Section 4.2 now speaks of the chunk recall of condition chunks; the section-aware and oracle-completion results in Sections 4.6 and 4.7 use condition coverage; and the generation results use condition recall throughout.
+
+**4. Reference verification.** Every DOI was resolved through Crossref, and every arXiv identifier through the arXiv API. Titles, author lists, years and page ranges were compared automatically with each entry, and all match.
+- **BM25 monograph:** Crossref records it as volume 4, issue 1–2, pages 1–174. The publisher's own page gives Vol. 3, No. 4, pp. 333–389 (2009), which is what we cite.
+- **Llama 3 report:** it lists the first 19 authors, an ellipsis and the last author, as APA 7 requires.
+- **Entries without a DOI:** NeurIPS 2020, COLM 2025, ICLR 2023 and 2025, TMLR 2022, the reranker model card, and Holm (1979). These were checked against their proceedings or publisher pages (`paper/references_verified.md`).
+- **Claims:** what each reference is cited for is recorded in the same file.
