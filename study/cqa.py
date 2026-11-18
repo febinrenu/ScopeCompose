@@ -329,8 +329,9 @@ def build_splits(*, seed: int = 0) -> dict:
       pages. Prompts and thresholds are chosen here and nowhere else.
     * **eval** -- from the remaining pages: every conditional question, every
       unanswerable one, and ``N_UNCONDITIONAL`` unconditional ones sampled at
-      random. The evaluated systems are zero-shot, so the benchmark's training
-      questions are as unseen to them as its dev questions; using both is what
+      random. No evaluated system is trained on the benchmark (the generator sees
+      only four in-context demonstrations from the tuning pages), so its training
+      questions are as unseen as its dev questions; using both is what
       gives the conditional stratum enough questions to test anything.
 
     Deterministic in ``seed``. The result is written to ``splits.json`` and

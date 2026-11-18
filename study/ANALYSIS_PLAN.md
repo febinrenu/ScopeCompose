@@ -201,3 +201,9 @@ subsample; `gold_nocondchk` on its 150 conditional questions.
    (iv) *Semantic condition matching* (`study/semantic.py`): a missed gold condition is credited
    when a stated non-gold condition and it entail each other under the study's NLI model (and, as a
    lenient bound, when either entails the other).
+6. **Primary completion analysis (2026-11-18, seventh review round).** In the pre-registered protocol the
+   threshold for completion was chosen under a scorer trained on all five evaluation folds, so evaluation
+   labels shaped the threshold. The clean protocol of deviation 5 (iii) is therefore reported as the primary
+   completion analysis: C7 and C8 in the paper use `qcclean`, with Holm over C1-C7 recomputed with that C7.
+   The pre-registered protocol is reported beside it as C7^p and C8^p (Holm over C1-C6 with the original C7),
+   as a disclosed deviation rather than as independent evidence. The conclusion is the same under both.

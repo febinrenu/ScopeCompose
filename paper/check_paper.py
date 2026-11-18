@@ -113,7 +113,7 @@ def main() -> int:
     # Numbers fixed by the design (not measured) are allowed when listed here.
     design = {"0", "1", "2", "3", "4", "5", "8", "13", "14", "20", "27", "50", "56.6", "100", "120", "150", "300",
               "000", "2,000", "20,000", "95", "1.00", "0.05", "15", "21.15", "40", "60",
-              "768", "072", "024", "192", "18",  # token budgets and an example age
+              "768", "072", "024", "192", "536", "18",  # token budgets and an example age
               "0.5"}  # the contradiction filter's probability threshold
     stray = [t for t in stray if t not in design]
     if stray:

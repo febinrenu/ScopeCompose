@@ -12,6 +12,7 @@ built by ``study.report``:
 from __future__ import annotations
 
 import bisect
+import json
 
 from study import cqa, systems
 
@@ -161,6 +162,23 @@ def clean_threshold() -> dict:
                 row[f"vs_qc_{pop_name}"] = r
         if row:
             out["e2e"][m] = row
+    # The clean protocol is the primary completion analysis: Holm over the confirmatory family with C7 under
+    # the clean protocol in place of the pre-registered one, and C8's non-inferiority check under it.
+    from metrics.stats import holm_adjust
+
+    from study.report import RESULTS
+
+    conf = json.loads(RESULTS.read_text(encoding="utf-8")).get("confirmatory", {}) if RESULTS.exists() else {}
+    for m, row in out["e2e"].items():
+        fam = conf.get(m, {}).get("family", {})
+        c7 = row.get("vs_top8_conditional")
+        if c7 is not None and all(f"C{i}" in fam for i in range(1, 7)):
+            ps = {f"C{i}": fam[f"C{i}"]["p"] for i in range(1, 7)} | {"C7": c7["p"]}
+            c7["p_holm"], c7["reject"] = holm_adjust(ps)["C7"]
+        c8 = row.get("vs_top8_unconditional")
+        if c8 is not None:
+            c8["margin"] = confirm.NI_MARGIN
+            c8["non_inferior"] = c8["low"] > -confirm.NI_MARGIN
     return out
 
 

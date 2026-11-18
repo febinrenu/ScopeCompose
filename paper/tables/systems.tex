@@ -1,5 +1,5 @@
 \begin{table}[!htbp]\centering
-\textbf{Table 2.} The systems. Each differs only in which chunks reach the same generator. Operators are marked by how closely they follow the method they are named after: [S] a standard component, not a reproduction; [P] a partial reproduction; [R] a reduction of the method to its evidence-reducing step. $^\dagger$\,Exploratory in the analysis plan; $^\ddagger$\,added in revision, exploratory.\\\vspace{5pt}
+\textbf{Table 2.} The systems. Each differs only in which chunks reach the same generator. Operators are marked by how closely they follow the method they are named after: [S] a standard component, not a reproduction; [P] a partial reproduction; [R] a reduction of the method to its evidence-reducing step. $^\dagger$\,Exploratory in the analysis plan; $^\ddagger$\,added in revision (exploratory, except the clean threshold protocol, a corrected re-analysis that is primary for completion).\\\vspace{5pt}
 {\fontsize{9}{11}\selectfont
 \begin{tabular}{L{4.3cm}L{10.6cm}}
 \toprule
@@ -26,8 +26,8 @@
 \texttt{adjacent}$^\dagger$ & the top 5 plus the chunks next to them on their pages \\
 \texttt{page}$^\dagger$ & every chunk of the top-ranked chunk's page \\
 \texttt{completion (untrained)}$^\dagger$ & the top 5 plus same-page chunks scored by an off-the-shelf reranker \\
-\texttt{completion} (ours) & the top 5 plus same-page chunks a trained scorer predicts state a condition \\
-\texttt{completion (clean $\tau$)}$^\ddagger$ & the same, with each fold's scorer and threshold set without any evaluation label \\
+\texttt{completion} (ours)$^\ddagger$ & the top 5 plus same-page chunks a trained scorer predicts state a condition; each fold's scorer and threshold set without any evaluation label \\
+\texttt{completion (pre-reg.\ $\tau$)} & the same, with the pre-registered threshold, chosen under a scorer trained on the evaluation folds \\
 \midrule
 \multicolumn{2}{l}{\emph{Context-preserving retrieval$^\ddagger$ (budget: the words of the top 8)}}\\
 \texttt{sentence window} & single elements retrieved, each passed with two neighbours on either side \\

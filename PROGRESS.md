@@ -9,6 +9,16 @@ and targets that the study no longer uses.
 
 ## Sessions
 
+### 2026-11-18 — seventh review round (reporting corrections)
+
+- "Zero-shot" replaced by four in-context demonstrations (paper Section 3.2, `study/cqa.py`).
+- Completion: the clean threshold protocol is now primary (C7 and C8, Holm recomputed over C1-C7:
+  Qwen −0.7, p_Holm 1.000; Llama +1.6, p_Holm 0.134); the pre-registered protocol is reported as C7^p and
+  C8^p (deviation 6). Tables 2, 4 and 5 relabelled; `paper/check_tables.py` follows the new labels.
+- "Pass on no more" replaced by "do not consistently improve condition coverage"; pre-registration
+  language made precise; an "Evidential status" paragraph classifies every analysis; attribution defined as
+  stage-wise diagnosis, not causal decomposition. main.pdf 25 pages, review.pdf 24; all checks pass.
+
 ### 2026-11-18 — sixth review round, new title
 
 - Title changed to *Conditional-Answer Fidelity in Retrieval-Augmented Generation: Attributing Condition Loss

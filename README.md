@@ -76,10 +76,10 @@ All figures are on English UK government guidance. Every number below is generat
 | Stage | Finding |
 |---|---|
 | **Chunking** | With 150-word chunks, the gold evidence of **72.1%** of conditional questions spans more than one chunk (42.2% of unconditional ones). For **38.7%**, some condition sits in a chunk holding nothing else the answer needs. Removing those condition-only chunks from the gold context costs **5.2** (Qwen2.5-7B) and **5.7** (Llama-3.1-8B) points of F1 with conditions. |
-| **Retrieval** | No bias against conditions as such. At k = 8 the hybrid retriever finds **74.5%** of condition chunks and **74.0%** of answer chunks, but only **67.7%** of condition-only chunks. Sentence-window, parent–child, hierarchical retrieval and condition-expanded queries pass on no more conditions at the same word budget (70.0–73.4% against 72.7%), and change F1 with conditions end to end by +0.3 to +1.9 points, none significantly. |
+| **Retrieval** | No bias against conditions as such. At k = 8 the hybrid retriever finds **74.5%** of condition chunks and **74.0%** of answer chunks, but only **67.7%** of condition-only chunks. Sentence-window, parent–child, hierarchical retrieval and condition-expanded queries do not consistently improve condition coverage at the same word budget (70.0–73.4% against 72.7%), and change F1 with conditions end to end by +0.3 to +1.9 points, none significantly. |
 | **Evidence reduction** | The reranker, NLI contradiction filter and ConflictRAG-style resolver remove condition chunks as readily as answer chunks. For example, reranking the top 8 down to 3 removes 17.5% of condition chunks and 19.2% of answer chunks. On RAMDocs, where discarding is right, they do not single out misinformation either: reranking keeps 66.8% of misinformation documents and 57.4% of correct ones. |
 | **Generation** | Gives the largest observed deficit. With every gold condition in context, the generators state only **21.0%** (Qwen2.5-7B), **18.2%** (Llama-3.1-8B), 21.1% (gpt-oss-20b), 27.9% (Gemma-4-31B) and **32.1%** (Nemotron-3-Ultra, 550B) of the gold conditions as conditions, and most of the rest are never cited at all. A second pass asking only for conditions roughly doubles recall (21.0% → 44.0% for Qwen), but attaches conditions to 77.8% and 96.8% of unconditional answers. Five other prompting strategies, including chain-of-condition reasoning, leave recall between 11.2% and 42.5% across three generators; those that state more conditions mostly attach them to unconditional answers too. |
-| **A remedy** | *Qualifier-aware context completion* adds the same-page chunks that a cross-fitted DeBERTa-v3 scorer predicts state a condition. It helps none of the five generators. Its scorer ranks condition chunks worse than the untrained reranker (AUC 0.70 vs 0.78) and does not transfer to the project's own corpus (AUC 0.36). The paper reports this as a pre-registered negative result. Under a clean threshold protocol, in which no evaluation label shapes any threshold, the result is the same. |
+| **A remedy** | *Qualifier-aware context completion* adds the same-page chunks that a cross-fitted DeBERTa-v3 scorer predicts state a condition. It helps none of the five generators. Its scorer ranks condition chunks worse than the untrained reranker (AUC 0.70 vs 0.78) and does not transfer to the project's own corpus (AUC 0.36). The primary analysis uses a clean threshold protocol, in which no evaluation label shapes any threshold; the pre-registered protocol, whose threshold was chosen under a scorer trained on evaluation labels, is reported beside it and gives the same conclusion. |
 
 ### Confirmatory family
 
@@ -94,8 +94,10 @@ questions. Each entry is the paired difference in F1 with conditions, with a pag
 | C4 | rerank-3 vs top-8 | 0.0 [−1.6, +1.4], p = 1.000 | +1.0 [−0.5, +2.6], p = 0.690 |
 | C5 | NLI filter vs top-8 | −0.3 [−1.3, +0.6], p = 1.000 | +0.6 [−0.5, +1.6], p = 0.690 |
 | C6 | ConflictRAG-style vs top-8 | −0.4 [−1.4, +0.4], p = 1.000 | −0.4 [−1.5, +0.7], p = 0.690 |
-| C7 | completion vs top-8 (conditional) | 0.0 [−1.2, +1.2], p = 1.000 | +1.3 [−0.1, +2.7], p = 0.390 |
-| C8 | completion vs top-8 (unconditional, non-inferiority, margin 2 points) | +3.7 [+0.8, +7.3]: non-inferior | −2.5 [−6.1, +1.2]: not shown |
+| C7 | completion vs top-8 (conditional), clean threshold protocol | −0.7 [−2.0, +0.5], p = 1.000 | +1.6 [+0.2, +3.1], p = 0.134 |
+| C8 | the same, unconditional, non-inferiority (margin 2 points) | +1.6 [−1.5, +4.7]: non-inferior | −2.6 [−6.1, +1.6]: not shown |
+| C7^p | completion vs top-8 (conditional), pre-registered threshold | 0.0 [−1.2, +1.2], p = 1.000 | +1.3 [−0.1, +2.7], p = 0.390 |
+| C8^p | the same, unconditional, non-inferiority | +3.7 [+0.8, +7.3]: non-inferior | −2.5 [−6.1, +1.2]: not shown |
 
 The three larger hosted generators repeat the key systems on a 300-question subsample. Every main effect
 keeps its direction, and the losses before generation do not shrink for them (paper, Section 4.8).
@@ -224,8 +226,12 @@ as a dated deviation, with its reason:
      (`python -m study.qualifier clean`);
    - semantic condition matching with the NLI model (`study/semantic.py`).
 
-The diagnostics are exploratory, and none changes a confirmatory result.
-[`paper/response_to_reviewers.md`](paper/response_to_reviewers.md) records six rounds of review and the
+6. **Primary completion analysis** (2026-11-18): because the pre-registered threshold was chosen under a scorer
+   trained on evaluation labels, the clean protocol is reported as C7 and C8, with Holm recomputed, and the
+   pre-registered protocol beside it as C7^p and C8^p. The conclusion is the same under both.
+
+The diagnostics are exploratory, and none changes a confirmatory conclusion.
+[`paper/response_to_reviewers.md`](paper/response_to_reviewers.md) records seven rounds of review and the
 response to each point.
 
 ## 7. Repository layout

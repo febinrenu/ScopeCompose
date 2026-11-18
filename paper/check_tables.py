@@ -23,7 +23,7 @@ LABEL = {"closed": "closed-book", "gold": "gold", "gold_nocondel": r"gold\,$-$\,
          "gold_nocondchk": r"gold\,$-$\,cond.-only chunks", "goldpad8": r"gold\,+\,distractors", "top3": "top-3",
          "top8": "top-8", "rr8to3": "rerank-3", "nli": "NLI filter", "crs": "ConflictRAG-style",
          "select": "listwise selection", "adj": "adjacent", "page": "page", "qc0": "completion (untrained)",
-         "qc": "completion", "qcclean": r"completion (clean $\tau$)", "sentwin": "sentence window",
+         "qc": r"completion (pre-reg.\ $\tau$)", "qcclean": "completion", "sentwin": "sentence window",
          "parentchild": "parent-child"}
 
 

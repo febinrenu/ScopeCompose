@@ -1126,6 +1126,8 @@ for _m, _mn in (("qwen7b", "Qwen"), ("llama8b", "Llama")):
     MACROS[f"clCSeven{_mn}Pt"] = (f"clean_threshold.e2e.{_m}.vs_top8_conditional", short_effect)
     MACROS[f"clCEightLow{_mn}"] = (f"clean_threshold.e2e.{_m}.vs_top8_unconditional", lower_bound)
     MACROS[f"clVsQc{_mn}Pt"] = (f"clean_threshold.e2e.{_m}.vs_qc_conditional", short_effect)
+    MACROS[f"clCSevenHolm{_mn}"] = (f"clean_threshold.e2e.{_m}.vs_top8_conditional.p_holm",
+                                    lambda x: "<0.001" if x < 0.001 else f"{x:.3f}")
     for _d, _dn in (("sentwin", "Sentwin"), ("parentchild", "Parent"), ("hier", "Hier"), ("qexp", "Qexp")):
         for _pop, _popn in (("conditional", "Cond"), ("unconditional", "Uncond")):
             MACROS[f"bl{_dn}{_popn}{_mn}"] = (f"baselines.e2e.{_m}.{_d}.{_pop}", effect)
@@ -1224,9 +1226,9 @@ LABEL = {
     "goldpad8": r"\texttt{gold\,+\,distractors}", "top3": r"\texttt{top-3}", "top8": r"\texttt{top-8}",
     "rr8to3": r"\texttt{rerank-3}", "nli": r"\texttt{NLI filter}", "crs": r"\texttt{ConflictRAG-style}",
     "grade": r"\texttt{relevance grading}", "select": r"\texttt{listwise selection}", "adj": r"\texttt{adjacent}",
-    "page": r"\texttt{page}", "qc0": r"\texttt{completion (untrained)}", "qc": r"\texttt{completion} (ours)",
+    "page": r"\texttt{page}", "qc0": r"\texttt{completion (untrained)}", "qc": r"\texttt{completion (pre-reg.\ $\tau$)}",
     "full": r"\texttt{full context}", "oracle": r"\texttt{oracle discard}", "rr3": r"\texttt{rerank-3}",
-    "qcclean": r"\texttt{completion (clean $\tau$)}", "sentwin": r"\texttt{sentence window}",
+    "qcclean": r"\texttt{completion} (ours)", "sentwin": r"\texttt{sentence window}",
     "parentchild": r"\texttt{parent-child}", "hier": r"\texttt{hierarchical}", "qexp": r"\texttt{query expansion}",
 }
 #: Marks in the end-to-end table: exploratory in the plan, and added in revision.
@@ -1237,7 +1239,7 @@ E2E_GROUPS = (
     ("Oracle ladder", ("closed", "gold", "gold_nocondel", "gold_nocondchk", "goldpad8")),
     ("Retrieval", ("top3", "top8")),
     ("Evidence-reducing operators", ("rr8to3", "nli", "crs", "select")),
-    ("Context completion", ("adj", "page", "qc0", "qc", "qcclean")),
+    ("Context completion", ("adj", "page", "qc0", "qcclean", "qc")),
 )
 DASH = "--"
 
@@ -1282,7 +1284,8 @@ E2E_TABLE = "\n".join([
     r"unconditional (U) questions, and the share of gold condition elements in the context that the generator "
     r"cites anywhere (cited, \%). C: \nEvalCond{} questions; U: \nEvalUncond{}. The C2 test in Table 5 uses "
     r"only the \nCondOnlyEval{} conditional questions with a condition-only gold chunk. "
-    r"$^\dagger$\,Exploratory in the analysis plan; $^\ddagger$\,added in revision, exploratory.\\\vspace{5pt}",
+    r"$^\dagger$\,Exploratory in the analysis plan; $^\ddagger$\,corrected re-analysis added in revision: the clean "
+    r"threshold protocol, primary for completion.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
     r"\begin{tabular}{L{4.6cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}P{1.35cm}}",
     r"\toprule",
@@ -1301,7 +1304,10 @@ CONFIRM_LABEL = {
     "C3": ("gold + distractors vs.\\ top-8", "C"), "C4": ("rerank-3 vs.\\ top-8", "C"),
     "C5": ("NLI filter vs.\\ top-8", "C"), "C6": ("ConflictRAG-style vs.\\ top-8", "C"),
     "C7": ("completion vs.\\ top-8", "C"), "C8": ("completion vs.\\ top-8 (non-inferiority)", "U"),
+    "C7p": ("completion vs.\\ top-8, pre-registered $\\tau$", "C"),
+    "C8p": ("the same, non-inferiority", "U"),
 }
+CONFIRM_ID = {"C7p": "C7$^{\\mathrm{p}}$", "C8p": "C8$^{\\mathrm{p}}$"}
 
 
 def confirm_rows(results: dict) -> str:
@@ -1311,26 +1317,34 @@ def confirm_rows(results: dict) -> str:
         vals = []
         for m in LOCAL_MODELS:
             r = conf.get(m, {})
-            x = r.get("C8") if cid == "C8" else r.get("family", {}).get(cid)
+            clean = results.get("clean_threshold", {}).get("e2e", {}).get(m, {})
+            # C7 and C8 report the clean threshold protocol (primary); C7p and C8p the pre-registered one.
+            x = {"C7": clean.get("vs_top8_conditional"), "C8": clean.get("vs_top8_unconditional"),
+                 "C8p": r.get("C8"), "C7p": r.get("family", {}).get("C7")}.get(cid) or r.get("family", {}).get(cid)
             if x is None or not x.get("complete"):
                 vals += [DASH, DASH]
                 continue
             vals.append(f"{_signed(x['diff'])} [{_signed(x['low'])}, {_signed(x['high'])}]")
-            if cid == "C8":
+            if cid in ("C8", "C8p"):
                 vals.append("yes" if x["non_inferior"] else "no")
             else:
                 vals.append(_pval(x["p_holm"]) if "p_holm" in x else DASH)
-        lines.append(f"{cid} & {label} & {pop} & " + " & ".join(vals) + r" \\")
+        if cid == "C7p":
+            lines.append(r"\midrule")
+        lines.append(f"{CONFIRM_ID.get(cid, cid)} & {label} & {pop} & " + " & ".join(vals) + r" \\")
     return "\n".join(lines) + "\n"
 
 
 CONFIRM_TABLE = "\n".join([
     r"% Generated by study/report.py. Do not edit by hand.",
     r"\begin{table}[!htbp]\centering",
-    r"\textbf{Table 5.} The pre-registered confirmatory family: paired difference in F1 with conditions (points), "
+    r"\textbf{Table 5.} The confirmatory family: paired difference in F1 with conditions (points), "
     r"95\% BCa interval over pages, and Holm-adjusted page-level sign-flip $p$. C: conditional questions; "
     r"C$^\dagger$: those with a condition-only gold chunk; U: unconditional. C8 asks whether the lower bound "
-    r"exceeds $-2$ points.\\\vspace{5pt}",
+    r"exceeds $-2$ points. C7 and C8 use the clean threshold protocol, the primary completion analysis; "
+    r"C7$^{\mathrm{p}}$ and C8$^{\mathrm{p}}$ are the pre-registered protocol, in which the model that set the "
+    r"threshold had been trained on evaluation labels. Holm runs over C1--C7, and separately over C1--C6 "
+    r"with C7$^{\mathrm{p}}$.\\\vspace{5pt}",
     r"{\fontsize{10}{12}\selectfont",
     r"\begin{tabular}{L{0.6cm}L{3.95cm}P{0.85cm}P{2.65cm}P{1.05cm}P{2.65cm}P{1.05cm}}",
     r"\toprule",
